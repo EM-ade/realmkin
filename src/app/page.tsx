@@ -1,103 +1,243 @@
+"use client";
+
 import Image from "next/image";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWeb3 } from "@/contexts/Web3Context";
+import { formatAddress } from "@/utils/formatAddress";
 
 export default function Home() {
+  const { logout } = useAuth();
+  const {
+    account,
+    isConnected,
+    isConnecting,
+    connectWallet,
+    disconnectWallet,
+  } = useWeb3();
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-[#2b1c3b] via-[#2b1c3b] to-[#2b1c3b] p-6">
+        <div className="border-6 border-[#d3b136] px-6 py-0 min-h-[calc(100vh-3rem)]">
+          <div className="text-white font-sans">
+            {/* Header */}
+            <header className="flex justify-between items-center px-6">
+              <div className="flex items-center space-x-2 py-0">
+                <div className="w-32 h-32 rounded-full overflow-hidden">
+                  <Image
+                    src="/realmkin-logo.png"
+                    alt="Realmkin Logo"
+                    width={256}
+                    height={256}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h1
+                  className="text-6xl font-bold tracking-[0.3em]"
+                  style={{ fontFamily: "var(--font-hertical-sans)" }}
+                >
+                  REALMKIN
+                </h1>
+              </div>
+              <div className="flex items-center space-x-3">
+                {/* Connect Wallet Button */}
+                <button
+                  onClick={isConnected ? disconnectWallet : connectWallet}
+                  disabled={isConnecting}
+                  className={`relative group border-2 font-bold py-2 px-4 transition-all duration-300 transform hover:scale-105 ${
+                    isConnected
+                      ? "border-yellow-400 bg-purple-800 hover:bg-purple-700 text-yellow-400 shadow-lg shadow-yellow-400/20"
+                      : "border-yellow-400 bg-gradient-to-r from-purple-800 to-purple-900 hover:from-purple-700 hover:to-purple-800 text-yellow-400 shadow-lg shadow-purple-500/20"
+                  }`}
+                  style={{
+                    clipPath:
+                      "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
+                  }}
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg">{isConnected ? "⚡" : "�"}</span>
+                    <span className="text-sm font-bold tracking-wide">
+                      {isConnecting
+                        ? "LINKING..."
+                        : isConnected
+                        ? "LINKED"
+                        : "LINK WALLET"}
+                    </span>
+                  </div>
+                </button>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+                {/* Logout Button */}
+                <button
+                  onClick={logout}
+                  className="relative group border-2 border-yellow-400 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-yellow-400 font-bold py-2 px-4 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/20"
+                  style={{
+                    clipPath:
+                      "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
+                  }}
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg">⚔️</span>
+                    <span className="text-sm font-bold tracking-wide">
+                      LOGOUT
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </header>
+
+            <div className="px-6 max-w-7xl mx-auto">
+              {/* Welcome Section */}
+              <div className="border-6 border-[#d3b136] p-8 pt-10 mb-2 ">
+                <h2 className="text-6xl font-bold mb-8">WELCOME BACK</h2>
+                <p className="text-2xl mb-4 font-bold text-gray-300">
+                  {account ? formatAddress(account) : "0XA12.....BG43"}
+                </p>
+                <p className="text-lg text-gray-300 max-w-2xl">
+                  " INCREASE YOUR WEEKLY EARNINGS BY HOLDING MORE NFTS- EACH
+                  WARDEN KIN BOOSTS YOUR $MKIN REWARD "
+                </p>
+              </div>
+
+              {/* Account Section */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-2xl font-bold pl-2">ACCOUNT</h3>
+                  <div className="relative mb-2">
+                    <div
+                      className="border-2 border-yellow-400 bg-gradient-to-r from-green-700 to-green-800 text-yellow-400 px-4 py-2 font-bold text-sm tracking-wider shadow-lg shadow-green-500/30 animate-pulse"
+                      style={{
+                        clipPath:
+                          "polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)",
+                      }}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span className="text-green-300">●</span>
+                        <span>ONLINE</span>
+                        <span className="text-green-300">●</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-6 border-[#d3b136] p-4 ">
+                  <div className="flex items-center space-x-8">
+                    <div className="coin-container w-[16rem] h-[16rem]">
+                      <div className="w-full h-full rounded-full overflow-hidden animate-spin-3d">
+                        <Image
+                          src="/realmkin.png"
+                          alt="Realmkin"
+                          width={256}
+                          height={256}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-8xl font-bold mb-4">
+                        50.024{" "}
+                        <span className="text-2xl -ml-4 text-gray-300">
+                          $MKIN
+                        </span>
+                      </div>
+                      <button className="bg-teal-400 hover:bg-teal-300 text-black font-bold py-4 px-8  text-xl transition-colors">
+                        CLAIM
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* NFT Section */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-2xl font-bold pl-2">MY WARDEN KINS</h3>
+                  <span className="text-2xl font-bold">3 KINS</span>
+                </div>
+
+                <div className="border-6 border-[#d3b136] p-4">
+                  <div className="grid grid-cols-5 gap-4">
+                    {/* NFT Card 1 */}
+                    <div className="border-6 border-[#d3b136] p-2 overflow-hidden bg-gray-800">
+                      <div className="border-2 border-[#d3b136] mb-2 aspect-square bg-gradient-to-br from-blue-400 to-yellow-400 p-4 flex items-center justify-center">
+                        <div className="text-6xl">🐰</div>
+                      </div>
+                      <div className="border-2 border-[#d3b136] text-center p-2">
+                        <div className="text-white px-2 font-bold text-lg mb-1">
+                          LEGENDARY
+                        </div>
+                        <div className="text-sm font-bold">POWER: 2000</div>
+                        <div className="text-xs text-gray-400">OWNED</div>
+                      </div>
+                    </div>
+
+                    {/* Empty Slot 1 */}
+                    <div className="border-6 w-30 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center">
+                      <div className="flex flex-col space-y-4">
+                        <div className="w-24 h-24 bg-[#d3b136]"></div>
+                        <div className="w-24 h-24 bg-[#d3b136]"></div>
+                        <div className="w-24 h-24 bg-[#d3b136]"></div>
+                      </div>
+                    </div>
+
+                    {/* NFT Card 2 */}
+                    <div className="border-6 border-[#d3b136] p-2 overflow-hidden bg-gray-800">
+                      <div className="border-2 border-[#d3b136] mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 p-4 flex items-center justify-center">
+                        <div className="text-6xl">👹</div>
+                      </div>
+                      <div className="border-2 border-[#d3b136] text-center p-2">
+                        <div className="text-white px-2 font-bold text-lg mb-1">
+                          LEGENDARY
+                        </div>
+                        <div className="text-sm font-bold">POWER: 1840</div>
+                        <div className="text-xs text-gray-400">OWNED</div>
+                      </div>
+                    </div>
+
+                    {/* Empty Slot 2 */}
+                    <div className="border-6 w-30 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center">
+                      <div className="flex flex-col space-y-4">
+                        <div className="w-24 h-24 bg-[#d3b136]"></div>
+                        <div className="w-24 h-24 bg-[#d3b136]"></div>
+                        <div className="w-24 h-24 bg-[#d3b136]"></div>
+                      </div>
+                    </div>
+
+                    {/* NFT Card 3 */}
+                    <div className="border-6 border-[#d3b136] p-2 overflow-hidden bg-gray-800">
+                      <div className="border-2 border-[#d3b136] mb-2 aspect-square bg-gradient-to-br from-gray-300 to-white p-4 flex items-center justify-center">
+                        <div className="text-6xl">🐰</div>
+                      </div>
+                      <div className="border-2 border-[#d3b136] text-center p-2">
+                        <div className="text-white px-2 font-bold text-lg mb-1">
+                          LEGENDARY
+                        </div>
+                        <div className="text-sm font-bold">POWER: 2100</div>
+                        <div className="text-xs text-gray-400">OWNED</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Links */}
+              <div className="mt-8 text-center">
+                <h4 className="text-2xl font-bold mb-4">OUR SOCIALS:</h4>
+                <div className="flex justify-center space-x-12 text-xl">
+                  <div>
+                    <span className="font-bold">DISCORD:</span>
+                  </div>
+                  <div>
+                    <span className="font-bold">INSTAGRAM:</span>
+                  </div>
+                  <div>
+                    <span className="font-bold">TWITTER /X:</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
