@@ -66,7 +66,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       window.ethereum.on("chainChanged", handleChainChanged);
 
       return () => {
-        if (window.ethereum.removeListener) {
+        if (window.ethereum && window.ethereum.removeListener) {
           window.ethereum.removeListener(
             "accountsChanged",
             handleAccountsChanged
@@ -114,14 +114,15 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       setAccount(address);
       setIsConnected(true);
       setProvider(provider);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error connecting wallet:", error);
-      if (error.code === 4001) {
+      const walletError = error as { code?: number };
+      if (walletError.code === 4001) {
         showCustomAlert(
           "⚔️ CONNECTION REJECTED",
           "The wallet guardian has denied access. Please approve the connection request to link your wallet to the Realmkin realm."
         );
-      } else if (error.code === -32002) {
+      } else if (walletError.code === -32002) {
         showCustomAlert(
           "⏳ PENDING REQUEST",
           "A connection request is already pending. Please check your wallet and complete the existing request."

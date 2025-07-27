@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/"); // Redirect to main page after successful login
-    } catch (error: any) {
+    } catch (error: unknown) {
       setError("Invalid email or password. Please try again.");
       console.error("Login error:", error);
     } finally {

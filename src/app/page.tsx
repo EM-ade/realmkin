@@ -54,7 +54,10 @@ export default function Home() {
                       "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
                   }}
                 >
-                  <div className="flex items-center space-x-2" style={{ fontFamily: "var(--font-gothic-cg)" }}>
+                  <div
+                    className="flex items-center space-x-2"
+                    style={{ fontFamily: "var(--font-gothic-cg)" }}
+                  >
                     <span className="text-lg">{isConnected ? "⚡" : "�"}</span>
                     <span className="text-sm font-bold tracking-wide">
                       {isConnecting
@@ -75,7 +78,10 @@ export default function Home() {
                       "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
                   }}
                 >
-                  <div className="flex items-center space-x-2" style={{ fontFamily: "var(--font-gothic-cg)" }}>
+                  <div
+                    className="flex items-center space-x-2"
+                    style={{ fontFamily: "var(--font-gothic-cg)" }}
+                  >
                     <span className="text-lg">⚔️</span>
                     <span className="text-sm font-bold tracking-wide">
                       LOGOUT
@@ -101,8 +107,8 @@ export default function Home() {
                   {account ? formatAddress(account) : "0XA12.....BG43"}
                 </p>
                 <p className="text-lg text-gray-300 max-w-2xl">
-                  " INCREASE YOUR WEEKLY EARNINGS BY HOLDING MORE NFTS- EACH
-                  WARDEN KIN BOOSTS YOUR $MKIN REWARD "
+                  &ldquo; INCREASE YOUR WEEKLY EARNINGS BY HOLDING MORE NFTS-
+                  EACH WARDEN KIN BOOSTS YOUR $MKIN REWARD &rdquo;
                 </p>
               </div>
 
