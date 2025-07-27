@@ -54,7 +54,7 @@ export default function Home() {
                       "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
                   }}
                 >
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2" style={{ fontFamily: "var(--font-gothic-cg)" }}>
                     <span className="text-lg">{isConnected ? "⚡" : "�"}</span>
                     <span className="text-sm font-bold tracking-wide">
                       {isConnecting
@@ -75,7 +75,7 @@ export default function Home() {
                       "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
                   }}
                 >
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2" style={{ fontFamily: "var(--font-gothic-cg)" }}>
                     <span className="text-lg">⚔️</span>
                     <span className="text-sm font-bold tracking-wide">
                       LOGOUT
@@ -88,8 +88,16 @@ export default function Home() {
             <div className="px-6 max-w-7xl mx-auto">
               {/* Welcome Section */}
               <div className="border-6 border-[#d3b136] p-8 pt-10 mb-2 ">
-                <h2 className="text-6xl font-bold mb-8">WELCOME BACK</h2>
-                <p className="text-2xl mb-4 font-bold text-gray-300">
+                <h2
+                  className="text-8xl font-bold mb-8"
+                  style={{ fontFamily: "var(--font-impact-regular)" }}
+                >
+                  WELCOME BACK
+                </h2>
+                <p
+                  className="text-4xl mb-4 font-bold text-gray-300"
+                  style={{ fontFamily: "var(--font-impact-regular)" }}
+                >
                   {account ? formatAddress(account) : "0XA12.....BG43"}
                 </p>
                 <p className="text-lg text-gray-300 max-w-2xl">
@@ -101,7 +109,12 @@ export default function Home() {
               {/* Account Section */}
               <div className="mb-6">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-2xl font-bold pl-2">ACCOUNT</h3>
+                  <h3
+                    className="text-2xl font-bold pl-2"
+                    style={{ fontFamily: "var(--font-gothic-cg)" }}
+                  >
+                    ACCOUNT
+                  </h3>
                   <div className="relative mb-2">
                     <div
                       className="border-2 border-yellow-400 bg-gradient-to-r from-green-700 to-green-800 text-yellow-400 px-4 py-2 font-bold text-sm tracking-wider shadow-lg shadow-green-500/30 animate-pulse"
@@ -110,7 +123,10 @@ export default function Home() {
                           "polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)",
                       }}
                     >
-                      <div className="flex items-center space-x-2">
+                      <div
+                        className="flex items-center space-x-2"
+                        style={{ fontFamily: "var(--font-gothic-cg)" }}
+                      >
                         <span className="text-green-300">●</span>
                         <span>ONLINE</span>
                         <span className="text-green-300">●</span>
@@ -149,7 +165,10 @@ export default function Home() {
 
               {/* NFT Section */}
               <div className="mb-6">
-                <div className="flex justify-between items-center mb-2">
+                <div
+                  className="flex justify-between items-center mb-2"
+                  style={{ fontFamily: "var(--font-gothic-cg)" }}
+                >
                   <h3 className="text-2xl font-bold pl-2">MY WARDEN KINS</h3>
                   <span className="text-2xl font-bold">3 KINS</span>
                 </div>

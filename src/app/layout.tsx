@@ -29,6 +29,20 @@ const amnestia = localFont({
   fallback: ["serif"],
 });
 
+// Impact Regular font for welcome text
+const impactRegular = localFont({
+  src: "../../public/fonts/Impact Regular.ttf",
+  variable: "--font-impact-regular",
+  fallback: ["Impact", "Arial Black", "sans-serif"],
+});
+
+// Gothic CG No3 Regular font for section headers
+const gothicCG = localFont({
+  src: "../../public/fonts/Gothic CG No3 Regular.otf",
+  variable: "--font-gothic-cg",
+  fallback: ["Arial", "sans-serif"],
+});
+
 export const metadata: Metadata = {
   title: "Realmkin - Holders Login",
   description: "Realmkin Web3 NFT Platform",
@@ -42,7 +56,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${herticalSans.variable} ${amnestia.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${herticalSans.variable} ${amnestia.variable} ${impactRegular.variable} ${gothicCG.variable} antialiased`}
       >
         <AuthProvider>
           <Web3Provider>{children}</Web3Provider>

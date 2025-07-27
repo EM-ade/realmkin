@@ -12,6 +12,8 @@
   --font-mono: var(--font-geist-mono);
   --font-hertical-sans: var(--font-hertical-sans);
   --font-amnestia: var(--font-amnestia);
+  --font-impact-regular: var(--font-impact-regular);
+  --font-gothic-cg: var(--font-gothic-cg);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,27 +29,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* 3D Coin rotation animation */
+/* 3D Coin rotation animation - horizontal only */
 @keyframes spin-3d {
   0% {
-    transform: rotateX(0deg) rotateY(0deg);
-  }
-  25% {
-    transform: rotateX(90deg) rotateY(90deg);
-  }
-  50% {
-    transform: rotateX(180deg) rotateY(180deg);
-  }
-  75% {
-    transform: rotateX(270deg) rotateY(270deg);
+    transform: rotateY(0deg);
   }
   100% {
-    transform: rotateX(360deg) rotateY(360deg);
+    transform: rotateY(360deg);
   }
 }
 
 .animate-spin-3d {
-  animation: spin-3d 5s linear infinite;
+  animation: spin-3d 4s linear infinite;
   transform-style: preserve-3d;
 }
 

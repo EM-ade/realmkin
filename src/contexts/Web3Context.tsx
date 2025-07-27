@@ -1,7 +1,13 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { ethers } from 'ethers';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { ethers } from "ethers";
 
 interface Web3ContextType {
   account: string | null;
@@ -42,7 +48,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
   // Listen for account changes
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.ethereum) {
+    if (typeof window !== "undefined" && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length === 0) {
           disconnectWallet();
@@ -56,13 +62,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         window.location.reload();
       };
 
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
+      window.ethereum.on("chainChanged", handleChainChanged);
 
       return () => {
         if (window.ethereum.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-          window.ethereum.removeListener('chainChanged', handleChainChanged);
+          window.ethereum.removeListener(
+            "accountsChanged",
+            handleAccountsChanged
+          );
+          window.ethereum.removeListener("chainChanged", handleChainChanged);
         }
       };
     }
@@ -70,10 +79,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
   const checkConnection = async () => {
     try {
-      if (typeof window !== 'undefined' && window.ethereum) {
+      if (typeof window !== "undefined" && window.ethereum) {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.listAccounts();
-        
+
         if (accounts.length > 0) {
           setAccount(accounts[0].address);
           setIsConnected(true);
@@ -81,13 +90,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         }
       }
     } catch (error) {
-      console.error('Error checking wallet connection:', error);
+      console.error("Error checking wallet connection:", error);
     }
   };
 
   const connectWallet = async () => {
-    if (typeof window === 'undefined' || !window.ethereum) {
-      alert('Please install MetaMask or another Web3 wallet!');
+    if (typeof window === "undefined" || !window.ethereum) {
+      showCustomAlert(
+        "🔮 REALM ACCESS DENIED",
+        "A Web3 wallet is required to enter the Realmkin universe. Please install MetaMask or another compatible wallet to continue your journey."
+      );
       return;
     }
 
@@ -95,7 +107,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
+      await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
 
@@ -103,15 +115,49 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       setIsConnected(true);
       setProvider(provider);
     } catch (error: any) {
-      console.error('Error connecting wallet:', error);
+      console.error("Error connecting wallet:", error);
       if (error.code === 4001) {
-        alert('Please connect to MetaMask.');
+        showCustomAlert(
+          "⚔️ CONNECTION REJECTED",
+          "The wallet guardian has denied access. Please approve the connection request to link your wallet to the Realmkin realm."
+        );
+      } else if (error.code === -32002) {
+        showCustomAlert(
+          "⏳ PENDING REQUEST",
+          "A connection request is already pending. Please check your wallet and complete the existing request."
+        );
       } else {
-        alert('Error connecting to wallet. Please try again.');
+        showCustomAlert(
+          "🚫 LINK FAILED",
+          "The mystical connection to your wallet has been disrupted. Please ensure your wallet is unlocked and try again."
+        );
       }
     } finally {
       setIsConnecting(false);
     }
+  };
+
+  const showCustomAlert = (title: string, message: string) => {
+    // Create custom modal-style alert
+    const alertDiv = document.createElement("div");
+    alertDiv.className =
+      "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50";
+    alertDiv.innerHTML = `
+      <div class="bg-gradient-to-br from-purple-900 to-purple-800 border-2 border-yellow-400 rounded-lg p-6 max-w-md mx-4 shadow-2xl">
+        <div class="text-center">
+          <h3 class="text-yellow-400 text-xl font-bold mb-3">${title}</h3>
+          <p class="text-white text-sm leading-relaxed mb-4">${message}</p>
+          <button
+            onclick="this.closest('.fixed').remove()"
+            class="bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-2 px-6 rounded transition-colors"
+            style="clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)"
+          >
+            UNDERSTOOD
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(alertDiv);
   };
 
   const disconnectWallet = () => {
@@ -129,9 +175,5 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     provider,
   };
 
-  return (
-    <Web3Context.Provider value={value}>
-      {children}
-    </Web3Context.Provider>
-  );
+  return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
 };
