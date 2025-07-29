@@ -5,6 +5,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { formatAddress } from "@/utils/formatAddress";
+import SocialLinks from "@/components/SocialLinks";
 
 export default function Home() {
   const { logout } = useAuth();
@@ -116,9 +117,9 @@ export default function Home() {
 
               {/* Account Section */}
               <div className="mb-4 sm:mb-6">
-                <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+                <div className="flex flex-row sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
                   <h3
-                    className="text-xl sm:text-2xl font-bold pl-2"
+                    className="text-lg sm:text-2xl font-bold pl-2"
                     style={{ fontFamily: "var(--font-gothic-cg)" }}
                   >
                     ACCOUNT
@@ -145,7 +146,7 @@ export default function Home() {
 
                 <div className="border-6 border-[#d3b136] p-4">
                   <div className="flex flex-col sm:flex-row items-center space-y-6 sm:space-y-0 sm:space-x-8">
-                    <div className="coin-container w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64">
+                    <div className="coin-container w-48 h-48 sm:w-64 sm:h-64 lg:w-96 lg:h-96">
                       <div className="w-full h-full rounded-full overflow-hidden animate-spin-3d">
                         <Image
                           src="/realmkin.png"
@@ -174,68 +175,68 @@ export default function Home() {
               {/* NFT Section */}
               <div className="mb-4 sm:mb-6">
                 <div
-                  className="flex flex-col sm:flex-row justify-between items-center mb-2 space-y-2 sm:space-y-0"
+                  className="flex flex-row sm:flex-row justify-between items-center mb-2 sm:space-y-0"
                   style={{ fontFamily: "var(--font-gothic-cg)" }}
                 >
-                  <h3 className="text-xl sm:text-2xl font-bold pl-2">
+                  <h3 className="text-lg sm:text-2xl font-bold pl-2">
                     MY WARDEN KINS
                   </h3>
-                  <span className="text-xl sm:text-2xl font-bold">3 KINS</span>
+                  <span className="text-lg sm:text-2xl font-bold">3 KINS</span>
                 </div>
 
-                <div className="border-6 border-[#d3b136] py-3 px-1">
+                <div className="border-6 border-[#d3b136] p-4">
                   {/* Mobile: Horizontal Scroll */}
                   <div className="sm:hidden">
                     <div className="flex space-x-4 overflow-x-auto pb-4 px-2">
                       {/* NFT Card 1 - Mobile */}
-                      <div className="border-6 border-[#d3b136] p-2 overflow-hidden flex-shrink-0 w-48">
-                        <div className="border-2 border-[#d3b136] p-8 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
+                      <div className="border-6 border-[#d3b136] p-2 overflow-hidden flex-shrink-0 w-40 h-auto">
+                        <div className="border-2 border-[#d3b136] p-12 mb-4 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
                           <div className="text-4xl">🐰</div>
                         </div>
                         <div className="border-2 border-[#d3b136] text-center p-2">
-                          <div className="text-white px-2 font-bold text-base mb-1">
+                          <div className="text-white px-2 font-bold text-sm mb-1">
                             LEGENDARY
                           </div>
-                          <div className="text-sm font-bold">POWER: 2000</div>
-                          <div className="text-xs text-gray-400">OWNED</div>
+                          <div className="text-xs font-bold">POWER: 2000</div>
+                          <div className="text-[10px] text-gray-400">OWNED</div>
                         </div>
                       </div>
 
                       {/* NFT Card 2 - Mobile */}
-                      <div className="border-6 border-[#d3b136] p-2 overflow-hidden flex-shrink-0 w-48">
-                        <div className="border-2 border-[#d3b136] p-8 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
+                      <div className="border-6 border-[#d3b136] p-2 overflow-hidden flex-shrink-0 w-40 h-auto">
+                        <div className="border-2 border-[#d3b136] p-12 mb-4 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
                           <div className="text-4xl">👹</div>
                         </div>
                         <div className="border-2 border-[#d3b136] text-center p-2">
-                          <div className="text-white px-2 font-bold text-base mb-1">
+                          <div className="text-white px-2 font-bold text-sm mb-1">
                             LEGENDARY
                           </div>
-                          <div className="text-sm font-bold">POWER: 1840</div>
-                          <div className="text-xs text-gray-400">OWNED</div>
+                          <div className="text-xs font-bold">POWER: 1840</div>
+                          <div className="text-[10px] text-gray-400">OWNED</div>
                         </div>
                       </div>
 
                       {/* NFT Card 3 - Mobile */}
-                      <div className="border-6 border-[#d3b136] p-2 overflow-hidden flex-shrink-0 w-48">
-                        <div className="border-2 border-[#d3b136] p-8 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
+                      <div className="border-6 border-[#d3b136] p-2 overflow-hidden flex-shrink-0 w-40 h-auto">
+                        <div className="border-2 border-[#d3b136] p-12 mb-4 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
                           <div className="text-4xl">🐰</div>
                         </div>
                         <div className="border-2 border-[#d3b136] text-center p-2">
-                          <div className="text-white px-2 font-bold text-base mb-1">
+                          <div className="text-white px-2 font-bold text-sm mb-1">
                             LEGENDARY
                           </div>
-                          <div className="text-sm font-bold">POWER: 2100</div>
-                          <div className="text-xs text-gray-400">OWNED</div>
+                          <div className="text-xs font-bold">POWER: 2100</div>
+                          <div className="text-[10px] text-gray-400">OWNED</div>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Tablet & Desktop: Grid Layout */}
-                  <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-6 items-center justify-items-center">
+                  <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 items-center justify-items-center">
                     {/* NFT Card 1 - Desktop */}
-                    <div className="border-6 border-[#d3b136] p-3 overflow-hidden w-full max-w-[200px]">
-                      <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
+                    <div className="border-6 border-[#d3b136] p-6 overflow-hidden w-full max-w-[400px]">
+                      <div className="border-2 border-[#d3b136] p-4 lg:p-14 mb-2 bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
                         <div className="text-4xl lg:text-6xl">🐰</div>
                       </div>
                       <div className="border-2 border-[#d3b136] text-center p-2">
@@ -248,16 +249,16 @@ export default function Home() {
                     </div>
 
                     {/* Empty Slot 1 - Desktop */}
-                    <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center aspect-square w-full max-w-[200px]">
+                    <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px]">
                       <div className="flex flex-col space-y-3 items-center">
-                        <div className="w-12 h-12 lg:w-24 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
-                        <div className="w-12 h-12 lg:w-24 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
-                        <div className="w-12 h-12 lg:w-24 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
+                        <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
+                        <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
+                        <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
                       </div>
                     </div>
 
                     {/* NFT Card 2 - Desktop */}
-                    <div className="border-6 border-[#d3b136] p-3 overflow-hidden w-full max-w-[200px]">
+                    <div className="border-6 border-[#d3b136] p-6 overflow-hidden w-full max-w-[400px]">
                       <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
                         <div className="text-4xl lg:text-6xl">👹</div>
                       </div>
@@ -271,16 +272,16 @@ export default function Home() {
                     </div>
 
                     {/* Empty Slot 2 - Desktop */}
-                    <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center aspect-square w-full max-w-[200px]">
+                    <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px]">
                       <div className="flex flex-col space-y-3 items-center">
-                        <div className="w-12 h-12 lg:w-24 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
-                        <div className="w-12 h-12 lg:w-24 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
-                        <div className="w-12 h-12 lg:w-24 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
+                        <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
+                        <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
+                        <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300"></div>
                       </div>
                     </div>
 
                     {/* NFT Card 3 - Desktop */}
-                    <div className="border-6 border-[#d3b136] p-3 overflow-hidden w-full max-w-[200px]">
+                    <div className="border-6 border-[#d3b136] p-6 overflow-hidden w-full max-w-[400px]">
                       <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
                         <div className="text-4xl lg:text-6xl">🐰</div>
                       </div>
@@ -292,6 +293,8 @@ export default function Home() {
                         <div className="text-xs text-gray-400">OWNED</div>
                       </div>
                     </div>
+
+                    
                   </div>
                 </div>
               </div>
@@ -304,23 +307,7 @@ export default function Home() {
                 >
                   OUR SOCIALS:
                 </h4>
-
-                
-
-                {/* Desktop: Horizontal Layout */}
-                <div className="hidden sm:flex justify-center space-x-6 lg:space-x-12 text-lg lg:text-xl">
-                  <div className="bg-purple-800 border-2 border-yellow-400 rounded-lg py-3 px-6 hover:bg-purple-700 transition-colors">
-                    <span className="font-bold text-yellow-400">DISCORD</span>
-                  </div>
-                  <div className="bg-purple-800 border-2 border-yellow-400 rounded-lg py-3 px-6 hover:bg-purple-700 transition-colors">
-                    <span className="font-bold text-yellow-400">INSTAGRAM</span>
-                  </div>
-                  <div className="bg-purple-800 border-2 border-yellow-400 rounded-lg py-3 px-6 hover:bg-purple-700 transition-colors">
-                    <span className="font-bold text-yellow-400">
-                      TWITTER /X
-                    </span>
-                  </div>
-                </div>
+                <SocialLinks />
               </div>
             </div>
           </div>
