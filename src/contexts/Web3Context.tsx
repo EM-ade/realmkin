@@ -134,14 +134,22 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         try {
           provider = new ethers.BrowserProvider(window.ethereum);
           await provider.send("eth_requestAccounts", []);
-        } catch (requestError) {
+        } catch (requestError: unknown) {
           // Fallback: try direct ethereum request
           console.log("Trying fallback connection method...");
           await window.ethereum.request({ method: "eth_requestAccounts" });
           provider = new ethers.BrowserProvider(window.ethereum);
         }
       } else if (walletType === "phantom") {
-        const phantom = (window as any).phantom?.solana;
+        interface PhantomWindow {
+          phantom?: {
+            solana: {
+              connect(): Promise<{ publicKey: { toString(): string } }>;
+            };
+          };
+        }
+        
+        const phantom = (window as unknown as PhantomWindow).phantom?.solana;
 
         if (!phantom) {
           showCustomAlert(
@@ -166,7 +174,13 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         );
         return;
       } else if (walletType === "coinbase") {
-        const coinbase = (window as any).coinbaseWalletExtension;
+        interface CoinbaseWindow {
+          coinbaseWalletExtension: {
+            request: (params: { method: string }) => Promise<void>;
+          };
+        }
+        
+        const coinbase = (window as unknown as CoinbaseWindow).coinbaseWalletExtension;
 
         if (!coinbase) {
           showCustomAlert(
@@ -324,7 +338,11 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     document.body.appendChild(selectionDiv);
 
     // Add wallet connection function to window
-    (window as any).connectWallet = (walletType: string) => {
+    interface WindowWithConnect {
+      connectWallet: (walletType: string) => void;
+    }
+    
+    (window as unknown as WindowWithConnect).connectWallet = (walletType: string): void => {
       connectSpecificWallet(walletType);
     };
   };
@@ -387,7 +405,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
     // Add retry function to window for the retry button
     if (showRetry) {
-      (window as any).retryWalletConnection = connectWallet;
+      (window as unknown as Window & { retryWalletConnection: () => void }).retryWalletConnection = connectWallet;
     }
   };
 

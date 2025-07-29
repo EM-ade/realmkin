@@ -305,24 +305,7 @@ export default function Home() {
                   OUR SOCIALS:
                 </h4>
 
-                {/* Mobile: Stacked Layout */}
-                <div className="sm:hidden space-y-3">
-                  <div className="bg-purple-800 border-2 border-yellow-400 rounded-lg py-3 px-4">
-                    <span className="font-bold text-yellow-400 text-lg">
-                      DISCORD
-                    </span>
-                  </div>
-                  <div className="bg-purple-800 border-2 border-yellow-400 rounded-lg py-3 px-4">
-                    <span className="font-bold text-yellow-400 text-lg">
-                      INSTAGRAM
-                    </span>
-                  </div>
-                  <div className="bg-purple-800 border-2 border-yellow-400 rounded-lg py-3 px-4">
-                    <span className="font-bold text-yellow-400 text-lg">
-                      TWITTER /X
-                    </span>
-                  </div>
-                </div>
+                
 
                 {/* Desktop: Horizontal Layout */}
                 <div className="hidden sm:flex justify-center space-x-6 lg:space-x-12 text-lg lg:text-xl">
