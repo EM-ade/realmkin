@@ -29,11 +29,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4 sm:px-6">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 sm:px-6">
       {/* REALMKIN Title */}
       <div className="text-center mb-8 sm:mb-12">
         <h1
-          className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-4 sm:mb-6"
+          className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-wide mb-4 sm:mb-6  animate-float"
           style={{
             fontFamily: "var(--font-amnestia)",
             transform: "scaleX(1.2)",
@@ -42,14 +42,14 @@ export default function LoginPage() {
         >
           REALMKIN
         </h1>
-        <h2 className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-normal font-sans">
+        <h2 className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-normal font-sans text-glow">
           Holders Login
         </h2>
       </div>
 
       {/* Login Form Container */}
       <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg">
-        <div className="bg-[#141414] border border-[#3b3b3b] rounded-2xl sm:rounded-3xl p-6 sm:p-8">
+        <div className="bg-[#141414] border border-[#3b3b3b] rounded-2xl sm:rounded-3xl p-6 sm:p-8 card-hover animate-pulse-glow">
           <form onSubmit={handleLogin} className="space-y-6 sm:space-y-8">
             {/* Email Input */}
             <div>
@@ -84,7 +84,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-bold py-4 sm:py-5 px-4 sm:px-6 rounded-xl sm:rounded-2xl text-lg sm:text-xl transition-colors font-sans"
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-bold py-4 sm:py-5 px-4 sm:px-6 rounded-xl sm:rounded-2xl text-lg sm:text-xl transition-all duration-300 font-sans btn-enhanced transform hover:scale-105 shadow-lg shadow-blue-500/30"
             >
               {loading ? "Logging In..." : "Log In"}
             </button>

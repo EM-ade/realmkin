@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Web3Provider } from "@/contexts/Web3Context";
+import { NFTProvider } from "@/contexts/NFTContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,7 +60,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${herticalSans.variable} ${amnestia.variable} ${impactRegular.variable} ${gothicCG.variable} antialiased`}
       >
         <AuthProvider>
-          <Web3Provider>{children}</Web3Provider>
+          <Web3Provider>
+            <NFTProvider>{children}</NFTProvider>
+          </Web3Provider>
         </AuthProvider>
       </body>
     </html>
