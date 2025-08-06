@@ -136,7 +136,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           await provider.send("eth_requestAccounts", []);
         } catch (requestError: unknown) {
           // Fallback: try direct ethereum request
-          console.log("Trying fallback connection method...");
+          console.log("Trying fallback connection method...", requestError);
           await window.ethereum.request({ method: "eth_requestAccounts" });
           provider = new ethers.BrowserProvider(window.ethereum);
         }
@@ -148,7 +148,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             };
           };
         }
-        
+
         const phantom = (window as unknown as PhantomWindow).phantom?.solana;
 
         if (!phantom) {
@@ -179,8 +179,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             request: (params: { method: string }) => Promise<void>;
           };
         }
-        
-        const coinbase = (window as unknown as CoinbaseWindow).coinbaseWalletExtension;
+
+        const coinbase = (window as unknown as CoinbaseWindow)
+          .coinbaseWalletExtension;
 
         if (!coinbase) {
           showCustomAlert(
@@ -341,8 +342,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     interface WindowWithConnect {
       connectWallet: (walletType: string) => void;
     }
-    
-    (window as unknown as WindowWithConnect).connectWallet = (walletType: string): void => {
+
+    (window as unknown as WindowWithConnect).connectWallet = (
+      walletType: string
+    ): void => {
       connectSpecificWallet(walletType);
     };
   };
@@ -405,7 +408,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
     // Add retry function to window for the retry button
     if (showRetry) {
-      (window as unknown as Window & { retryWalletConnection: () => void }).retryWalletConnection = connectWallet;
+      (
+        window as unknown as Window & { retryWalletConnection: () => void }
+      ).retryWalletConnection = connectWallet;
     }
   };
 

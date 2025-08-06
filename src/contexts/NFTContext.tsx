@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   ReactNode,
 } from "react";
 import { useWeb3 } from "./Web3Context";
@@ -43,22 +44,10 @@ export const NFTProvider = ({ children }: NFTProviderProps) => {
   const [totalNFTs, setTotalNFTs] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const { account, isConnected } = useWeb3();
 
-  // Fetch NFTs when wallet is connected
-  useEffect(() => {
-    if (isConnected && account) {
-      fetchNFTs();
-    } else {
-      // Clear NFTs when wallet is disconnected
-      setNFTs([]);
-      setTotalNFTs(0);
-      setError(null);
-    }
-  }, [isConnected, account]);
-
-  const fetchNFTs = async () => {
+  const fetchNFTs = useCallback(async () => {
     if (!account) return;
 
     setIsLoading(true);
@@ -76,17 +65,16 @@ export const NFTProvider = ({ children }: NFTProviderProps) => {
 
       // Fetch fresh data
       const nftCollection = await nftService.fetchUserNFTs(account);
-      
+
       setNFTs(nftCollection.nfts);
       setTotalNFTs(nftCollection.totalCount);
-      
+
       // Cache the results
       cacheNFTs(account, nftCollection);
-      
     } catch (err) {
-      console.error('Error fetching NFTs:', err);
-      setError('Failed to load your NFTs. Please try again.');
-      
+      console.error("Error fetching NFTs:", err);
+      setError("Failed to load your NFTs. Please try again.");
+
       // Try to load cached data as fallback
       const cachedData = getCachedNFTs(account);
       if (cachedData) {
@@ -96,18 +84,30 @@ export const NFTProvider = ({ children }: NFTProviderProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [account]);
+
+  // Fetch NFTs when wallet is connected
+  useEffect(() => {
+    if (isConnected && account) {
+      fetchNFTs();
+    } else {
+      // Clear NFTs when wallet is disconnected
+      setNFTs([]);
+      setTotalNFTs(0);
+      setError(null);
+    }
+  }, [isConnected, account, fetchNFTs]);
 
   const refreshNFTs = async () => {
     if (!account) return;
-    
+
     // Clear cache and fetch fresh data
     clearCachedNFTs(account);
     await fetchNFTs();
   };
 
   const getNFTsByRarity = (rarity: string): NFTMetadata[] => {
-    return nfts.filter(nft => nft.rarity === rarity.toUpperCase());
+    return nfts.filter((nft) => nft.rarity === rarity.toUpperCase());
   };
 
   const getTotalPower = (): number => {
@@ -120,7 +120,7 @@ export const NFTProvider = ({ children }: NFTProviderProps) => {
       const cached = localStorage.getItem(`nfts_${walletAddress}`);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Error reading NFT cache:', error);
+      console.error("Error reading NFT cache:", error);
       return null;
     }
   };
@@ -134,7 +134,7 @@ export const NFTProvider = ({ children }: NFTProviderProps) => {
       };
       localStorage.setItem(`nfts_${walletAddress}`, JSON.stringify(cacheData));
     } catch (error) {
-      console.error('Error caching NFTs:', error);
+      console.error("Error caching NFTs:", error);
     }
   };
 
@@ -142,7 +142,7 @@ export const NFTProvider = ({ children }: NFTProviderProps) => {
     try {
       localStorage.removeItem(`nfts_${walletAddress}`);
     } catch (error) {
-      console.error('Error clearing NFT cache:', error);
+      console.error("Error clearing NFT cache:", error);
     }
   };
 

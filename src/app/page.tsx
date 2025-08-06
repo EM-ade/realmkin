@@ -4,10 +4,8 @@ import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
-import { useNFT } from "@/contexts/NFTContext";
 import { formatAddress } from "@/utils/formatAddress";
 import SocialLinks from "@/components/SocialLinks";
-import NFTCard from "@/components/NFTCard";
 
 export default function Home() {
   const { logout } = useAuth();

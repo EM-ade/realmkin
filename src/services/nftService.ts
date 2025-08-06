@@ -1,18 +1,58 @@
 import axios from "axios";
 
+export interface NFTAttribute {
+  trait_type: string;
+  value: string | number;
+}
+
 export interface NFTMetadata {
   id: string;
   name: string;
   description: string;
   image: string;
-  attributes: Array<{
-    trait_type: string;
-    value: string | number;
-  }>;
+  attributes: NFTAttribute[];
   contractAddress: string;
   tokenId: string;
   rarity?: string;
   power?: number;
+}
+
+// API Response types
+interface AlchemyNFT {
+  contract: { address: string };
+  tokenId: string;
+  metadata?: {
+    name?: string;
+    description?: string;
+    image?: string;
+    attributes?: NFTAttribute[];
+  };
+  media?: Array<{ gateway?: string }>;
+}
+
+interface MagicEdenNFTV2 {
+  mintAddress?: string;
+  tokenMint?: string;
+  tokenId?: string;
+  name?: string;
+  description?: string;
+  image?: string;
+  img?: string;
+  attributes?: NFTAttribute[];
+  traits?: NFTAttribute[];
+  collection?: string;
+}
+
+interface MagicEdenNFTV3 {
+  token?: {
+    contract?: string;
+    tokenId?: string;
+    name?: string;
+    description?: string;
+    image?: string;
+    imageSmall?: string;
+    attributes?: NFTAttribute[];
+  };
 }
 
 export interface NFTCollection {
@@ -55,7 +95,7 @@ class NFTService {
       );
 
       const nfts = await Promise.all(
-        response.data.ownedNfts.map(async (nft: any) => {
+        response.data.ownedNfts.map(async (nft: AlchemyNFT) => {
           return await this.processNFTData(nft);
         })
       );
@@ -75,7 +115,7 @@ class NFTService {
    */
   async fetchNFTsWithMagicEden(walletAddress: string): Promise<NFTCollection> {
     try {
-      const headers: any = {
+      const headers: Record<string, string> = {
         Accept: "application/json",
       };
 
@@ -97,7 +137,7 @@ class NFTService {
       );
 
       const nfts = await Promise.all(
-        response.data.map(async (nft: any) => {
+        response.data.map(async (nft: MagicEdenNFTV2) => {
           return await this.processMagicEdenNFTData(nft);
         })
       );
@@ -121,7 +161,7 @@ class NFTService {
     walletAddress: string
   ): Promise<NFTCollection> {
     try {
-      const headers: any = {
+      const headers: Record<string, string> = {
         Accept: "application/json",
       };
 
@@ -144,7 +184,7 @@ class NFTService {
       );
 
       const nfts = await Promise.all(
-        response.data.tokens.map(async (nft: any) => {
+        response.data.tokens.map(async (nft: MagicEdenNFTV3) => {
           return await this.processMagicEdenV3NFTData(nft);
         })
       );
@@ -182,7 +222,7 @@ class NFTService {
   /**
    * Process NFT data from Alchemy API
    */
-  private async processNFTData(nft: any): Promise<NFTMetadata | null> {
+  private async processNFTData(nft: AlchemyNFT): Promise<NFTMetadata | null> {
     try {
       const metadata = nft.metadata || {};
 
@@ -214,7 +254,9 @@ class NFTService {
   /**
    * Process NFT data from Magic Eden V2 API
    */
-  private async processMagicEdenNFTData(nft: any): Promise<NFTMetadata | null> {
+  private async processMagicEdenNFTData(
+    nft: MagicEdenNFTV2
+  ): Promise<NFTMetadata | null> {
     try {
       let imageUrl = nft.image || nft.img || "";
       imageUrl = this.resolveIPFSUrl(imageUrl);
@@ -244,7 +286,7 @@ class NFTService {
    * Process NFT data from Magic Eden V3 API
    */
   private async processMagicEdenV3NFTData(
-    nft: any
+    nft: MagicEdenNFTV3
   ): Promise<NFTMetadata | null> {
     try {
       let imageUrl = nft.token?.image || nft.token?.imageSmall || "";
@@ -287,19 +329,19 @@ class NFTService {
   /**
    * Calculate NFT power based on attributes
    */
-  private calculateNFTPower(attributes: any[]): number {
+  private calculateNFTPower(attributes: NFTAttribute[]): number {
     // Customize this logic based on your NFT attributes
     let power = 1000; // Base power
 
     attributes.forEach((attr) => {
       if (attr.trait_type === "Strength" || attr.trait_type === "Power") {
-        power += parseInt(attr.value) * 10;
+        power += parseInt(String(attr.value)) * 10;
       }
       if (attr.trait_type === "Rarity" && attr.value === "Legendary") {
         power += 500;
       }
       if (attr.trait_type === "Level") {
-        power += parseInt(attr.value) * 50;
+        power += parseInt(String(attr.value)) * 50;
       }
     });
 
@@ -309,7 +351,7 @@ class NFTService {
   /**
    * Determine rarity based on attributes
    */
-  private determineRarity(attributes: any[]): string {
+  private determineRarity(attributes: NFTAttribute[]): string {
     // Customize this logic based on your NFT attributes
     const rarityAttr = attributes.find(
       (attr) => attr.trait_type === "Rarity" || attr.trait_type === "Tier"
