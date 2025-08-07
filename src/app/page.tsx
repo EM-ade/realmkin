@@ -8,7 +8,13 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import { formatAddress } from "@/utils/formatAddress";
 import SocialLinks from "@/components/SocialLinks";
 import NFTCard from "@/components/NFTCard";
+import RewardsDashboard from "@/components/RewardsDashboard";
 import { nftService, NFTMetadata } from "@/services/nftService";
+import {
+  rewardsService,
+  UserRewards,
+  RewardsCalculation,
+} from "@/services/rewardsService";
 
 export default function Home() {
   const { user, userData, logout } = useAuth();
@@ -25,8 +31,16 @@ export default function Home() {
   const [nftLoading, setNftLoading] = useState(false);
   const [nftError, setNftError] = useState<string | null>(null);
 
+  // Rewards state
+  const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
+  const [rewardsCalculation, setRewardsCalculation] =
+    useState<RewardsCalculation | null>(null);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [showRewardsDashboard, setShowRewardsDashboard] = useState(false);
+
   const fetchUserNFTs = useCallback(async () => {
-    if (!account) return;
+    if (!account || !user) return;
 
     setNftLoading(true);
     setNftError(null);
@@ -34,6 +48,27 @@ export default function Home() {
     try {
       const nftCollection = await nftService.fetchUserNFTs(account);
       setNfts(nftCollection.nfts);
+
+      // Initialize/update rewards based on NFT count
+      if (user) {
+        try {
+          const rewards = await rewardsService.initializeUserRewards(
+            user.uid,
+            account,
+            nftCollection.nfts.length
+          );
+          setUserRewards(rewards);
+
+          // Calculate current pending rewards
+          const calculation = rewardsService.calculatePendingRewards(
+            rewards,
+            nftCollection.nfts.length
+          );
+          setRewardsCalculation(calculation);
+        } catch (error) {
+          console.error("Error initializing rewards:", error);
+        }
+      }
 
       if (nftCollection.nfts.length === 0) {
         setNftError("No Realmkin NFTs found in this wallet");
@@ -44,7 +79,47 @@ export default function Home() {
     } finally {
       setNftLoading(false);
     }
-  }, [account]);
+  }, [account, user]);
+
+  // Handle reward claim
+  const handleClaimRewards = useCallback(async () => {
+    if (!user || !account || !rewardsCalculation?.canClaim) return;
+
+    setClaimLoading(true);
+    setClaimError(null);
+
+    try {
+      const claimRecord = await rewardsService.claimRewards(user.uid, account);
+
+      // Refresh rewards data after claim
+      const rewards = await rewardsService.initializeUserRewards(
+        user.uid,
+        account,
+        nfts.length
+      );
+      setUserRewards(rewards);
+
+      const calculation = rewardsService.calculatePendingRewards(
+        rewards,
+        nfts.length
+      );
+      setRewardsCalculation(calculation);
+
+      // Show success message (you can add a toast notification here)
+      console.log(
+        `Successfully claimed ${rewardsService.formatCurrency(
+          claimRecord.amount
+        )}`
+      );
+    } catch (error) {
+      console.error("Error claiming rewards:", error);
+      setClaimError(
+        error instanceof Error ? error.message : "Failed to claim rewards"
+      );
+    } finally {
+      setClaimLoading(false);
+    }
+  }, [user, account, rewardsCalculation, nfts.length]);
 
   // Fetch NFTs when wallet connects
   useEffect(() => {
@@ -67,7 +142,7 @@ export default function Home() {
   };
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-[#2b1c3b] via-[#2b1c3b] to-[#2b1c3b] bg-pattern p-3 sm:p-6 lg:p-12 xl:px-20 2xl:px-20">
+      <div className="min-h-screen bg-black bg-gradient-to-br from-[#2b1c3b] via-[#2b1c3b] to-[#2b1c3b] bg-pattern p-3 sm:p-6 lg:p-12 xl:px-20 2xl:px-20">
         <div className="border-6 border-[#d3b136] animate-pulse-glow px-2 sm:px-6 py-0 min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-6rem)] xl:min-h-[calc(100vh-8rem)] 2xl:min-h-[calc(100vh-10rem)] max-w-7xl mx-auto">
           <div className="text-white font-sans">
             {/* Header */}
@@ -203,13 +278,62 @@ export default function Home() {
                       </div>
                       <div className="flex-1 text-center sm:text-left">
                         <div className="text-4xl sm:text-6xl lg:text-8xl font-bold mb-4 text-gradient">
-                          50.024{" "}
-                          <span className="text-lg sm:text-xl lg:text-2xl -ml-2 sm:-ml-4 text-gray-300">
-                            $MKIN
+                          {rewardsCalculation
+                            ? rewardsService.formatCurrency(
+                                rewardsCalculation.pendingAmount
+                              )
+                            : "$0.00"}
+                          <span className="text-lg sm:text-xl lg:text-2xl ml-2 text-gray-300">
+                            USD
                           </span>
                         </div>
-                        <button className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 text-lg sm:text-xl transition-all duration-300 w-full sm:w-auto btn-enhanced transform hover:scale-105 shadow-lg shadow-cyan-500/30">
-                          CLAIM
+                        <div className="mb-4">
+                          <div className="text-sm text-gray-300 mb-2">
+                            {nfts.length} NFTs × $0.37/week ={" "}
+                            {rewardsService.formatCurrency(nfts.length * 0.37)}
+                            /week
+                          </div>
+                          {rewardsCalculation &&
+                            !rewardsCalculation.canClaim &&
+                            rewardsCalculation.nextClaimDate && (
+                              <div className="text-xs text-yellow-400">
+                                Next claim:{" "}
+                                {rewardsService.getTimeUntilNextClaim(
+                                  rewardsCalculation.nextClaimDate
+                                )}
+                              </div>
+                            )}
+                          {claimError && (
+                            <div className="text-xs text-red-400 mb-2">
+                              {claimError}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={handleClaimRewards}
+                          disabled={
+                            claimLoading || !rewardsCalculation?.canClaim
+                          }
+                          className={`
+                            font-bold py-3 sm:py-4 px-6 sm:px-8 text-lg sm:text-xl transition-all duration-300 w-full sm:w-auto btn-enhanced transform hover:scale-105 shadow-lg
+                            ${
+                              rewardsCalculation?.canClaim && !claimLoading
+                                ? "bg-cyan-500 hover:bg-cyan-400 text-white shadow-cyan-500/30"
+                                : "bg-gray-600 text-gray-400 cursor-not-allowed shadow-gray-600/30"
+                            }
+                          `}
+                        >
+                          {claimLoading
+                            ? "CLAIMING..."
+                            : rewardsCalculation?.canClaim
+                            ? "CLAIM"
+                            : "NOT READY"}
+                        </button>
+                        <button
+                          onClick={() => setShowRewardsDashboard(true)}
+                          className="ml-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 text-sm transition-all duration-300 btn-enhanced transform hover:scale-105 shadow-lg shadow-purple-500/30"
+                        >
+                          HISTORY
                         </button>
                       </div>
                     </div>
@@ -484,6 +608,11 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {/* Rewards Dashboard Modal */}
+      <RewardsDashboard
+        isOpen={showRewardsDashboard}
+        onClose={() => setShowRewardsDashboard(false)}
+      />
     </ProtectedRoute>
   );
 }
