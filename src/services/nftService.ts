@@ -62,8 +62,6 @@ export interface NFTCollection {
 
 class NFTService {
   private readonly ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
-  private readonly MAGIC_EDEN_API_KEY =
-    process.env.NEXT_PUBLIC_MAGIC_EDEN_API_KEY;
 
   // Realmkin contract address - you'll need to update this with your actual contract
   private readonly REALMKIN_CONTRACT_ADDRESS =
@@ -115,19 +113,13 @@ class NFTService {
    */
   async fetchNFTsWithMagicEden(walletAddress: string): Promise<NFTCollection> {
     try {
-      const headers: Record<string, string> = {
-        Accept: "application/json",
-      };
-
-      if (this.MAGIC_EDEN_API_KEY) {
-        headers["Authorization"] = `Bearer ${this.MAGIC_EDEN_API_KEY}`;
-      }
-
-      // Magic Eden V2 API endpoint for wallet tokens
+      // Magic Eden V2 API endpoint for wallet tokens (no API key required)
       const response = await axios.get(
         `https://api-mainnet.magiceden.dev/v2/wallets/${walletAddress}/tokens`,
         {
-          headers,
+          headers: {
+            Accept: "application/json",
+          },
           params: {
             collection: this.REALMKIN_COLLECTION_SYMBOL,
             limit: 500,
@@ -147,7 +139,7 @@ class NFTService {
         totalCount: response.data.length,
       };
     } catch (error) {
-      console.error("Error fetching NFTs with Magic Eden:", error);
+      console.error("Error fetching NFTs with Magic Eden V2:", error);
 
       // Try alternative Magic Eden endpoint
       return await this.fetchNFTsWithMagicEdenV3(walletAddress);
@@ -161,19 +153,13 @@ class NFTService {
     walletAddress: string
   ): Promise<NFTCollection> {
     try {
-      const headers: Record<string, string> = {
-        Accept: "application/json",
-      };
-
-      if (this.MAGIC_EDEN_API_KEY) {
-        headers["Authorization"] = `Bearer ${this.MAGIC_EDEN_API_KEY}`;
-      }
-
-      // Magic Eden V3 API endpoint
+      // Magic Eden V3 API endpoint (no API key required)
       const response = await axios.get(
         `https://api-mainnet.magiceden.dev/v3/rtp/ethereum/users/${walletAddress}/tokens/v7`,
         {
-          headers,
+          headers: {
+            Accept: "application/json",
+          },
           params: {
             collection: this.REALMKIN_COLLECTION_SYMBOL,
             limit: 500,
@@ -195,6 +181,61 @@ class NFTService {
       };
     } catch (error) {
       console.error("Error fetching NFTs with Magic Eden V3:", error);
+
+      // Try general wallet endpoint without collection filter
+      return await this.fetchNFTsWithMagicEdenGeneral(walletAddress);
+    }
+  }
+
+  /**
+   * Fetch all NFTs from wallet using Magic Eden general endpoint
+   */
+  async fetchNFTsWithMagicEdenGeneral(
+    walletAddress: string
+  ): Promise<NFTCollection> {
+    try {
+      // Magic Eden general wallet endpoint (gets all NFTs, no collection filter)
+      const response = await axios.get(
+        `https://api-mainnet.magiceden.dev/v2/wallets/${walletAddress}/tokens`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+          params: {
+            limit: 500,
+            offset: 0,
+          },
+        }
+      );
+
+      // Filter for Realmkin NFTs if we have a contract address
+      let nftData = response.data;
+      if (
+        this.REALMKIN_CONTRACT_ADDRESS &&
+        this.REALMKIN_CONTRACT_ADDRESS !== "0x..."
+      ) {
+        nftData = response.data.filter(
+          (nft: MagicEdenNFTV2) =>
+            nft.collection?.toLowerCase() ===
+            this.REALMKIN_CONTRACT_ADDRESS.toLowerCase()
+        );
+      }
+
+      const nfts = await Promise.all(
+        nftData.map(async (nft: MagicEdenNFTV2) => {
+          return await this.processMagicEdenNFTData(nft);
+        })
+      );
+
+      return {
+        nfts: nfts.filter((nft) => nft !== null),
+        totalCount: nftData.length,
+      };
+    } catch (error) {
+      console.error(
+        "Error fetching NFTs with Magic Eden general endpoint:",
+        error
+      );
       throw error;
     }
   }

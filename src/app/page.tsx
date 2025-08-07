@@ -8,7 +8,7 @@ import { formatAddress } from "@/utils/formatAddress";
 import SocialLinks from "@/components/SocialLinks";
 
 export default function Home() {
-  const { logout } = useAuth();
+  const { user, userData, logout } = useAuth();
   const {
     account,
     isConnected,
@@ -16,9 +16,19 @@ export default function Home() {
     connectWallet,
     disconnectWallet,
   } = useWeb3();
+
+  // Dynamic welcome message logic
+  const getWelcomeMessage = () => {
+    if (user && userData?.username) {
+      return `Welcome back ${userData.username}`;
+    } else if (user) {
+      return "Welcome back";
+    }
+    return "Welcome";
+  };
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#2b1c3b] p-3 sm:p-6 lg:p-12 xl:px-20 2xl:px-20">
+      <div className="min-h-screen bg-gradient-to-br from-[#2b1c3b] via-[#2b1c3b] to-[#2b1c3b] bg-pattern p-3 sm:p-6 lg:p-12 xl:px-20 2xl:px-20">
         <div className="border-6 border-[#d3b136] animate-pulse-glow px-2 sm:px-6 py-0 min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-6rem)] xl:min-h-[calc(100vh-8rem)] 2xl:min-h-[calc(100vh-10rem)] max-w-7xl mx-auto">
           <div className="text-white font-sans">
             {/* Header */}
@@ -101,14 +111,16 @@ export default function Home() {
                   className="text-4xl sm:text-6xl lg:text-8xl font-bold mb-6 sm:mb-10 tracking-wider text-center sm:text-left text-glow"
                   style={{ fontFamily: "var(--font-impact-regular)" }}
                 >
-                  WELCOME BACK
+                  {getWelcomeMessage().toUpperCase()}
                 </h2>
-                <p
-                  className="text-2xl sm:text-3xl lg:text-4xl mb-4 sm:mb-6 font-bold text-gray-300 tracking-wider text-center sm:text-left"
-                  style={{ fontFamily: "var(--font-impact-regular)" }}
-                >
-                  {account ? formatAddress(account) : "0XA12.....BG43"}
-                </p>
+                {isConnected && account && (
+                  <p
+                    className="text-2xl sm:text-3xl lg:text-4xl mb-4 sm:mb-6 font-bold text-gray-300 tracking-wider text-center sm:text-left"
+                    style={{ fontFamily: "var(--font-impact-regular)" }}
+                  >
+                    {formatAddress(account)}
+                  </p>
+                )}
                 <p className="text-sm sm:text-base lg:text-lg text-gray-300 max-w-2xl mx-auto sm:mx-0 text-center sm:text-left">
                   &ldquo; INCREASE YOUR WEEKLY EARNINGS BY HOLDING MORE NFTS-
                   EACH WARDEN KIN BOOSTS YOUR $MKIN REWARD &rdquo;
