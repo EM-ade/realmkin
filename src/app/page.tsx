@@ -190,166 +190,261 @@ export default function Home() {
                   </span>
                 </div>
 
-                <div className="border-6 border-[#d3b136] p-4 card-hover">
-                  {/* Mobile: Horizontal Scroll */}
-                  <div className="sm:hidden">
-                    <div className="flex space-x-4 overflow-x-auto pb-4 px-2">
-                      {/* NFT Card 1 - Mobile */}
-                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
-                        <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                          <div className="text-4xl animate-float">🐰</div>
+                {isConnected && account ? (
+                  // Show NFT Cards when wallet is connected
+                  <div className="border-6 border-[#d3b136] p-4 card-hover">
+                    {/* Mobile: Horizontal Scroll */}
+                    <div className="sm:hidden">
+                      <div className="flex space-x-4 overflow-x-auto pb-4 px-2">
+                        {/* NFT Card 1 - Mobile */}
+                        <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
+                          <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                            <div className="text-4xl animate-float">🐰</div>
+                          </div>
+                          <div className="bg-[#2b1c3b] text-center p-2">
+                            <div className="text-white px-2 font-bold text-sm mb-1">
+                              LEGENDARY
+                            </div>
+                            <div className="text-xs font-bold text-white">
+                              POWER: 2000
+                            </div>
+                            <div className="text-[10px] text-gray-400">
+                              OWNED
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* NFT Card 2 - Mobile */}
+                        <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
+                          <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                            <div
+                              className="text-4xl animate-float"
+                              style={{ animationDelay: "0.5s" }}
+                            >
+                              👹
+                            </div>
+                          </div>
+                          <div className="bg-[#2b1c3b] text-center p-2">
+                            <div className="text-white px-2 font-bold text-sm mb-1">
+                              LEGENDARY
+                            </div>
+                            <div className="text-xs font-bold text-white">
+                              POWER: 1840
+                            </div>
+                            <div className="text-[10px] text-gray-400">
+                              OWNED
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* NFT Card 3 - Mobile */}
+                        <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
+                          <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                            <div
+                              className="text-4xl animate-float"
+                              style={{ animationDelay: "1s" }}
+                            >
+                              🐰
+                            </div>
+                          </div>
+                          <div className="bg-[#2b1c3b] text-center p-2">
+                            <div className="text-white px-2 font-bold text-sm mb-1">
+                              LEGENDARY
+                            </div>
+                            <div className="text-xs font-bold text-white">
+                              POWER: 2100
+                            </div>
+                            <div className="text-[10px] text-gray-400">
+                              OWNED
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tablet & Desktop: Grid Layout */}
+                    <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 items-center justify-items-center gap-4">
+                      {/* NFT Card 1 - Desktop */}
+                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
+                        <div className="border-2 border-[#d3b136] p-4 lg:p-14 mb-2 bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                          <div className="text-4xl lg:text-6xl animate-float">
+                            🐰
+                          </div>
                         </div>
                         <div className="bg-[#2b1c3b] text-center p-2">
-                          <div className="text-white px-2 font-bold text-sm mb-1">
+                          <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
                             LEGENDARY
                           </div>
-                          <div className="text-xs font-bold text-white">
+                          <div className="text-sm font-bold text-white">
                             POWER: 2000
                           </div>
-                          <div className="text-[10px] text-gray-400">OWNED</div>
+                          <div className="text-xs text-gray-400">OWNED</div>
                         </div>
                       </div>
 
-                      {/* NFT Card 2 - Mobile */}
-                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
-                        <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                      {/* Empty Slot 1 - Desktop */}
+                      <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px] card-hover">
+                        <div className="flex flex-col space-y-3 items-center">
+                          <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"></div>
                           <div
-                            className="text-4xl animate-float"
+                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
+                            style={{ animationDelay: "0.2s" }}
+                          ></div>
+                          <div
+                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
+                            style={{ animationDelay: "0.4s" }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* NFT Card 2 - Desktop */}
+                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
+                        <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                          <div
+                            className="text-4xl lg:text-6xl animate-float"
                             style={{ animationDelay: "0.5s" }}
                           >
                             👹
                           </div>
                         </div>
                         <div className="bg-[#2b1c3b] text-center p-2">
-                          <div className="text-white px-2 font-bold text-sm mb-1">
+                          <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
                             LEGENDARY
                           </div>
-                          <div className="text-xs font-bold text-white">
+                          <div className="text-sm font-bold text-white">
                             POWER: 1840
                           </div>
-                          <div className="text-[10px] text-gray-400">OWNED</div>
+                          <div className="text-xs text-gray-400">OWNED</div>
                         </div>
                       </div>
 
-                      {/* NFT Card 3 - Mobile */}
-                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
-                        <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                      {/* Empty Slot 2 - Desktop */}
+                      <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px] card-hover">
+                        <div className="flex flex-col space-y-3 items-center">
                           <div
-                            className="text-4xl animate-float"
+                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
+                            style={{ animationDelay: "0.6s" }}
+                          ></div>
+                          <div
+                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
+                            style={{ animationDelay: "0.8s" }}
+                          ></div>
+                          <div
+                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
+                            style={{ animationDelay: "1s" }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* NFT Card 3 - Desktop */}
+                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
+                        <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                          <div
+                            className="text-4xl lg:text-6xl animate-float"
                             style={{ animationDelay: "1s" }}
                           >
                             🐰
                           </div>
                         </div>
                         <div className="bg-[#2b1c3b] text-center p-2">
-                          <div className="text-white px-2 font-bold text-sm mb-1">
+                          <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
                             LEGENDARY
                           </div>
-                          <div className="text-xs font-bold text-white">
+                          <div className="text-sm font-bold text-white">
                             POWER: 2100
                           </div>
-                          <div className="text-[10px] text-gray-400">OWNED</div>
+                          <div className="text-xs text-gray-400">OWNED</div>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Tablet & Desktop: Grid Layout */}
-                  <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 items-center justify-items-center gap-4">
-                    {/* NFT Card 1 - Desktop */}
-                    <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
-                      <div className="border-2 border-[#d3b136] p-4 lg:p-14 mb-2 bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                        <div className="text-4xl lg:text-6xl animate-float">
-                          🐰
+                ) : (
+                  // Show Connect Wallet CTA when wallet is not connected
+                  <div className="border-6 border-[#d3b136] p-6 sm:p-8 card-hover">
+                    {/* Mobile: Connect Wallet CTA */}
+                    <div className="sm:hidden">
+                      <div className="text-center py-8">
+                        <div className="mb-6">
+                          <div className="text-6xl mb-4 animate-float">🔗</div>
+                          <h3
+                            className="text-2xl font-bold text-white mb-4 text-glow"
+                            style={{ fontFamily: "var(--font-gothic-cg)" }}
+                          >
+                            CONNECT YOUR WALLET
+                          </h3>
+                          <p className="text-gray-300 text-sm mb-6 px-4">
+                            Connect your wallet to view and manage your Realmkin
+                            NFT collection
+                          </p>
                         </div>
-                      </div>
-                      <div className="bg-[#2b1c3b] text-center p-2">
-                        <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
-                          LEGENDARY
+                        <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 rounded-lg mb-6">
+                          <div className="flex items-center justify-center space-x-3 mb-3">
+                            <div className="text-2xl">🎭</div>
+                            <div className="text-2xl">⚔️</div>
+                            <div className="text-2xl">🏆</div>
+                          </div>
+                          <p className="text-white text-xs font-bold">
+                            DISCOVER YOUR LEGENDARY COLLECTION
+                          </p>
                         </div>
-                        <div className="text-sm font-bold text-white">
-                          POWER: 2000
-                        </div>
-                        <div className="text-xs text-gray-400">OWNED</div>
-                      </div>
-                    </div>
-
-                    {/* Empty Slot 1 - Desktop */}
-                    <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px] card-hover">
-                      <div className="flex flex-col space-y-3 items-center">
-                        <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"></div>
-                        <div
-                          className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                          style={{ animationDelay: "0.2s" }}
-                        ></div>
-                        <div
-                          className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                          style={{ animationDelay: "0.4s" }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    {/* NFT Card 2 - Desktop */}
-                    <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
-                      <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                        <div
-                          className="text-4xl lg:text-6xl animate-float"
-                          style={{ animationDelay: "0.5s" }}
+                        <button
+                          onClick={connectWallet}
+                          disabled={isConnecting}
+                          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/30 w-full"
                         >
-                          👹
-                        </div>
-                      </div>
-                      <div className="bg-[#2b1c3b] text-center p-2">
-                        <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
-                          LEGENDARY
-                        </div>
-                        <div className="text-sm font-bold text-white">
-                          POWER: 1840
-                        </div>
-                        <div className="text-xs text-gray-400">OWNED</div>
+                          {isConnecting ? "CONNECTING..." : "CONNECT WALLET"}
+                        </button>
                       </div>
                     </div>
 
-                    {/* Empty Slot 2 - Desktop */}
-                    <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px] card-hover">
-                      <div className="flex flex-col space-y-3 items-center">
-                        <div
-                          className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                          style={{ animationDelay: "0.6s" }}
-                        ></div>
-                        <div
-                          className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                          style={{ animationDelay: "0.8s" }}
-                        ></div>
-                        <div
-                          className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                          style={{ animationDelay: "1s" }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    {/* NFT Card 3 - Desktop */}
-                    <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
-                      <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                        <div
-                          className="text-4xl lg:text-6xl animate-float"
-                          style={{ animationDelay: "1s" }}
+                    {/* Desktop: Connect Wallet CTA */}
+                    <div className="hidden sm:block">
+                      <div className="text-center py-12">
+                        <div className="mb-8">
+                          <div className="text-8xl mb-6 animate-float">🔗</div>
+                          <h3
+                            className="text-4xl lg:text-5xl font-bold text-white mb-6 text-glow"
+                            style={{ fontFamily: "var(--font-gothic-cg)" }}
+                          >
+                            CONNECT YOUR WALLET
+                          </h3>
+                          <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
+                            Connect your wallet to view and manage your
+                            legendary Realmkin NFT collection. Discover your
+                            unique characters and their mystical powers.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-6 mb-8 max-w-md mx-auto">
+                          <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 rounded-lg card-hover">
+                            <div className="text-4xl mb-2">🎭</div>
+                            <p className="text-white text-xs font-bold">
+                              RARE CHARACTERS
+                            </p>
+                          </div>
+                          <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 rounded-lg card-hover">
+                            <div className="text-4xl mb-2">⚔️</div>
+                            <p className="text-white text-xs font-bold">
+                              EPIC POWERS
+                            </p>
+                          </div>
+                          <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 rounded-lg card-hover">
+                            <div className="text-4xl mb-2">🏆</div>
+                            <p className="text-white text-xs font-bold">
+                              LEGENDARY STATUS
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={connectWallet}
+                          disabled={isConnecting}
+                          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-4 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/30 text-lg"
                         >
-                          🐰
-                        </div>
-                      </div>
-                      <div className="bg-[#2b1c3b] text-center p-2">
-                        <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
-                          LEGENDARY
-                        </div>
-                        <div className="text-sm font-bold text-white">
-                          POWER: 2100
-                        </div>
-                        <div className="text-xs text-gray-400">OWNED</div>
+                          {isConnecting ? "CONNECTING..." : "CONNECT WALLET"}
+                        </button>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Social Links */}
