@@ -88,10 +88,15 @@ class NFTService {
 
   // Magic Eden collection symbol for Solana
   private readonly REALMKIN_COLLECTION_SYMBOL =
-    process.env.NEXT_PUBLIC_REALMKIN_COLLECTION_SYMBOL || "realmkin";
+    process.env.NEXT_PUBLIC_REALMKIN_COLLECTION_SYMBOL || "The Realmkin";
 
   // Optional: Helius API key for enhanced Solana NFT data
   private readonly HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
+
+  // Temporary testing mode - set to false for production
+  private readonly TESTING_MODE = false;
+  private readonly TEST_WALLET_ADDRESS =
+    "F1p6dNLSSTHi4QkUkRVXZw8QurZJKUDcvVBjfF683nU";
 
   /**
    * Fetch NFTs owned by a Solana wallet using Helius API
@@ -197,13 +202,18 @@ class NFTService {
    */
   async fetchUserNFTs(walletAddress: string): Promise<NFTCollection> {
     try {
+      // Use test wallet address if in testing mode
+      const addressToUse = this.TESTING_MODE
+        ? this.TEST_WALLET_ADDRESS
+        : walletAddress;
+
       // Try Helius first (best for Solana)
       if (this.HELIUS_API_KEY) {
-        return await this.fetchNFTsWithHelius(walletAddress);
+        return await this.fetchNFTsWithHelius(addressToUse);
       }
 
       // Fallback to Magic Eden Solana
-      return await this.fetchNFTsWithMagicEdenSolana(walletAddress);
+      return await this.fetchNFTsWithMagicEdenSolana(addressToUse);
     } catch (error) {
       console.error("Error fetching Solana NFTs:", error);
 

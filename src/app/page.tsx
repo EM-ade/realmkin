@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,17 +25,7 @@ export default function Home() {
   const [nftLoading, setNftLoading] = useState(false);
   const [nftError, setNftError] = useState<string | null>(null);
 
-  // Fetch NFTs when wallet connects
-  useEffect(() => {
-    if (isConnected && account) {
-      fetchUserNFTs();
-    } else {
-      setNfts([]);
-      setNftError(null);
-    }
-  }, [isConnected, account]);
-
-  const fetchUserNFTs = async () => {
+  const fetchUserNFTs = useCallback(async () => {
     if (!account) return;
 
     setNftLoading(true);
@@ -54,7 +44,17 @@ export default function Home() {
     } finally {
       setNftLoading(false);
     }
-  };
+  }, [account]);
+
+  // Fetch NFTs when wallet connects
+  useEffect(() => {
+    if (isConnected && account) {
+      fetchUserNFTs();
+    } else {
+      setNfts([]);
+      setNftError(null);
+    }
+  }, [isConnected, account, fetchUserNFTs]);
 
   // Dynamic welcome message logic
   const getWelcomeMessage = () => {
@@ -263,7 +263,7 @@ export default function Home() {
                   </h3>
                   <span className="text-lg sm:text-2xl font-bold text-gradient">
                     {isConnected && account
-                      ? `${nfts.length} KINS`
+                      ? `${nfts.length} ${nfts.length === 1 ? "KIN" : "KINS"}`
                       : "CONNECT WALLET"}
                   </span>
                 </div>
@@ -294,7 +294,16 @@ export default function Home() {
                           </button>
                         </div>
                       ) : nfts.length > 0 ? (
-                        <div className="flex space-x-4 overflow-x-auto pb-4 px-2">
+                        <div
+                          className={`
+                          ${
+                            nfts.length <= 2
+                              ? "flex justify-center space-x-6"
+                              : "flex space-x-4 overflow-x-auto"
+                          }
+                          pb-4 px-2
+                        `}
+                        >
                           {nfts.map((nft, index) => (
                             <NFTCard
                               key={nft.id}
@@ -337,7 +346,22 @@ export default function Home() {
                           </button>
                         </div>
                       ) : nfts.length > 0 ? (
-                        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-items-center">
+                        // Responsive grid that adapts to NFT count for optimal visual balance
+                        <div
+                          className={`
+                          ${
+                            nfts.length === 1
+                              ? "flex justify-center" // Single NFT: centered
+                              : nfts.length === 2
+                              ? "grid grid-cols-2 gap-6 justify-items-center max-w-2xl mx-auto" // Two NFTs: side by side
+                              : nfts.length === 3
+                              ? "grid grid-cols-1 sm:grid-cols-3 gap-4 justify-items-center max-w-4xl mx-auto" // Three NFTs: responsive row
+                              : nfts.length === 4
+                              ? "grid grid-cols-2 lg:grid-cols-4 gap-4 justify-items-center max-w-5xl mx-auto" // Four NFTs: 2x2 then 1x4
+                              : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center" // Many NFTs: full responsive grid
+                          }
+                        `}
+                        >
                           {nfts.map((nft, index) => (
                             <NFTCard
                               key={nft.id}
@@ -345,27 +369,6 @@ export default function Home() {
                               size="large"
                               animationDelay={`${index * 0.1}s`}
                             />
-                          ))}
-                          {/* Fill remaining slots with empty placeholders if needed */}
-                          {Array.from({
-                            length: Math.max(0, 5 - nfts.length),
-                          }).map((_, index) => (
-                            <div
-                              key={`empty-${index}`}
-                              className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px] card-hover opacity-50"
-                            >
-                              <div className="flex flex-col space-y-3 items-center">
-                                <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"></div>
-                                <div
-                                  className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                                  style={{ animationDelay: "0.2s" }}
-                                ></div>
-                                <div
-                                  className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                                  style={{ animationDelay: "0.4s" }}
-                                ></div>
-                              </div>
-                            </div>
                           ))}
                         </div>
                       ) : (
