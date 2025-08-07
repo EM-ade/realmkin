@@ -134,9 +134,9 @@ export default function Home() {
   // Dynamic welcome message logic
   const getWelcomeMessage = () => {
     if (user && userData?.username) {
-      return `Welcome back ${userData.username}`;
+      return `Welcome ${userData.username}`;
     } else if (user) {
-      return "Welcome back";
+      return "Welcome";
     }
     return "Welcome";
   };
