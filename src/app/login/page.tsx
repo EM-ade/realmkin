@@ -134,7 +134,7 @@ export default function LoginPage() {
             transformOrigin: "center",
           }}
         >
-          REALMKIN
+          THE REALMKIN
         </h1>
         <h2 className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-normal font-sans text-glow">
           {isSignup ? "Join the Realm" : "Holders Login"}

@@ -1,11 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { formatAddress } from "@/utils/formatAddress";
 import SocialLinks from "@/components/SocialLinks";
+import NFTCard from "@/components/NFTCard";
+import { nftService, NFTMetadata } from "@/services/nftService";
 
 export default function Home() {
   const { user, userData, logout } = useAuth();
@@ -16,6 +19,42 @@ export default function Home() {
     connectWallet,
     disconnectWallet,
   } = useWeb3();
+
+  // NFT state
+  const [nfts, setNfts] = useState<NFTMetadata[]>([]);
+  const [nftLoading, setNftLoading] = useState(false);
+  const [nftError, setNftError] = useState<string | null>(null);
+
+  // Fetch NFTs when wallet connects
+  useEffect(() => {
+    if (isConnected && account) {
+      fetchUserNFTs();
+    } else {
+      setNfts([]);
+      setNftError(null);
+    }
+  }, [isConnected, account]);
+
+  const fetchUserNFTs = async () => {
+    if (!account) return;
+
+    setNftLoading(true);
+    setNftError(null);
+
+    try {
+      const nftCollection = await nftService.fetchUserNFTs(account);
+      setNfts(nftCollection.nfts);
+
+      if (nftCollection.nfts.length === 0) {
+        setNftError("No Realmkin NFTs found in this wallet");
+      }
+    } catch (error) {
+      console.error("Error fetching NFTs:", error);
+      setNftError("Failed to load NFTs. Please try again.");
+    } finally {
+      setNftLoading(false);
+    }
+  };
 
   // Dynamic welcome message logic
   const getWelcomeMessage = () => {
@@ -47,7 +86,7 @@ export default function Home() {
                   className="text-2xl sm:text-4xl lg:text-6xl font-bold tracking-[0.1em] sm:tracking-[0.2em] lg:tracking-[0.3em] text-gradient"
                   style={{ fontFamily: "var(--font-hertical-sans)" }}
                 >
-                  REALMKIN
+                  THE REALMKIN
                 </h1>
               </div>
               <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
@@ -148,32 +187,69 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="border-6 border-[#d3b136] p-4 card-hover">
-                  <div className="flex flex-col sm:flex-row items-center space-y-6 sm:space-y-0 sm:space-x-8">
-                    <div className="coin-container w-48 h-48 sm:w-64 sm:h-64 lg:w-96 lg:h-96">
-                      <div className="w-full h-full rounded-full overflow-hidden animate-spin-3d shadow-2xl shadow-yellow-400/20">
-                        <Image
-                          src="/realmkin.png"
-                          alt="Realmkin"
-                          width={256}
-                          height={256}
-                          className="w-full h-full object-cover"
-                        />
+                {isConnected && account ? (
+                  <div className="border-6 border-[#d3b136] p-4 card-hover">
+                    <div className="flex flex-col sm:flex-row items-center space-y-6 sm:space-y-0 sm:space-x-8">
+                      <div className="coin-container w-48 h-48 sm:w-64 sm:h-64 lg:w-96 lg:h-96">
+                        <div className="w-full h-full rounded-full overflow-hidden animate-spin-3d shadow-2xl shadow-yellow-400/20">
+                          <Image
+                            src="/realmkin.png"
+                            alt="The Realmkin"
+                            width={256}
+                            height={256}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1 text-center sm:text-left">
+                        <div className="text-4xl sm:text-6xl lg:text-8xl font-bold mb-4 text-gradient">
+                          50.024{" "}
+                          <span className="text-lg sm:text-xl lg:text-2xl -ml-2 sm:-ml-4 text-gray-300">
+                            $MKIN
+                          </span>
+                        </div>
+                        <button className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 text-lg sm:text-xl transition-all duration-300 w-full sm:w-auto btn-enhanced transform hover:scale-105 shadow-lg shadow-cyan-500/30">
+                          CLAIM
+                        </button>
                       </div>
                     </div>
-                    <div className="flex-1 text-center sm:text-left">
-                      <div className="text-4xl sm:text-6xl lg:text-8xl font-bold mb-4 text-gradient">
-                        50.024{" "}
-                        <span className="text-lg sm:text-xl lg:text-2xl -ml-2 sm:-ml-4 text-gray-300">
-                          $MKIN
-                        </span>
+                  </div>
+                ) : (
+                  <div className="border-6 border-[#d3b136] p-6 sm:p-8 card-hover">
+                    <div className="text-center py-8">
+                      <div className="mb-6">
+                        <div className="text-6xl mb-4 animate-float">💰</div>
+                        <h3
+                          className="text-2xl sm:text-3xl font-bold text-white mb-4 text-glow"
+                          style={{ fontFamily: "var(--font-gothic-cg)" }}
+                        >
+                          CONNECT TO CLAIM REWARDS
+                        </h3>
+                        <p className="text-gray-300 text-sm sm:text-base mb-6 px-4">
+                          Connect your wallet to access your $MKIN token balance
+                          and claim mining rewards
+                        </p>
                       </div>
-                      <button className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 text-lg sm:text-xl transition-all duration-300 w-full sm:w-auto btn-enhanced transform hover:scale-105 shadow-lg shadow-cyan-500/30">
-                        CLAIM
+                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 rounded-lg mb-6 max-w-md mx-auto">
+                        <div className="flex items-center justify-center space-x-3 mb-3">
+                          <div className="text-2xl">💎</div>
+                          <div className="text-2xl">⚡</div>
+                          <div className="text-2xl">🏆</div>
+                        </div>
+                        <p className="text-white text-xs font-bold">
+                          EARN $MKIN TOKENS DAILY
+                        </p>
+                      </div>
+                      <button
+                        onClick={connectWallet}
+                        disabled={isConnecting}
+                        className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white font-bold py-3 px-6 sm:py-4 sm:px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-yellow-500/30 text-lg"
+                      >
+                        {isConnecting ? "CONNECTING..." : "CONNECT TO CLAIM"}
                       </button>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* NFT Section */}
@@ -186,7 +262,9 @@ export default function Home() {
                     MY WARDEN KINS
                   </h3>
                   <span className="text-lg sm:text-2xl font-bold text-gradient">
-                    3 KINS
+                    {isConnected && account
+                      ? `${nfts.length} KINS`
+                      : "CONNECT WALLET"}
                   </span>
                 </div>
 
@@ -195,167 +273,109 @@ export default function Home() {
                   <div className="border-6 border-[#d3b136] p-4 card-hover">
                     {/* Mobile: Horizontal Scroll */}
                     <div className="sm:hidden">
-                      <div className="flex space-x-4 overflow-x-auto pb-4 px-2">
-                        {/* NFT Card 1 - Mobile */}
-                        <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
-                          <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                            <div className="text-4xl animate-float">🐰</div>
-                          </div>
-                          <div className="bg-[#2b1c3b] text-center p-2">
-                            <div className="text-white px-2 font-bold text-sm mb-1">
-                              LEGENDARY
-                            </div>
-                            <div className="text-xs font-bold text-white">
-                              POWER: 2000
-                            </div>
-                            <div className="text-[10px] text-gray-400">
-                              OWNED
-                            </div>
-                          </div>
+                      {nftLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d3b136]"></div>
+                          <span className="ml-3 text-white">
+                            Loading NFTs...
+                          </span>
                         </div>
-
-                        {/* NFT Card 2 - Mobile */}
-                        <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
-                          <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                            <div
-                              className="text-4xl animate-float"
-                              style={{ animationDelay: "0.5s" }}
-                            >
-                              👹
-                            </div>
-                          </div>
-                          <div className="bg-[#2b1c3b] text-center p-2">
-                            <div className="text-white px-2 font-bold text-sm mb-1">
-                              LEGENDARY
-                            </div>
-                            <div className="text-xs font-bold text-white">
-                              POWER: 1840
-                            </div>
-                            <div className="text-[10px] text-gray-400">
-                              OWNED
-                            </div>
-                          </div>
+                      ) : nftError ? (
+                        <div className="text-center py-8">
+                          <div className="text-red-400 mb-4 text-4xl">⚠️</div>
+                          <p className="text-red-400 text-sm mb-4">
+                            {nftError}
+                          </p>
+                          <button
+                            onClick={fetchUserNFTs}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors"
+                          >
+                            Retry
+                          </button>
                         </div>
-
-                        {/* NFT Card 3 - Mobile */}
-                        <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden flex-shrink-0 w-40 h-auto card-hover">
-                          <div className="border-2 border-[#d3b136] p-12 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                            <div
-                              className="text-4xl animate-float"
-                              style={{ animationDelay: "1s" }}
-                            >
-                              🐰
-                            </div>
-                          </div>
-                          <div className="bg-[#2b1c3b] text-center p-2">
-                            <div className="text-white px-2 font-bold text-sm mb-1">
-                              LEGENDARY
-                            </div>
-                            <div className="text-xs font-bold text-white">
-                              POWER: 2100
-                            </div>
-                            <div className="text-[10px] text-gray-400">
-                              OWNED
-                            </div>
-                          </div>
+                      ) : nfts.length > 0 ? (
+                        <div className="flex space-x-4 overflow-x-auto pb-4 px-2">
+                          {nfts.map((nft, index) => (
+                            <NFTCard
+                              key={nft.id}
+                              nft={nft}
+                              size="medium"
+                              animationDelay={`${index * 0.2}s`}
+                            />
+                          ))}
                         </div>
-                      </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="text-6xl mb-4">🎭</div>
+                          <p className="text-gray-400">
+                            No Realmkin NFTs found in this wallet
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Tablet & Desktop: Grid Layout */}
-                    <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 items-center justify-items-center gap-4">
-                      {/* NFT Card 1 - Desktop */}
-                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
-                        <div className="border-2 border-[#d3b136] p-4 lg:p-14 mb-2 bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                          <div className="text-4xl lg:text-6xl animate-float">
-                            🐰
-                          </div>
+                    <div className="hidden sm:block">
+                      {nftLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d3b136]"></div>
+                          <span className="ml-4 text-white text-lg">
+                            Loading NFTs...
+                          </span>
                         </div>
-                        <div className="bg-[#2b1c3b] text-center p-2">
-                          <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
-                            LEGENDARY
-                          </div>
-                          <div className="text-sm font-bold text-white">
-                            POWER: 2000
-                          </div>
-                          <div className="text-xs text-gray-400">OWNED</div>
-                        </div>
-                      </div>
-
-                      {/* Empty Slot 1 - Desktop */}
-                      <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px] card-hover">
-                        <div className="flex flex-col space-y-3 items-center">
-                          <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"></div>
-                          <div
-                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                          <div
-                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                            style={{ animationDelay: "0.4s" }}
-                          ></div>
-                        </div>
-                      </div>
-
-                      {/* NFT Card 2 - Desktop */}
-                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
-                        <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                          <div
-                            className="text-4xl lg:text-6xl animate-float"
-                            style={{ animationDelay: "0.5s" }}
+                      ) : nftError ? (
+                        <div className="text-center py-12">
+                          <div className="text-red-400 mb-6 text-6xl">⚠️</div>
+                          <p className="text-red-400 text-lg mb-6">
+                            {nftError}
+                          </p>
+                          <button
+                            onClick={fetchUserNFTs}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-lg transition-colors"
                           >
-                            👹
-                          </div>
+                            Retry
+                          </button>
                         </div>
-                        <div className="bg-[#2b1c3b] text-center p-2">
-                          <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
-                            LEGENDARY
-                          </div>
-                          <div className="text-sm font-bold text-white">
-                            POWER: 1840
-                          </div>
-                          <div className="text-xs text-gray-400">OWNED</div>
+                      ) : nfts.length > 0 ? (
+                        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-items-center">
+                          {nfts.map((nft, index) => (
+                            <NFTCard
+                              key={nft.id}
+                              nft={nft}
+                              size="large"
+                              animationDelay={`${index * 0.1}s`}
+                            />
+                          ))}
+                          {/* Fill remaining slots with empty placeholders if needed */}
+                          {Array.from({
+                            length: Math.max(0, 5 - nfts.length),
+                          }).map((_, index) => (
+                            <div
+                              key={`empty-${index}`}
+                              className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px] card-hover opacity-50"
+                            >
+                              <div className="flex flex-col space-y-3 items-center">
+                                <div className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"></div>
+                                <div
+                                  className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
+                                  style={{ animationDelay: "0.2s" }}
+                                ></div>
+                                <div
+                                  className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
+                                  style={{ animationDelay: "0.4s" }}
+                                ></div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-
-                      {/* Empty Slot 2 - Desktop */}
-                      <div className="border-6 border-[#d3b136] p-2 bg-gray-800 flex flex-col justify-center items-center w-full max-w-[100px] card-hover">
-                        <div className="flex flex-col space-y-3 items-center">
-                          <div
-                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                            style={{ animationDelay: "0.6s" }}
-                          ></div>
-                          <div
-                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                            style={{ animationDelay: "0.8s" }}
-                          ></div>
-                          <div
-                            className="w-16 h-20 lg:w-20 lg:h-24 bg-[#d3b136] border-2 border-yellow-300 animate-pulse"
-                            style={{ animationDelay: "1s" }}
-                          ></div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="text-8xl mb-6">🎭</div>
+                          <p className="text-gray-400 text-xl">
+                            No Realmkin NFTs found in this wallet
+                          </p>
                         </div>
-                      </div>
-
-                      {/* NFT Card 3 - Desktop */}
-                      <div className="border-4 border-[#d3b136] bg-[#2b1c3b] p-4 overflow-hidden w-full max-w-[400px] card-hover">
-                        <div className="border-2 border-[#d3b136] p-8 lg:p-14 mb-2 aspect-square bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                          <div
-                            className="text-4xl lg:text-6xl animate-float"
-                            style={{ animationDelay: "1s" }}
-                          >
-                            🐰
-                          </div>
-                        </div>
-                        <div className="bg-[#2b1c3b] text-center p-2">
-                          <div className="text-white px-2 font-bold text-base lg:text-lg mb-1">
-                            LEGENDARY
-                          </div>
-                          <div className="text-sm font-bold text-white">
-                            POWER: 2100
-                          </div>
-                          <div className="text-xs text-gray-400">OWNED</div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 ) : (

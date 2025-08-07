@@ -17,42 +17,62 @@ export interface NFTMetadata {
   power?: number;
 }
 
-// API Response types
-interface AlchemyNFT {
-  contract: { address: string };
-  tokenId: string;
-  metadata?: {
-    name?: string;
-    description?: string;
-    image?: string;
-    attributes?: NFTAttribute[];
+// Helius API Response types
+interface HeliusNFT {
+  id: string;
+  mint?: string;
+  content?: {
+    metadata?: {
+      name?: string;
+      description?: string;
+      attributes?: NFTAttribute[];
+    };
+    links?: {
+      image?: string;
+    };
+    files?: Array<{
+      uri: string;
+      type: string;
+    }>;
   };
-  media?: Array<{ gateway?: string }>;
+  grouping?: Array<{
+    group_key: string;
+    group_value: string;
+  }>;
 }
 
-interface MagicEdenNFTV2 {
-  mintAddress?: string;
+interface HeliusResponse {
+  result: {
+    items: HeliusNFT[];
+  };
+}
+
+// Magic Eden Solana API Response types
+interface MagicEdenSolanaNFT {
+  mintAddress: string;
   tokenMint?: string;
-  tokenId?: string;
+  mint?: string;
   name?: string;
   description?: string;
   image?: string;
   img?: string;
+  animationUrl?: string;
   attributes?: NFTAttribute[];
   traits?: NFTAttribute[];
   collection?: string;
-}
-
-interface MagicEdenNFTV3 {
-  token?: {
-    contract?: string;
-    tokenId?: string;
-    name?: string;
-    description?: string;
-    image?: string;
-    imageSmall?: string;
-    attributes?: NFTAttribute[];
+  symbol?: string;
+  properties?: {
+    files?: Array<{
+      uri: string;
+      type: string;
+    }>;
+    category?: string;
   };
+  creators?: Array<{
+    address: string;
+    verified: boolean;
+    share: number;
+  }>;
 }
 
 export interface NFTCollection {
@@ -61,60 +81,86 @@ export interface NFTCollection {
 }
 
 class NFTService {
-  private readonly ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
+  // Solana Realmkin collection contract address
+  private readonly REALMKIN_SOLANA_CONTRACT_ADDRESS =
+    process.env.NEXT_PUBLIC_REALMKIN_SOLANA_CONTRACT_ADDRESS ||
+    "eTQujiFKVvLJXdkAobg9JqULNdDrCt5t4WtDochmVSZ";
 
-  // Realmkin contract address - you'll need to update this with your actual contract
-  private readonly REALMKIN_CONTRACT_ADDRESS =
-    process.env.NEXT_PUBLIC_REALMKIN_CONTRACT_ADDRESS || "0x...";
-
-  // Magic Eden collection symbol - update with your actual collection symbol
+  // Magic Eden collection symbol for Solana
   private readonly REALMKIN_COLLECTION_SYMBOL =
     process.env.NEXT_PUBLIC_REALMKIN_COLLECTION_SYMBOL || "realmkin";
 
+  // Optional: Helius API key for enhanced Solana NFT data
+  private readonly HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
+
   /**
-   * Fetch NFTs owned by a wallet address using Alchemy API
+   * Fetch NFTs owned by a Solana wallet using Helius API
    */
-  async fetchNFTsWithAlchemy(walletAddress: string): Promise<NFTCollection> {
-    if (!this.ALCHEMY_API_KEY) {
-      throw new Error("Alchemy API key not configured");
+  async fetchNFTsWithHelius(walletAddress: string): Promise<NFTCollection> {
+    if (!this.HELIUS_API_KEY) {
+      console.warn("Helius API key not configured, falling back to Magic Eden");
+      return await this.fetchNFTsWithMagicEdenSolana(walletAddress);
     }
 
     try {
-      const response = await axios.get(
-        `https://eth-mainnet.g.alchemy.com/nft/v3/${this.ALCHEMY_API_KEY}/getNFTsForOwner`,
+      const response = await axios.post<HeliusResponse>(
+        `https://mainnet.helius-rpc.com/?api-key=${this.HELIUS_API_KEY}`,
         {
+          jsonrpc: "2.0",
+          id: "my-id",
+          method: "getAssetsByOwner",
           params: {
-            owner: walletAddress,
-            contractAddresses: [this.REALMKIN_CONTRACT_ADDRESS],
-            withMetadata: true,
-            pageSize: 100,
+            ownerAddress: walletAddress,
+            page: 1,
+            limit: 1000,
+            displayOptions: {
+              showFungible: false,
+              showNativeBalance: false,
+            },
+          },
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
           },
         }
       );
 
+      // Filter for Realmkin collection
+      const realmkinNFTs = response.data.result.items.filter((nft: HeliusNFT) =>
+        nft.grouping?.some(
+          (group) =>
+            group.group_key === "collection" &&
+            group.group_value === this.REALMKIN_SOLANA_CONTRACT_ADDRESS
+        )
+      );
+
       const nfts = await Promise.all(
-        response.data.ownedNfts.map(async (nft: AlchemyNFT) => {
-          return await this.processNFTData(nft);
+        realmkinNFTs.map(async (nft: HeliusNFT) => {
+          return await this.processHeliusNFTData(nft);
         })
       );
 
       return {
         nfts: nfts.filter((nft) => nft !== null),
-        totalCount: response.data.totalCount || nfts.length,
+        totalCount: realmkinNFTs.length,
       };
     } catch (error) {
-      console.error("Error fetching NFTs with Alchemy:", error);
-      throw error;
+      console.error("Error fetching NFTs with Helius:", error);
+      // Fallback to Magic Eden
+      return await this.fetchNFTsWithMagicEdenSolana(walletAddress);
     }
   }
 
   /**
-   * Fetch NFTs using Magic Eden API as fallback
+   * Fetch NFTs using Magic Eden Solana API as fallback
    */
-  async fetchNFTsWithMagicEden(walletAddress: string): Promise<NFTCollection> {
+  async fetchNFTsWithMagicEdenSolana(
+    walletAddress: string
+  ): Promise<NFTCollection> {
     try {
       // Magic Eden V2 API endpoint for wallet tokens (no API key required)
-      const response = await axios.get(
+      const response = await axios.get<MagicEdenSolanaNFT[]>(
         `https://api-mainnet.magiceden.dev/v2/wallets/${walletAddress}/tokens`,
         {
           headers: {
@@ -129,8 +175,8 @@ class NFTService {
       );
 
       const nfts = await Promise.all(
-        response.data.map(async (nft: MagicEdenNFTV2) => {
-          return await this.processMagicEdenNFTData(nft);
+        response.data.map(async (nft: MagicEdenSolanaNFT) => {
+          return await this.processMagicEdenSolanaNFTData(nft);
         })
       );
 
@@ -141,119 +187,25 @@ class NFTService {
     } catch (error) {
       console.error("Error fetching NFTs with Magic Eden V2:", error);
 
-      // Try alternative Magic Eden endpoint
-      return await this.fetchNFTsWithMagicEdenV3(walletAddress);
+      // Return empty collection as fallback
+      return { nfts: [], totalCount: 0 };
     }
   }
 
   /**
-   * Fetch NFTs using Magic Eden V3 API as alternative
-   */
-  async fetchNFTsWithMagicEdenV3(
-    walletAddress: string
-  ): Promise<NFTCollection> {
-    try {
-      // Magic Eden V3 API endpoint (no API key required)
-      const response = await axios.get(
-        `https://api-mainnet.magiceden.dev/v3/rtp/ethereum/users/${walletAddress}/tokens/v7`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-          params: {
-            collection: this.REALMKIN_COLLECTION_SYMBOL,
-            limit: 500,
-            includeAttributes: true,
-            includeLastSale: false,
-          },
-        }
-      );
-
-      const nfts = await Promise.all(
-        response.data.tokens.map(async (nft: MagicEdenNFTV3) => {
-          return await this.processMagicEdenV3NFTData(nft);
-        })
-      );
-
-      return {
-        nfts: nfts.filter((nft) => nft !== null),
-        totalCount: response.data.tokens.length,
-      };
-    } catch (error) {
-      console.error("Error fetching NFTs with Magic Eden V3:", error);
-
-      // Try general wallet endpoint without collection filter
-      return await this.fetchNFTsWithMagicEdenGeneral(walletAddress);
-    }
-  }
-
-  /**
-   * Fetch all NFTs from wallet using Magic Eden general endpoint
-   */
-  async fetchNFTsWithMagicEdenGeneral(
-    walletAddress: string
-  ): Promise<NFTCollection> {
-    try {
-      // Magic Eden general wallet endpoint (gets all NFTs, no collection filter)
-      const response = await axios.get(
-        `https://api-mainnet.magiceden.dev/v2/wallets/${walletAddress}/tokens`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-          params: {
-            limit: 500,
-            offset: 0,
-          },
-        }
-      );
-
-      // Filter for Realmkin NFTs if we have a contract address
-      let nftData = response.data;
-      if (
-        this.REALMKIN_CONTRACT_ADDRESS &&
-        this.REALMKIN_CONTRACT_ADDRESS !== "0x..."
-      ) {
-        nftData = response.data.filter(
-          (nft: MagicEdenNFTV2) =>
-            nft.collection?.toLowerCase() ===
-            this.REALMKIN_CONTRACT_ADDRESS.toLowerCase()
-        );
-      }
-
-      const nfts = await Promise.all(
-        nftData.map(async (nft: MagicEdenNFTV2) => {
-          return await this.processMagicEdenNFTData(nft);
-        })
-      );
-
-      return {
-        nfts: nfts.filter((nft) => nft !== null),
-        totalCount: nftData.length,
-      };
-    } catch (error) {
-      console.error(
-        "Error fetching NFTs with Magic Eden general endpoint:",
-        error
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Main method to fetch NFTs - tries multiple sources
+   * Main method to fetch Solana NFTs - tries multiple sources
    */
   async fetchUserNFTs(walletAddress: string): Promise<NFTCollection> {
     try {
-      // Try Alchemy first
-      if (this.ALCHEMY_API_KEY) {
-        return await this.fetchNFTsWithAlchemy(walletAddress);
+      // Try Helius first (best for Solana)
+      if (this.HELIUS_API_KEY) {
+        return await this.fetchNFTsWithHelius(walletAddress);
       }
 
-      // Fallback to Magic Eden
-      return await this.fetchNFTsWithMagicEden(walletAddress);
+      // Fallback to Magic Eden Solana
+      return await this.fetchNFTsWithMagicEdenSolana(walletAddress);
     } catch (error) {
-      console.error("Error fetching NFTs:", error);
+      console.error("Error fetching Solana NFTs:", error);
 
       // Return mock data for development/testing
       return this.getMockNFTs();
@@ -261,42 +213,42 @@ class NFTService {
   }
 
   /**
-   * Process NFT data from Alchemy API
+   * Process NFT data from Helius API
    */
-  private async processNFTData(nft: AlchemyNFT): Promise<NFTMetadata | null> {
+  private async processHeliusNFTData(
+    nft: HeliusNFT
+  ): Promise<NFTMetadata | null> {
     try {
-      const metadata = nft.metadata || {};
-
-      // Handle IPFS URLs
-      let imageUrl = metadata.image || nft.media?.[0]?.gateway || "";
+      let imageUrl =
+        nft.content?.links?.image || nft.content?.files?.[0]?.uri || "";
       imageUrl = this.resolveIPFSUrl(imageUrl);
 
-      // Calculate power based on attributes (customize this logic)
-      const power = this.calculateNFTPower(metadata.attributes || []);
-      const rarity = this.determineRarity(metadata.attributes || []);
+      const attributes = nft.content?.metadata?.attributes || [];
+      const power = this.calculateNFTPower(attributes);
+      const rarity = this.determineRarity(attributes);
 
       return {
-        id: `${nft.contract.address}-${nft.tokenId}`,
-        name: metadata.name || `Realmkin #${nft.tokenId}`,
-        description: metadata.description || "",
+        id: nft.id || nft.mint || "",
+        name: nft.content?.metadata?.name || `Realmkin #${nft.id}`,
+        description: nft.content?.metadata?.description || "",
         image: imageUrl,
-        attributes: metadata.attributes || [],
-        contractAddress: nft.contract.address,
-        tokenId: nft.tokenId,
-        rarity,
+        attributes,
         power,
+        rarity,
+        contractAddress: this.REALMKIN_SOLANA_CONTRACT_ADDRESS,
+        tokenId: nft.id || nft.mint || "",
       };
     } catch (error) {
-      console.error("Error processing NFT data:", error);
+      console.error("Error processing Helius NFT data:", error);
       return null;
     }
   }
 
   /**
-   * Process NFT data from Magic Eden V2 API
+   * Process NFT data from Magic Eden Solana API
    */
-  private async processMagicEdenNFTData(
-    nft: MagicEdenNFTV2
+  private async processMagicEdenSolanaNFTData(
+    nft: MagicEdenSolanaNFT
   ): Promise<NFTMetadata | null> {
     try {
       let imageUrl = nft.image || nft.img || "";
@@ -307,49 +259,18 @@ class NFTService {
       const rarity = this.determineRarity(attributes);
 
       return {
-        id: `${nft.mintAddress || nft.tokenMint}`,
-        name: nft.name || `Realmkin #${nft.tokenId || nft.tokenMint}`,
+        id: nft.mintAddress || nft.tokenMint || nft.mint || "",
+        name: nft.name || `Realmkin #${nft.mintAddress}`,
         description: nft.description || "",
         image: imageUrl,
-        attributes: attributes,
-        contractAddress: nft.collection || "",
-        tokenId: nft.tokenId || nft.tokenMint || "",
-        rarity,
+        attributes,
         power,
+        rarity,
+        contractAddress: this.REALMKIN_SOLANA_CONTRACT_ADDRESS,
+        tokenId: nft.mintAddress || nft.tokenMint || nft.mint || "",
       };
     } catch (error) {
-      console.error("Error processing Magic Eden NFT data:", error);
-      return null;
-    }
-  }
-
-  /**
-   * Process NFT data from Magic Eden V3 API
-   */
-  private async processMagicEdenV3NFTData(
-    nft: MagicEdenNFTV3
-  ): Promise<NFTMetadata | null> {
-    try {
-      let imageUrl = nft.token?.image || nft.token?.imageSmall || "";
-      imageUrl = this.resolveIPFSUrl(imageUrl);
-
-      const attributes = nft.token?.attributes || [];
-      const power = this.calculateNFTPower(attributes);
-      const rarity = this.determineRarity(attributes);
-
-      return {
-        id: `${nft.token?.contract}-${nft.token?.tokenId}`,
-        name: nft.token?.name || `Realmkin #${nft.token?.tokenId}`,
-        description: nft.token?.description || "",
-        image: imageUrl,
-        attributes: attributes,
-        contractAddress: nft.token?.contract || "",
-        tokenId: nft.token?.tokenId || "",
-        rarity,
-        power,
-      };
-    } catch (error) {
-      console.error("Error processing Magic Eden V3 NFT data:", error);
+      console.error("Error processing Magic Eden Solana NFT data:", error);
       return null;
     }
   }
