@@ -9,6 +9,7 @@ import { formatAddress } from "@/utils/formatAddress";
 import SocialLinks from "@/components/SocialLinks";
 import NFTCard from "@/components/NFTCard";
 import RewardsDashboard from "@/components/RewardsDashboard";
+import WithdrawalConfirmationModal from "@/components/WithdrawalConfirmationModal";
 import { nftService, NFTMetadata } from "@/services/nftService";
 import {
   rewardsService,
@@ -41,6 +42,10 @@ export default function Home() {
   const [bonusNotification, setBonusNotification] = useState<string | null>(
     null
   );
+  const [showWithdrawalConfirmation, setShowWithdrawalConfirmation] =
+    useState(false);
+  const [lastClaimAmount, setLastClaimAmount] = useState<number>(0);
+  const [lastClaimWallet, setLastClaimWallet] = useState<string>("");
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -137,12 +142,10 @@ export default function Home() {
       );
       setRewardsCalculation(calculation);
 
-      // Show success message (you can add a toast notification here)
-      console.log(
-        `Successfully claimed ${rewardsService.formatCurrency(
-          claimRecord.amount
-        )}`
-      );
+      // Show withdrawal confirmation modal
+      setLastClaimAmount(claimRecord.amount);
+      setLastClaimWallet(account);
+      setShowWithdrawalConfirmation(true);
     } catch (error) {
       console.error("Error claiming rewards:", error);
       setClaimError(
@@ -646,6 +649,14 @@ export default function Home() {
       <RewardsDashboard
         isOpen={showRewardsDashboard}
         onClose={() => setShowRewardsDashboard(false)}
+      />
+
+      {/* Withdrawal Confirmation Modal */}
+      <WithdrawalConfirmationModal
+        isOpen={showWithdrawalConfirmation}
+        onClose={() => setShowWithdrawalConfirmation(false)}
+        amount={lastClaimAmount}
+        walletAddress={lastClaimWallet}
       />
     </ProtectedRoute>
   );
