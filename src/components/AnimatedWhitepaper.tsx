@@ -39,7 +39,7 @@ const whitepaperData: WhitepaperSection[] = [
     content: [
       "Card-Based PvE Combat: Players summon WardenKin NFTs into The Void to battle continuously. Each fight earns XP and Kill Coins.",
       "Fusion System: Players can temporarily fuse any number of NFTs into a single custom-named character before each battle.",
-      "Revival Mechanic: Characters 'die' randomly in battle and re-enter after a cooldown. The war never ends.",
+      "Revival Mechanic: Characters &apos;die&apos; randomly in battle and re-enter after a cooldown. The war never ends.",
     ],
     icon: "🎴",
     delay: 400,
@@ -199,7 +199,7 @@ export default function AnimatedWhitepaper({
                 JOIN THE REALM
               </p>
               <p className="text-gray-300 text-sm">
-                Connect with our community and stay updated on The Realm's
+                Connect with our community and stay updated on The Realm&apos;s
                 evolution
               </p>
             </div>

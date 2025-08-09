@@ -32,7 +32,7 @@ export default function Home() {
   const [nftError, setNftError] = useState<string | null>(null);
 
   // Rewards state
-  const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
+  const [, setUserRewards] = useState<UserRewards | null>(null);
   const [rewardsCalculation, setRewardsCalculation] =
     useState<RewardsCalculation | null>(null);
   const [claimLoading, setClaimLoading] = useState(false);

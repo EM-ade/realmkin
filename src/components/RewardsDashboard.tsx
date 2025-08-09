@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { rewardsService, ClaimRecord } from "@/services/rewardsService";
 
@@ -17,13 +17,7 @@ export default function RewardsDashboard({
   const [claimHistory, setClaimHistory] = useState<ClaimRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && user) {
-      fetchClaimHistory();
-    }
-  }, [isOpen, user]);
-
-  const fetchClaimHistory = async () => {
+  const fetchClaimHistory = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -35,7 +29,13 @@ export default function RewardsDashboard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      fetchClaimHistory();
+    }
+  }, [isOpen, user, fetchClaimHistory]);
 
   if (!isOpen) return null;
 

@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import AnimatedRoadmap from "@/components/AnimatedRoadmap";
 import AnimatedWhitepaper from "@/components/AnimatedWhitepaper";
+import SocialLinks from "@/components/SocialLinks";
 
 export default function LoginPage() {
   // Simplified flow toggle - set to false to re-enable full email auth
@@ -32,7 +33,7 @@ export default function LoginPage() {
 
   const router = useRouter();
   const { login, signup, checkUsernameAvailability } = useAuth();
-  const { connectWallet, account: walletAddress, isConnecting } = useWeb3();
+  const { connectWallet, account: walletAddress } = useWeb3();
 
   // Animation trigger
   useEffect(() => {
@@ -44,12 +45,20 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       console.log("🔍 Checking for wallets...");
-      console.log("Phantom available:", !!(window as any).phantom?.solana);
+      console.log(
+        "Phantom available:",
+        !!(window as unknown as { phantom?: { solana?: unknown } }).phantom
+          ?.solana
+      );
       console.log(
         "MetaMask available:",
-        !!(window as any).ethereum?.isMetaMask
+        !!(window as unknown as { ethereum?: { isMetaMask?: boolean } })
+          .ethereum?.isMetaMask
       );
-      console.log("Ethereum available:", !!(window as any).ethereum);
+      console.log(
+        "Ethereum available:",
+        !!(window as unknown as { ethereum?: unknown }).ethereum
+      );
     }
   }, []);
 
@@ -91,7 +100,7 @@ export default function LoginPage() {
           setIsNewUser(false);
           // User exists and is now logged in, redirect to main page
           router.push("/");
-        } catch (loginError) {
+        } catch {
           console.log("👤 New user detected, will need to set username");
 
           // Clear any stale local storage data
@@ -132,9 +141,11 @@ export default function LoginPage() {
       console.log("🔗 Initiating wallet connection...");
       await connectWallet();
       console.log("✅ Wallet connection completed");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Wallet connection failed:", error);
-      setError(error.message || "Failed to connect wallet");
+      setError(
+        error instanceof Error ? error.message : "Failed to connect wallet"
+      );
     } finally {
       setLoading(false);
     }
@@ -183,21 +194,13 @@ export default function LoginPage() {
 
       // Redirect to main page
       router.push("/");
-    } catch (error: any) {
-      setError(error.message || "Failed to create account");
+    } catch (error: unknown) {
+      setError(
+        error instanceof Error ? error.message : "Failed to create account"
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  // PDF download function
-  const downloadWhitepaperPDF = () => {
-    const link = document.createElement("a");
-    link.href = "/TheRealmkinWhitePaper.pdf";
-    link.download = "TheRealmkinWhitePaper.pdf";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   // Form validation
@@ -730,34 +733,14 @@ export default function LoginPage() {
       </main>
 
       {/* Footer - Social Links */}
-      <footer className="relative z-10 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 lg:space-x-16 p-4 sm:p-6 lg:p-8">
-        <a
-          href="https://discord.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#d3b136] text-base sm:text-lg lg:text-xl font-bold hover:text-white transition-colors"
+      <footer className="relative z-10 text-center p-4 sm:p-6 lg:p-8">
+        <h4
+          className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-[#d3b136]"
           style={{ fontFamily: "var(--font-amnestia)" }}
         >
-          DISCORD:
-        </a>
-        <a
-          href="https://instagram.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#d3b136] text-base sm:text-lg lg:text-xl font-bold hover:text-white transition-colors"
-          style={{ fontFamily: "var(--font-amnestia)" }}
-        >
-          INSTAGRAM:
-        </a>
-        <a
-          href="https://x.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#d3b136] text-base sm:text-lg lg:text-xl font-bold hover:text-white transition-colors"
-          style={{ fontFamily: "var(--font-amnestia)" }}
-        >
-          X:
-        </a>
+          OUR SOCIALS:
+        </h4>
+        <SocialLinks />
       </footer>
 
       {/* Animated Roadmap Modal */}
