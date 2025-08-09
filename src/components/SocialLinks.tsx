@@ -7,7 +7,7 @@ const SocialLinks = () => {
       <div className="text-center">
         {/* <div className="text-white font-bold mb-2 text-sm">DISCORD:</div> */}
         <a
-          href="https://discord.com"
+          href="https://discord.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="group"
@@ -24,7 +24,7 @@ const SocialLinks = () => {
       <div className="text-center">
         {/* <div className="text-white font-bold mb-2 text-sm">INSTAGRAM:</div> */}
         <a
-          href="https://instagram.com"
+          href="https://x.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="group"
@@ -44,7 +44,7 @@ const SocialLinks = () => {
       <div className="text-center">
         {/* <div className="text-white font-bold mb-2 text-sm">TWITTER /X:</div> */}
         <a
-          href="https://twitter.com"
+          href="https://x.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="group"

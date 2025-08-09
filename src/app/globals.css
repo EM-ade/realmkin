@@ -8,8 +8,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+    "Courier New", monospace;
   --font-hertical-sans: var(--font-hertical-sans);
   --font-amnestia: var(--font-amnestia);
   --font-impact-regular: var(--font-impact-regular);
@@ -51,7 +53,8 @@ body {
 
 /* Floating animation for decorative elements */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -65,17 +68,20 @@ body {
 
 /* Pulse glow animation */
 @keyframes pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 20px rgba(211, 177, 54, 0.3);
   }
   50% {
-    box-shadow: 0 0 30px rgba(211, 177, 54, 0.6), 0 0 40px rgba(211, 177, 54, 0.3);
+    box-shadow: 0 0 30px rgba(211, 177, 54, 0.6),
+      0 0 40px rgba(211, 177, 54, 0.3);
   }
 }
 
 /* Teal glow animation for active elements */
 @keyframes pulse-glow-teal {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 20px rgba(0, 188, 212, 0.3);
   }
   50% {
@@ -114,9 +120,16 @@ body {
 
 /* Subtle background pattern */
 .bg-pattern {
-  background-image:
-    radial-gradient(circle at 25% 25%, rgba(211, 177, 54, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(147, 51, 234, 0.1) 0%, transparent 50%);
+  background-image: radial-gradient(
+      circle at 25% 25%,
+      rgba(211, 177, 54, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 75% 75%,
+      rgba(147, 51, 234, 0.1) 0%,
+      transparent 50%
+    );
 }
 
 /* Enhanced button hover effects */
@@ -127,7 +140,7 @@ body {
 }
 
 .btn-enhanced::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
@@ -144,6 +157,124 @@ body {
 
 .btn-enhanced:hover::before {
   left: 100%;
+}
+
+/* Slide in from right animation */
+@keyframes slideInRight {
+  0% {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.7s ease-out;
+}
+
+/* Fade in up animation */
+@keyframes fadeInUp {
+  0% {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+/* Golden border glow animation */
+@keyframes goldenGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(211, 177, 54, 0.4),
+      inset 0 0 20px rgba(211, 177, 54, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(211, 177, 54, 0.8),
+      inset 0 0 30px rgba(211, 177, 54, 0.2);
+  }
+}
+
+.animate-golden-glow {
+  animation: goldenGlow 3s ease-in-out infinite;
+}
+
+/* Roadmap specific animations */
+@keyframes roadmapSlideIn {
+  0% {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-roadmap-slide {
+  animation: roadmapSlideIn 0.6s ease-out;
+}
+
+/* Timeline pulse animation */
+@keyframes timelinePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(211, 177, 54, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(211, 177, 54, 0);
+  }
+}
+
+.animate-timeline-pulse {
+  animation: timelinePulse 2s infinite;
+}
+
+/* Milestone completion animation */
+@keyframes milestoneComplete {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-milestone-complete {
+  animation: milestoneComplete 0.6s ease-in-out;
+}
+
+/* Whitepaper specific animations */
+@keyframes whitepaperFadeIn {
+  0% {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-whitepaper-fade {
+  animation: whitepaperFadeIn 0.7s ease-out;
+}
+
+/* Section hover scale */
+.scale-102 {
+  transform: scale(1.02);
 }
 
 /* Card hover effects */
@@ -172,7 +303,8 @@ body {
 }
 
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -224,7 +356,7 @@ body {
 }
 
 .border-magic::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -2px;
   left: -2px;
@@ -243,13 +375,17 @@ body {
 }
 
 .mystical-glow::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(211, 177, 54, 0.3) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(211, 177, 54, 0.3) 0%,
+    transparent 70%
+  );
   transform: translate(-50%, -50%);
   animation: mystical-pulse 3s ease-in-out infinite;
   pointer-events: none;
@@ -257,7 +393,8 @@ body {
 }
 
 @keyframes mystical-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0.3;
   }

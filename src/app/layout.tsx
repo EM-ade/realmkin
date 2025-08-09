@@ -1,20 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Web3Provider } from "@/contexts/Web3Context";
 import { NFTProvider } from "@/contexts/NFTContext";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 // Hertical Sans Regular font for header
 const herticalSans = localFont({
@@ -57,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${herticalSans.variable} ${amnestia.variable} ${impactRegular.variable} ${gothicCG.variable} antialiased`}
+        className={`${herticalSans.variable} ${amnestia.variable} ${impactRegular.variable} ${gothicCG.variable} antialiased`}
       >
         <AuthProvider>
           <Web3Provider>

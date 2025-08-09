@@ -9,7 +9,10 @@ interface RewardsDashboardProps {
   onClose: () => void;
 }
 
-export default function RewardsDashboard({ isOpen, onClose }: RewardsDashboardProps) {
+export default function RewardsDashboard({
+  isOpen,
+  onClose,
+}: RewardsDashboardProps) {
   const { user } = useAuth();
   const [claimHistory, setClaimHistory] = useState<ClaimRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,7 +25,7 @@ export default function RewardsDashboard({ isOpen, onClose }: RewardsDashboardPr
 
   const fetchClaimHistory = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       const history = await rewardsService.getClaimHistory(user.uid, 20);
@@ -41,7 +44,7 @@ export default function RewardsDashboard({ isOpen, onClose }: RewardsDashboardPr
       <div className="bg-[#2b1c3b] border-4 border-[#d3b136] rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b-2 border-[#d3b136]">
-          <h2 
+          <h2
             className="text-2xl font-bold text-white text-glow"
             style={{ fontFamily: "var(--font-gothic-cg)" }}
           >
@@ -64,7 +67,9 @@ export default function RewardsDashboard({ isOpen, onClose }: RewardsDashboardPr
             </div>
           ) : claimHistory.length > 0 ? (
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-white mb-4">Recent Claims</h3>
+              <h3 className="text-lg font-bold text-white mb-4">
+                Recent Claims
+              </h3>
               {claimHistory.map((claim) => (
                 <div
                   key={claim.id}
@@ -72,17 +77,19 @@ export default function RewardsDashboard({ isOpen, onClose }: RewardsDashboardPr
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-white font-bold">
-                      {rewardsService.formatCurrency(claim.amount)}
+                      {rewardsService.formatMKIN(claim.amount)}
                     </div>
                     <div className="text-gray-400 text-sm">
                       {claim.claimedAt.toLocaleDateString()}
                     </div>
                   </div>
                   <div className="text-gray-300 text-sm">
-                    {claim.nftCount} NFTs • {claim.weeksClaimed.toFixed(2)} weeks
+                    {claim.nftCount} NFTs • {claim.weeksClaimed.toFixed(2)}{" "}
+                    weeks
                   </div>
                   <div className="text-gray-400 text-xs mt-1">
-                    Wallet: {claim.walletAddress.slice(0, 8)}...{claim.walletAddress.slice(-8)}
+                    Wallet: {claim.walletAddress.slice(0, 8)}...
+                    {claim.walletAddress.slice(-8)}
                   </div>
                 </div>
               ))}
@@ -102,7 +109,7 @@ export default function RewardsDashboard({ isOpen, onClose }: RewardsDashboardPr
         <div className="p-6 border-t-2 border-[#d3b136] bg-[#1a0f2e]">
           <div className="text-center">
             <p className="text-gray-300 text-sm">
-              Earn $0.37 per NFT per week • Minimum claim: $0.01
+              Earn ₥200 per NFT per week • Minimum claim: ₥1
             </p>
             <p className="text-gray-400 text-xs mt-1">
               Claims are processed weekly

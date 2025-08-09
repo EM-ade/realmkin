@@ -38,6 +38,9 @@ export default function Home() {
   const [claimLoading, setClaimLoading] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [showRewardsDashboard, setShowRewardsDashboard] = useState(false);
+  const [bonusNotification, setBonusNotification] = useState<string | null>(
+    null
+  );
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -52,12 +55,41 @@ export default function Home() {
       // Initialize/update rewards based on NFT count
       if (user) {
         try {
+          // Get previous rewards to check for new NFTs
+          const previousRewards = await rewardsService.getUserRewards(user.uid);
+          const previousNFTCount = previousRewards?.totalNFTs || 0;
+
           const rewards = await rewardsService.initializeUserRewards(
             user.uid,
             account,
             nftCollection.nfts.length
           );
           setUserRewards(rewards);
+
+          // Check for new NFTs and show bonus notification
+          const newNFTsAcquired = Math.max(
+            0,
+            nftCollection.nfts.length - previousNFTCount
+          );
+          if (newNFTsAcquired > 0 && previousNFTCount > 0) {
+            const bonusAmount = newNFTsAcquired * 200;
+            setBonusNotification(
+              `+₥${bonusAmount} bonus for ${newNFTsAcquired} new NFT${
+                newNFTsAcquired > 1 ? "s" : ""
+              }!`
+            );
+            // Clear notification after 5 seconds
+            setTimeout(() => setBonusNotification(null), 5000);
+          } else if (previousNFTCount === 0 && nftCollection.nfts.length > 0) {
+            const welcomeBonus = nftCollection.nfts.length * 200;
+            setBonusNotification(
+              `Welcome bonus: +₥${welcomeBonus} for your ${
+                nftCollection.nfts.length
+              } NFT${nftCollection.nfts.length > 1 ? "s" : ""}!`
+            );
+            // Clear notification after 5 seconds
+            setTimeout(() => setBonusNotification(null), 5000);
+          }
 
           // Calculate current pending rewards
           const calculation = rewardsService.calculatePendingRewards(
@@ -279,18 +311,15 @@ export default function Home() {
                       <div className="flex-1 text-center sm:text-left">
                         <div className="text-4xl sm:text-6xl lg:text-8xl font-bold mb-4 text-gradient">
                           {rewardsCalculation
-                            ? rewardsService.formatCurrency(
+                            ? rewardsService.formatMKIN(
                                 rewardsCalculation.pendingAmount
                               )
-                            : "$0.00"}
-                          <span className="text-lg sm:text-xl lg:text-2xl ml-2 text-gray-300">
-                            USD
-                          </span>
+                            : "₥0 MKIN"}
                         </div>
                         <div className="mb-4">
                           <div className="text-sm text-gray-300 mb-2">
-                            {nfts.length} NFTs × $0.37/week ={" "}
-                            {rewardsService.formatCurrency(nfts.length * 0.37)}
+                            {nfts.length} NFTs × ₥200/week ={" "}
+                            {rewardsService.formatMKIN(nfts.length * 200)}
                             /week
                           </div>
                           {rewardsCalculation &&
@@ -306,6 +335,11 @@ export default function Home() {
                           {claimError && (
                             <div className="text-xs text-red-400 mb-2">
                               {claimError}
+                            </div>
+                          )}
+                          {bonusNotification && (
+                            <div className="text-xs text-green-400 mb-2 animate-pulse">
+                              🎉 {bonusNotification}
                             </div>
                           )}
                         </div>
@@ -350,7 +384,7 @@ export default function Home() {
                           CONNECT TO CLAIM REWARDS
                         </h3>
                         <p className="text-gray-300 text-sm sm:text-base mb-6 px-4">
-                          Connect your wallet to access your $MKIN token balance
+                          Connect your wallet to access your ₥KIN token balance
                           and claim mining rewards
                         </p>
                       </div>
