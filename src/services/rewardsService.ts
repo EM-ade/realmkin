@@ -288,6 +288,49 @@ class RewardsService {
   }
 
   /**
+   * Get claim history by wallet address (useful for off-chain management)
+   */
+  async getClaimHistoryByWallet(
+    walletAddress: string,
+    limitCount: number = 10
+  ): Promise<ClaimRecord[]> {
+    const claimsQuery = query(
+      collection(db, "claimRecords"),
+      where("walletAddress", "==", walletAddress),
+      orderBy("claimedAt", "desc"),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(claimsQuery);
+    return querySnapshot.docs.map((doc) => {
+      const data = doc.data() as ClaimRecord;
+      return {
+        ...data,
+        claimedAt:
+          data.claimedAt instanceof Date
+            ? data.claimedAt
+            : new Date(data.claimedAt),
+      };
+    });
+  }
+
+  /**
+   * Get total claimed amount by wallet address
+   */
+  async getTotalClaimedByWallet(walletAddress: string): Promise<number> {
+    const claimsQuery = query(
+      collection(db, "claimRecords"),
+      where("walletAddress", "==", walletAddress)
+    );
+
+    const querySnapshot = await getDocs(claimsQuery);
+    return querySnapshot.docs.reduce((total, doc) => {
+      const data = doc.data() as ClaimRecord;
+      return total + data.amount;
+    }, 0);
+  }
+
+  /**
    * Format MKIN tokens for display
    */
   formatMKIN(amount: number): string {
