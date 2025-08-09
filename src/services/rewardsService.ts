@@ -9,6 +9,8 @@ import {
   getDocs,
   orderBy,
   limit,
+  serverTimestamp,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -52,6 +54,90 @@ class RewardsService {
   private readonly MILLISECONDS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
   private readonly MIN_CLAIM_AMOUNT = 1; // Minimum 1 MKIN to claim
   private readonly NEW_NFT_BONUS = 200; // 200 MKIN bonus for each new NFT acquired
+  private readonly MAX_CLAIM_AMOUNT = 100000; // Maximum claim amount for security
+  private readonly RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute rate limit window
+  private readonly MAX_CLAIMS_PER_WINDOW = 3; // Max 3 claim attempts per minute
+
+  /**
+   * Security validation methods
+   */
+  private validateUserId(userId: string): boolean {
+    return (
+      typeof userId === "string" && userId.length > 0 && userId.length <= 128
+    );
+  }
+
+  private validateWalletAddress(address: string): boolean {
+    return (
+      typeof address === "string" &&
+      address.length >= 32 &&
+      address.length <= 44 &&
+      /^[A-Za-z0-9]+$/.test(address)
+    );
+  }
+
+  private validateAmount(amount: number): boolean {
+    return (
+      typeof amount === "number" &&
+      amount >= this.MIN_CLAIM_AMOUNT &&
+      amount <= this.MAX_CLAIM_AMOUNT &&
+      Number.isFinite(amount)
+    );
+  }
+
+  private validateNFTCount(count: number): boolean {
+    return (
+      typeof count === "number" &&
+      count >= 0 &&
+      count <= 10000 && // Reasonable upper limit
+      Number.isInteger(count)
+    );
+  }
+
+  /**
+   * Rate limiting check
+   */
+  private async checkRateLimit(userId: string): Promise<void> {
+    const rateLimitRef = doc(db, "rateLimits", userId);
+    const rateLimitDoc = await getDoc(rateLimitRef);
+
+    const now = Date.now();
+
+    if (rateLimitDoc.exists()) {
+      const data = rateLimitDoc.data();
+      const windowStart = data.windowStart || 0;
+      const attempts = data.attempts || 0;
+
+      // Check if we're still in the same window
+      if (now - windowStart < this.RATE_LIMIT_WINDOW) {
+        if (attempts >= this.MAX_CLAIMS_PER_WINDOW) {
+          throw new Error(
+            "Rate limit exceeded. Please wait before trying again."
+          );
+        }
+
+        // Increment attempts in current window
+        await updateDoc(rateLimitRef, {
+          attempts: attempts + 1,
+          lastAttempt: now,
+        });
+      } else {
+        // Start new window
+        await setDoc(rateLimitRef, {
+          windowStart: now,
+          attempts: 1,
+          lastAttempt: now,
+        });
+      }
+    } else {
+      // First attempt
+      await setDoc(rateLimitRef, {
+        windowStart: now,
+        attempts: 1,
+        lastAttempt: now,
+      });
+    }
+  }
 
   /**
    * Initialize or update user rewards data
@@ -202,15 +288,32 @@ class RewardsService {
   }
 
   /**
-   * Process a reward claim
+   * Process a reward claim with security validations
    */
   async claimRewards(
     userId: string,
     walletAddress: string
   ): Promise<ClaimRecord> {
+    // Security validations
+    if (!this.validateUserId(userId)) {
+      throw new Error("Invalid user ID");
+    }
+
+    if (!this.validateWalletAddress(walletAddress)) {
+      throw new Error("Invalid wallet address");
+    }
+
+    // Rate limiting check
+    await this.checkRateLimit(userId);
+
     const userRewards = await this.getUserRewards(userId);
     if (!userRewards) {
       throw new Error("User rewards not found");
+    }
+
+    // Verify wallet address matches user's registered wallet
+    if (userRewards.walletAddress !== walletAddress) {
+      throw new Error("Wallet address mismatch");
     }
 
     const calculation = this.calculatePendingRewards(
@@ -229,33 +332,64 @@ class RewardsService {
     const now = new Date();
     const claimAmount = Math.floor(calculation.pendingAmount * 100) / 100; // Round to 2 decimal places
 
-    // Create claim record
-    const claimRecord: ClaimRecord = {
-      id: `${userId}_${now.getTime()}`,
-      userId,
-      walletAddress,
-      amount: claimAmount,
-      nftCount: userRewards.totalNFTs,
-      claimedAt: now,
-      weeksClaimed: calculation.weeksElapsed,
-    };
+    // Additional security validation
+    if (!this.validateAmount(claimAmount)) {
+      throw new Error("Invalid claim amount calculated");
+    }
 
-    // Save claim record
-    const claimRef = doc(db, "claimRecords", claimRecord.id);
-    await setDoc(claimRef, claimRecord);
+    // Use transaction for atomic operations
+    const claimRecord = await runTransaction(db, async (transaction) => {
+      // Re-check user rewards in transaction to prevent race conditions
+      const userRewardsRef = doc(db, "userRewards", userId);
+      const userRewardsDoc = await transaction.get(userRewardsRef);
 
-    // Update user rewards
-    const updatedUserRewards: Partial<UserRewards> = {
-      totalClaimed: userRewards.totalClaimed + claimAmount,
-      totalEarned: userRewards.totalEarned + claimAmount,
-      pendingRewards: 0, // Reset pending rewards
-      lastClaimed: now,
-      lastCalculated: now,
-      updatedAt: now,
-    };
+      if (!userRewardsDoc.exists()) {
+        throw new Error("User rewards not found in transaction");
+      }
 
-    const userRewardsRef = doc(db, "userRewards", userId);
-    await updateDoc(userRewardsRef, updatedUserRewards);
+      const currentUserRewards = userRewardsDoc.data() as UserRewards;
+
+      // Re-validate claim eligibility
+      const currentCalculation = this.calculatePendingRewards(
+        currentUserRewards,
+        currentUserRewards.totalNFTs
+      );
+
+      if (!currentCalculation.canClaim) {
+        throw new Error("Claim no longer available");
+      }
+
+      // Create claim record
+      const claimRecord: ClaimRecord = {
+        id: `${userId}_${now.getTime()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`,
+        userId,
+        walletAddress,
+        amount: claimAmount,
+        nftCount: currentUserRewards.totalNFTs,
+        claimedAt: now,
+        weeksClaimed: currentCalculation.weeksElapsed,
+      };
+
+      // Save claim record
+      const claimRef = doc(db, "claimRecords", claimRecord.id);
+      transaction.set(claimRef, claimRecord);
+
+      // Update user rewards
+      const updatedUserRewards: Partial<UserRewards> = {
+        totalClaimed: currentUserRewards.totalClaimed + claimAmount,
+        totalEarned: currentUserRewards.totalEarned + claimAmount,
+        pendingRewards: 0, // Reset pending rewards
+        lastClaimed: now,
+        lastCalculated: now,
+        updatedAt: now,
+      };
+
+      transaction.update(userRewardsRef, updatedUserRewards);
+
+      return claimRecord;
+    });
 
     return claimRecord;
   }
