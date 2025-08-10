@@ -389,19 +389,6 @@ export default function LoginPage() {
             </span>
           </div>
         )}
-
-        {/* Development Toggle - Remove in production */}
-        <div className="absolute top-4 right-4">
-          <button
-            onClick={() => setUseSimplifiedFlow(!useSimplifiedFlow)}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-            title="Toggle authentication mode (dev only)"
-          >
-            {useSimplifiedFlow
-              ? "Switch to Email Auth"
-              : "Switch to Wallet Auth"}
-          </button>
-        </div>
       </header>
 
       {/* Main Content */}
