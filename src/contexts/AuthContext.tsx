@@ -14,6 +14,7 @@ import { auth, db } from "@/lib/firebase";
 interface UserData {
   username: string;
   email: string;
+  walletAddress?: string;
   createdAt: Date;
 }
 
@@ -22,9 +23,10 @@ interface AuthContextType {
   userData: UserData | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, username: string) => Promise<void>;
+  signup: (email: string, password: string, username: string, walletAddress?: string) => Promise<void>;
   logout: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
+  getUserByWallet: (walletAddress: string) => Promise<UserData | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -35,6 +37,7 @@ const AuthContext = createContext<AuthContextType>({
   signup: async () => {},
   logout: async () => {},
   checkUsernameAvailability: async () => false,
+  getUserByWallet: async () => null,
 });
 
 export const useAuth = () => {
@@ -80,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signup = async (email: string, password: string, username: string) => {
+  const signup = async (email: string, password: string, username: string, walletAddress?: string) => {
     try {
       console.log("Starting signup process for:", email);
 
@@ -105,6 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userData: UserData = {
           username,
           email,
+          walletAddress,
           createdAt: new Date(),
         };
 
@@ -113,6 +117,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await setDoc(doc(db, "usernames", username.toLowerCase()), {
           uid: user.uid,
         });
+        
+        // If wallet address provided, create wallet mapping for easy lookup
+        if (walletAddress) {
+          await setDoc(doc(db, "wallets", walletAddress.toLowerCase()), {
+            uid: user.uid,
+            username: username,
+            createdAt: new Date(),
+          });
+          console.log("Wallet mapping created successfully");
+        }
+        
         console.log("User data saved successfully");
       } catch (firestoreError) {
         console.warn("Failed to save user data to Firestore:", firestoreError);
@@ -160,6 +175,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const getUserByWallet = async (walletAddress: string): Promise<UserData | null> => {
+    try {
+      console.log("🔍 Looking up user by wallet address:", walletAddress);
+      
+      // Check if wallet mapping exists
+      const walletDoc = await getDoc(doc(db, "wallets", walletAddress.toLowerCase()));
+      
+      if (!walletDoc.exists()) {
+        console.log("❌ No wallet mapping found");
+        return null;
+      }
+      
+      const walletData = walletDoc.data();
+      const uid = walletData.uid;
+      
+      // Get user data using the UID
+      const userDoc = await getDoc(doc(db, "users", uid));
+      
+      if (!userDoc.exists()) {
+        console.log("❌ User document not found for UID:", uid);
+        return null;
+      }
+      
+      const userData = userDoc.data() as UserData;
+      console.log("✅ User found:", userData.username);
+      return userData;
+      
+    } catch (error) {
+      console.error("Error getting user by wallet:", error);
+      return null;
+    }
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -177,6 +225,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signup,
     logout,
     checkUsernameAvailability,
+    getUserByWallet,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -32,7 +32,7 @@ export default function LoginPage() {
   const [checkingUser, setCheckingUser] = useState(false);
 
   const router = useRouter();
-  const { login, signup, checkUsernameAvailability } = useAuth();
+  const { login, signup, checkUsernameAvailability, getUserByWallet } = useAuth();
   const { connectWallet, account: walletAddress } = useWeb3();
 
   // Animation trigger
@@ -69,45 +69,48 @@ export default function LoginPage() {
         setCheckingUser(true);
         console.log("🔍 Checking if user exists for wallet:", address);
 
-        // Check local storage first for faster UX
-        const storedUserData = localStorage.getItem(
-          `realmkin_user_${address.toLowerCase()}`
-        );
-        if (storedUserData) {
-          console.log(
-            "📱 Found user data in local storage, attempting auto-login"
-          );
+        // Check Firebase wallet mapping first
+        const existingUser = await getUserByWallet(address);
+        
+        if (existingUser) {
+          console.log("✅ Existing user found:", existingUser.username);
+          
+          // Try to log in using the temp email/password method
+          const tempEmail = `${address.toLowerCase()}@wallet.realmkin.com`;
+          
+          try {
+            await login(tempEmail, address);
+            console.log("✅ User logged in automatically");
+
+            // Store user data in local storage for faster future logins
+            localStorage.setItem(
+              `realmkin_user_${address.toLowerCase()}`,
+              JSON.stringify({
+                address: address,
+                username: existingUser.username,
+                lastLogin: new Date().toISOString(),
+                hasAccount: true,
+              })
+            );
+
+            setIsNewUser(false);
+            // User exists and is now logged in, redirect to main page
+            router.push("/");
+            return;
+          } catch (loginError) {
+            console.error("Login failed for existing user:", loginError);
+            // Even though user exists in Firebase, login failed - might be auth issue
+            // Let them try to sign up again or handle this case
+          }
         }
 
-        // Create the temporary email format we use for wallet-based accounts
-        const tempEmail = `${address.toLowerCase()}@wallet.realmkin.com`;
+        // No existing user found or login failed
+        console.log("👤 New user detected, will need to set username");
 
-        // Try to sign in with the wallet-based credentials to check if user exists
-        try {
-          await login(tempEmail, address);
-          console.log("✅ Existing user found, logging in automatically");
+        // Clear any stale local storage data
+        localStorage.removeItem(`realmkin_user_${address.toLowerCase()}`);
 
-          // Store user data in local storage for faster future logins
-          localStorage.setItem(
-            `realmkin_user_${address.toLowerCase()}`,
-            JSON.stringify({
-              address: address,
-              lastLogin: new Date().toISOString(),
-              hasAccount: true,
-            })
-          );
-
-          setIsNewUser(false);
-          // User exists and is now logged in, redirect to main page
-          router.push("/");
-        } catch {
-          console.log("👤 New user detected, will need to set username");
-
-          // Clear any stale local storage data
-          localStorage.removeItem(`realmkin_user_${address.toLowerCase()}`);
-
-          setIsNewUser(true);
-        }
+        setIsNewUser(true);
       } catch (error) {
         console.error("Error checking user:", error);
         setIsNewUser(true);
@@ -115,7 +118,7 @@ export default function LoginPage() {
         setCheckingUser(false);
       }
     },
-    [login, router]
+    [login, router, getUserByWallet]
   );
 
   // Check if wallet is connected and handle user state
@@ -176,8 +179,8 @@ export default function LoginPage() {
       const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
       const tempPassword = walletAddress; // Use wallet address as password
 
-      // Sign up with temporary credentials
-      await signup(tempEmail, tempPassword, username);
+      // Sign up with temporary credentials and wallet address
+      await signup(tempEmail, tempPassword, username, walletAddress);
 
       // Store user data in local storage for future logins
       localStorage.setItem(
