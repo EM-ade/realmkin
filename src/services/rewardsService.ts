@@ -58,6 +58,35 @@ class RewardsService {
   private readonly RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute rate limit window
   private readonly MAX_CLAIMS_PER_WINDOW = 3; // Max 3 claim attempts per minute
 
+
+
+  /**
+   * Convert timestamp to valid Date object with fallback
+   */
+  private convertToValidDate(timestamp: any, fallbackDate: Date): Date {
+    try {
+      if (timestamp instanceof Date) {
+        return isNaN(timestamp.getTime()) ? fallbackDate : timestamp;
+      }
+      
+      if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+        // Handle Firestore Timestamp
+        const date = timestamp.toDate();
+        return isNaN(date.getTime()) ? fallbackDate : date;
+      }
+      
+      if (timestamp) {
+        const date = new Date(timestamp);
+        return isNaN(date.getTime()) ? fallbackDate : date;
+      }
+      
+      return fallbackDate;
+    } catch (error) {
+      console.warn("Error converting timestamp to Date:", error, "Using fallback date:", fallbackDate.toISOString());
+      return fallbackDate;
+    }
+  }
+
   /**
    * Security validation methods
    */
@@ -157,18 +186,40 @@ class RewardsService {
       // Update existing record
       const existingData = existingDoc.data() as UserRewards;
 
-      // Calculate pending rewards based on time elapsed
-      const calculation = this.calculatePendingRewards(existingData, nftCount);
+      // Convert Firestore timestamps to Date objects and ensure numeric fields are initialized
+      const processedData: UserRewards = {
+        ...existingData,
+        // Ensure numeric fields are properly initialized
+        totalNFTs: existingData.totalNFTs || 0,
+        weeklyRate: existingData.weeklyRate || 0,
+        totalEarned: existingData.totalEarned || 0,
+        totalClaimed: existingData.totalClaimed || 0,
+        pendingRewards: existingData.pendingRewards || 0,
+        // Convert timestamps with validation
+        lastCalculated: this.convertToValidDate(existingData.lastCalculated, now),
+        lastClaimed: existingData.lastClaimed 
+          ? this.convertToValidDate(existingData.lastClaimed, now)
+          : null,
+        createdAt: this.convertToValidDate(existingData.createdAt, now),
+        updatedAt: this.convertToValidDate(existingData.updatedAt, now),
+      };
 
       // Check for new NFTs and add bonus
-      const previousNFTCount = existingData.totalNFTs;
+      const previousNFTCount = processedData.totalNFTs;
       const newNFTsAcquired = Math.max(0, nftCount - previousNFTCount);
       const newNFTBonus = newNFTsAcquired * this.NEW_NFT_BONUS;
+
+      // Give full weekly amount for current NFT count
+      const weeklyRewards = nftCount * this.WEEKLY_RATE_PER_NFT;
+      const totalPendingRewards = weeklyRewards + newNFTBonus;
+
+      console.log("🔧 Updating rewards for user:", userId);
+      console.log("🔧 Weekly rewards:", weeklyRewards, "New NFT bonus:", newNFTBonus);
 
       const updatedData: Partial<UserRewards> = {
         totalNFTs: nftCount,
         weeklyRate,
-        pendingRewards: calculation.pendingAmount + newNFTBonus,
+        pendingRewards: totalPendingRewards,
         lastCalculated: now,
         updatedAt: now,
         walletAddress, // Update in case wallet changed
@@ -184,7 +235,7 @@ class RewardsService {
       await updateDoc(userRewardsRef, updatedData);
 
       return {
-        ...existingData,
+        ...processedData,
         ...updatedData,
       } as UserRewards;
     } else {
@@ -224,29 +275,47 @@ class RewardsService {
     userRewards: UserRewards,
     currentNFTCount: number
   ): RewardsCalculation {
+    // Validate inputs
+    if (!this.validateNFTCount(currentNFTCount)) {
+      console.error("Invalid NFT count:", currentNFTCount);
+      throw new Error("Invalid NFT count provided");
+    }
     const now = new Date();
-    const lastCalculated = userRewards.lastCalculated;
-    const timeElapsed = now.getTime() - lastCalculated.getTime();
-    const weeksElapsed = timeElapsed / this.MILLISECONDS_PER_WEEK;
+    
+    // Ensure numeric fields are properly initialized
+    const pendingRewards = userRewards.pendingRewards || 0;
+    const totalEarned = userRewards.totalEarned || 0;
+    const totalClaimed = userRewards.totalClaimed || 0;
 
-    // Use current NFT count for calculation
+    // Calculate weekly rate (200 MKIN per NFT per week)
     const weeklyRate = currentNFTCount * this.WEEKLY_RATE_PER_NFT;
-    const newRewards = weeksElapsed * weeklyRate;
-    const totalPending = userRewards.pendingRewards + newRewards;
 
     // Calculate next claim date (1 week from last claim or creation)
-    const lastClaimDate = userRewards.lastClaimed || userRewards.createdAt;
+    const claimDate = userRewards.lastClaimed || userRewards.createdAt;
+    const lastClaimDate = this.convertToValidDate(claimDate, now);
+    
     const nextClaimDate = new Date(
       lastClaimDate.getTime() + this.MILLISECONDS_PER_WEEK
     );
-    const canClaim =
-      totalPending >= this.MIN_CLAIM_AMOUNT && now >= nextClaimDate;
+    
+    // Check if user can claim (must meet time constraint and minimum amount)
+    const canClaim = now >= nextClaimDate && pendingRewards >= this.MIN_CLAIM_AMOUNT;
+
+    // Debug logging to track calculations
+    console.log("🔧 Rewards calculation debug:", {
+      currentNFTCount,
+      weeklyRate,
+      pendingRewards,
+      canClaim,
+      nextClaimDate: nextClaimDate.toISOString(),
+      now: now.toISOString()
+    });
 
     return {
       totalNFTs: currentNFTCount,
       weeklyRate,
-      weeksElapsed,
-      pendingAmount: totalPending,
+      weeksElapsed: 1, // Always 1 week since we give full amount
+      pendingAmount: pendingRewards, // Use existing pending rewards
       canClaim,
       nextClaimDate: canClaim ? null : nextClaimDate,
     };
@@ -261,26 +330,24 @@ class RewardsService {
 
     if (docSnap.exists()) {
       const data = docSnap.data() as UserRewards;
-      // Convert Firestore timestamps to Date objects
+      const now = new Date();
+      
+      // Convert Firestore timestamps to Date objects and ensure numeric fields are initialized
       return {
         ...data,
-        lastCalculated:
-          data.lastCalculated instanceof Date
-            ? data.lastCalculated
-            : new Date(data.lastCalculated),
-        lastClaimed: data.lastClaimed
-          ? data.lastClaimed instanceof Date
-            ? data.lastClaimed
-            : new Date(data.lastClaimed)
+        // Ensure numeric fields are properly initialized
+        totalNFTs: data.totalNFTs || 0,
+        weeklyRate: data.weeklyRate || 0,
+        totalEarned: data.totalEarned || 0,
+        totalClaimed: data.totalClaimed || 0,
+        pendingRewards: data.pendingRewards || 0,
+        // Convert timestamps with validation
+        lastCalculated: this.convertToValidDate(data.lastCalculated, now),
+        lastClaimed: data.lastClaimed 
+          ? this.convertToValidDate(data.lastClaimed, now)
           : null,
-        createdAt:
-          data.createdAt instanceof Date
-            ? data.createdAt
-            : new Date(data.createdAt),
-        updatedAt:
-          data.updatedAt instanceof Date
-            ? data.updatedAt
-            : new Date(data.updatedAt),
+        createdAt: this.convertToValidDate(data.createdAt, now),
+        updatedAt: this.convertToValidDate(data.updatedAt, now),
       };
     }
 
@@ -409,14 +476,12 @@ class RewardsService {
     );
 
     const querySnapshot = await getDocs(claimsQuery);
+    const now = new Date();
     return querySnapshot.docs.map((doc) => {
       const data = doc.data() as ClaimRecord;
       return {
         ...data,
-        claimedAt:
-          data.claimedAt instanceof Date
-            ? data.claimedAt
-            : new Date(data.claimedAt),
+        claimedAt: this.convertToValidDate(data.claimedAt, now),
       };
     });
   }
@@ -436,14 +501,12 @@ class RewardsService {
     );
 
     const querySnapshot = await getDocs(claimsQuery);
+    const now = new Date();
     return querySnapshot.docs.map((doc) => {
       const data = doc.data() as ClaimRecord;
       return {
         ...data,
-        claimedAt:
-          data.claimedAt instanceof Date
-            ? data.claimedAt
-            : new Date(data.claimedAt),
+        claimedAt: this.convertToValidDate(data.claimedAt, now),
       };
     });
   }

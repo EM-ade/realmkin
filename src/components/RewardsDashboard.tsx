@@ -80,7 +80,10 @@ export default function RewardsDashboard({
                       {rewardsService.formatMKIN(claim.amount)}
                     </div>
                     <div className="text-gray-400 text-sm">
-                      {claim.claimedAt.toLocaleDateString()}
+                      {claim.claimedAt && !isNaN(claim.claimedAt.getTime()) 
+                        ? claim.claimedAt.toLocaleDateString()
+                        : "Date unavailable"
+                      }
                     </div>
                   </div>
                   <div className="text-gray-300 text-sm">
