@@ -99,12 +99,54 @@ export default function LoginPage() {
             return;
           } catch (loginError) {
             console.error("Login failed for existing user:", loginError);
-            // Even though user exists in Firebase, login failed - might be auth issue
-            // Let them try to sign up again or handle this case
+            
+            // Check if this is a known user from localStorage
+            const cachedUser = localStorage.getItem(`realmkin_user_${address.toLowerCase()}`);
+            if (cachedUser) {
+              try {
+                const userData = JSON.parse(cachedUser);
+                if (userData.hasAccount && userData.username) {
+                  console.log("✅ Found cached user data, treating as existing user");
+                  setIsNewUser(false);
+                  // Try to create the missing Firebase Auth account
+                  try {
+                    await signup(tempEmail, address, userData.username, address);
+                    console.log("✅ Recreated Firebase Auth account for existing user");
+                    router.push("/");
+                    return;
+                  } catch (signupError) {
+                    console.error("Failed to recreate Firebase Auth account:", signupError);
+                    // Still treat as existing user, let them try to sign up again
+                  }
+                }
+              } catch (parseError) {
+                console.error("Failed to parse cached user data:", parseError);
+              }
+            }
+            
+            // If we have existing user data but login failed, don't treat as new user
+            // Let them try to sign up again which will handle the "email already exists" case
+            setIsNewUser(false);
+            return;
           }
         }
 
-        // No existing user found or login failed
+        // Check localStorage for cached user data even if Firebase lookup failed
+        const cachedUser = localStorage.getItem(`realmkin_user_${address.toLowerCase()}`);
+        if (cachedUser) {
+          try {
+            const userData = JSON.parse(cachedUser);
+            if (userData.hasAccount && userData.username) {
+              console.log("✅ Found cached user data, treating as existing user");
+              setIsNewUser(false);
+              return;
+            }
+          } catch (parseError) {
+            console.error("Failed to parse cached user data:", parseError);
+          }
+        }
+
+        // No existing user found
         console.log("👤 New user detected, will need to set username");
 
         // Clear any stale local storage data
@@ -113,12 +155,28 @@ export default function LoginPage() {
         setIsNewUser(true);
       } catch (error) {
         console.error("Error checking user:", error);
+        
+        // On error, check localStorage as fallback
+        const cachedUser = localStorage.getItem(`realmkin_user_${address.toLowerCase()}`);
+        if (cachedUser) {
+          try {
+            const userData = JSON.parse(cachedUser);
+            if (userData.hasAccount && userData.username) {
+              console.log("✅ Found cached user data on error, treating as existing user");
+              setIsNewUser(false);
+              return;
+            }
+          } catch (parseError) {
+            console.error("Failed to parse cached user data:", parseError);
+          }
+        }
+        
         setIsNewUser(true);
       } finally {
         setCheckingUser(false);
       }
     },
-    [login, router, getUserByWallet]
+    [login, router, getUserByWallet, signup]
   );
 
   // Check if wallet is connected and handle user state

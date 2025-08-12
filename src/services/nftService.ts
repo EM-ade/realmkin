@@ -1,4 +1,5 @@
 import axios from "axios";
+import { isValidWalletAddress, detectWalletType } from "@/utils/formatAddress";
 
 export interface NFTAttribute {
   trait_type: string;
@@ -205,17 +206,46 @@ class NFTService {
    */
   async fetchUserNFTs(walletAddress: string): Promise<NFTCollection> {
     try {
+      console.log("🔍 NFT Service: Fetching NFTs for wallet:", walletAddress);
+      console.log("🔍 NFT Service: Wallet address type:", typeof walletAddress);
+      console.log("🔍 NFT Service: Wallet address length:", walletAddress?.length);
+      
+      // Validate wallet address format
+      if (!walletAddress || !isValidWalletAddress(walletAddress)) {
+        console.error("❌ NFT Service: Invalid wallet address format:", walletAddress);
+        throw new Error("Invalid wallet address format");
+      }
+      
+      // Check wallet type
+      const walletType = detectWalletType(walletAddress);
+      console.log("🔍 NFT Service: Detected wallet type:", walletType);
+      
+      if (walletType === 'ethereum') {
+        console.warn("⚠️ NFT Service: Ethereum wallet detected, but this app is designed for Solana NFTs");
+        // For now, return empty collection for Ethereum wallets
+        return { nfts: [], totalCount: 0 };
+      }
+      
+      if (walletType !== 'solana') {
+        console.error("❌ NFT Service: Unsupported wallet type:", walletType);
+        throw new Error("Unsupported wallet type");
+      }
+      
       // Use test wallet address if in testing mode
       const addressToUse = this.TESTING_MODE
         ? this.TEST_WALLET_ADDRESS
         : walletAddress;
+        
+      console.log("🔍 NFT Service: Using address:", addressToUse);
 
       // Try Helius first (best for Solana)
       if (this.HELIUS_API_KEY) {
+        console.log("🔍 NFT Service: Using Helius API");
         return await this.fetchNFTsWithHelius(addressToUse);
       }
 
       // Fallback to Magic Eden Solana
+      console.log("🔍 NFT Service: Using Magic Eden API");
       return await this.fetchNFTsWithMagicEdenSolana(addressToUse);
     } catch (error) {
       console.error("Error fetching Solana NFTs:", error);

@@ -5,7 +5,7 @@ import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
-import { formatAddress } from "@/utils/formatAddress";
+import { formatAddress, detectWalletType } from "@/utils/formatAddress";
 import SocialLinks from "@/components/SocialLinks";
 import NFTCard from "@/components/NFTCard";
 import RewardsDashboard from "@/components/RewardsDashboard";
@@ -16,6 +16,8 @@ import {
   UserRewards,
   RewardsCalculation,
 } from "@/services/rewardsService";
+
+import { isLaptopEnvironment } from "@/utils/walletConnection";
 
 export default function Home() {
   const { user, userData, logout } = useAuth();
@@ -47,8 +49,15 @@ export default function Home() {
   const [lastClaimAmount, setLastClaimAmount] = useState<number>(0);
   const [lastClaimWallet, setLastClaimWallet] = useState<string>("");
 
+  const [showLaptopNotification, setShowLaptopNotification] = useState(false);
+
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
+
+    console.log("🔍 Main Page: Fetching NFTs for account:", account);
+    console.log("🔍 Main Page: Account type:", typeof account);
+    console.log("🔍 Main Page: Account length:", account?.length);
+    console.log("🔍 Main Page: Detected wallet type:", detectWalletType(account));
 
     setNftLoading(true);
     setNftError(null);
@@ -158,13 +167,30 @@ export default function Home() {
 
   // Fetch NFTs when wallet connects
   useEffect(() => {
+    console.log("🔍 Main Page: useEffect triggered - isConnected:", isConnected, "account:", account);
     if (isConnected && account) {
+      console.log("🔍 Main Page: Fetching NFTs for connected wallet");
       fetchUserNFTs();
     } else {
+      console.log("🔍 Main Page: Clearing NFTs - wallet not connected");
       setNfts([]);
       setNftError(null);
     }
   }, [isConnected, account, fetchUserNFTs]);
+
+  // Check if user is on laptop and show notification
+  useEffect(() => {
+    if (typeof window !== "undefined" && !isConnected) {
+      const isLaptop = isLaptopEnvironment();
+      if (isLaptop) {
+        // Show notification after a short delay
+        const timer = setTimeout(() => {
+          setShowLaptopNotification(true);
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isConnected]);
 
   // Dynamic welcome message logic
   const getWelcomeMessage = () => {
@@ -231,6 +257,8 @@ export default function Home() {
                   </div>
                 </button>
 
+
+
                 {/* Logout Button */}
                 <button
                   onClick={logout}
@@ -254,6 +282,29 @@ export default function Home() {
             </header>
 
             <div className="px-2 sm:px-6 max-w-7xl mx-auto">
+              {/* Laptop Notification */}
+              {showLaptopNotification && !isConnected && (
+                <div className="mb-4 border-2 border-blue-400 bg-blue-900 bg-opacity-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">💻</span>
+                      <div>
+                        <h4 className="text-blue-300 font-bold text-sm">Laptop Detected</h4>
+                        <p className="text-blue-200 text-xs">
+                          Using optimized wallet connection settings for better performance on laptops.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowLaptopNotification(false)}
+                      className="text-blue-300 hover:text-blue-100 text-xl font-bold"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Welcome Section */}
               <div className="border-6 border-[#d3b136] p-4 sm:p-8 pt-6 sm:pt-10 mb-2 card-hover">
                 <h2
@@ -270,6 +321,9 @@ export default function Home() {
                     {formatAddress(account)}
                   </p>
                 )}
+                
+
+                
                 <p className="text-sm sm:text-base lg:text-lg text-gray-300 max-w-2xl mx-auto sm:mx-0 text-center sm:text-left">
                   &ldquo; INCREASE YOUR WEEKLY EARNINGS BY HOLDING MORE NFTS-
                   EACH WARDEN KIN BOOSTS YOUR $MKIN REWARD &rdquo;
@@ -658,6 +712,8 @@ export default function Home() {
         amount={lastClaimAmount}
         walletAddress={lastClaimWallet}
       />
+
+
     </ProtectedRoute>
   );
 }

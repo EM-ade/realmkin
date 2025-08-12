@@ -8,6 +8,13 @@ import {
   ReactNode,
 } from "react";
 import { ethers } from "ethers";
+import { 
+  connectMetaMask, 
+  getConnectionErrorMessage, 
+  getOptimizedConfig,
+  detectPopupBlocker,
+  ensureWindowFocus 
+} from "@/utils/walletConnection";
 
 interface Web3ContextType {
   account: string | null;
@@ -79,14 +86,61 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
   const checkConnection = async () => {
     try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.listAccounts();
+      if (typeof window !== "undefined") {
+        // Check for Ethereum wallets (MetaMask, Coinbase, etc.)
+        if (window.ethereum) {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const accounts = await provider.listAccounts();
 
-        if (accounts.length > 0) {
-          setAccount(accounts[0].address);
-          setIsConnected(true);
-          setProvider(provider);
+          if (accounts.length > 0) {
+            setAccount(accounts[0].address);
+            setIsConnected(true);
+            setProvider(provider);
+            return;
+          }
+        }
+
+        // Check for Phantom wallet persistence
+        const phantom = (window as any).phantom?.solana;
+        if (phantom) {
+          try {
+            // Check if Phantom is already connected
+            if (phantom.isConnected) {
+              const response = await phantom.connect();
+              setAccount(response.publicKey.toString());
+              setIsConnected(true);
+              setProvider(null); // Phantom doesn't use ethers provider
+              return;
+            }
+            
+            // Try to connect if not already connected
+            const response = await phantom.connect();
+            setAccount(response.publicKey.toString());
+            setIsConnected(true);
+            setProvider(null);
+            return;
+          } catch (error) {
+            console.log("Phantom wallet not connected:", error);
+          }
+        }
+
+        // Check localStorage for cached wallet connection
+        const cachedWallet = localStorage.getItem('realmkin_cached_wallet');
+        if (cachedWallet) {
+          try {
+            const walletData = JSON.parse(cachedWallet);
+            if (walletData.type === 'phantom' && (window as any).phantom?.solana) {
+              // Try to reconnect Phantom
+              const response = await (window as any).phantom.solana.connect();
+              setAccount(response.publicKey.toString());
+              setIsConnected(true);
+              setProvider(null);
+              return;
+            }
+          } catch (error) {
+            console.log("Failed to restore cached wallet:", error);
+            localStorage.removeItem('realmkin_cached_wallet');
+          }
         }
       }
     } catch (error) {
@@ -108,6 +162,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     showWalletSelection();
   };
 
+  // Enhanced connection function with better laptop support
   const connectSpecificWallet = async (walletType: string) => {
     setIsConnecting(true);
 
@@ -115,30 +170,13 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       let provider;
 
       if (walletType === "metamask") {
-        await waitForEthereum();
-
-        if (!window.ethereum || !window.ethereum.isMetaMask) {
-          showCustomAlert(
-            "🦊 METAMASK NOT FOUND",
-            "MetaMask is not installed. Please install MetaMask extension and try again.",
-            false,
-            "https://metamask.io/download/"
-          );
-          return;
-        }
-
-        // Force focus on the window to help with popup detection
-        window.focus();
-
-        // Try multiple connection methods
         try {
-          provider = new ethers.BrowserProvider(window.ethereum);
-          await provider.send("eth_requestAccounts", []);
-        } catch (requestError: unknown) {
-          // Fallback: try direct ethereum request
-          console.log("Trying fallback connection method...", requestError);
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          provider = new ethers.BrowserProvider(window.ethereum);
+          // Use the optimized connection utility
+          const config = getOptimizedConfig();
+          provider = await connectMetaMask(config);
+        } catch (error) {
+          console.error("MetaMask connection failed:", error);
+          throw error;
         }
       } else if (walletType === "phantom") {
         interface PhantomWindow {
@@ -163,9 +201,18 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
         // Connect to Phantom (Solana)
         const response = await phantom.connect();
-        setAccount(response.publicKey.toString());
+        const publicKey = response.publicKey.toString();
+        setAccount(publicKey);
         setIsConnected(true);
         setProvider(null); // Phantom doesn't use ethers provider
+        
+        // Cache the wallet connection
+        localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+          type: 'phantom',
+          address: publicKey,
+          timestamp: Date.now()
+        }));
+        
         return;
       } else if (walletType === "walletconnect") {
         showCustomAlert(
@@ -193,6 +240,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           return;
         }
 
+        // Enhanced Coinbase connection with laptop-friendly approach
+        await ensureWindowFocus();
+        
         provider = new ethers.BrowserProvider(coinbase);
         await provider.send("eth_requestAccounts", []);
       }
@@ -204,67 +254,26 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         setAccount(address);
         setIsConnected(true);
         setProvider(provider);
+        
+        // Cache the wallet connection
+        localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+          type: walletType,
+          address: address,
+          timestamp: Date.now()
+        }));
       }
     } catch (error: unknown) {
       console.error("Error connecting wallet:", error);
-      const walletError = error as { code?: number; message?: string };
-
-      if (walletError.code === 4001) {
-        showCustomAlert(
-          "⚔️ CONNECTION REJECTED",
-          "The wallet guardian has denied access. Please approve the connection request to link your wallet to the Realmkin realm."
-        );
-      } else if (walletError.code === -32002) {
-        showCustomAlert(
-          "⏳ PENDING REQUEST",
-          "A connection request is already pending. Please check your wallet and complete the existing request."
-        );
-      } else if (walletError.code === -32603) {
-        showCustomAlert(
-          "🔄 WALLET BUSY",
-          "Your wallet is currently processing another request. Please wait a moment and try again."
-        );
-      } else if (walletError.message?.includes("popup")) {
-        showCustomAlert(
-          "🚫 POPUP BLOCKED",
-          "Your browser may be blocking the wallet popup. Please disable popup blockers for this site and try again.",
-          true
-        );
-      } else {
-        showCustomAlert(
-          "🚫 LINK FAILED",
-          "The mystical connection to your wallet has been disrupted. Please ensure your wallet is unlocked, refresh the page, and try again.",
-          true
-        );
-      }
+      
+      // Use the utility function to get appropriate error message
+      const { title, message, showRetry } = getConnectionErrorMessage(error);
+      showCustomAlert(title, message, showRetry);
     } finally {
       setIsConnecting(false);
     }
   };
 
-  // Helper function to wait for ethereum object to load
-  const waitForEthereum = (): Promise<void> => {
-    return new Promise((resolve) => {
-      if (window.ethereum) {
-        resolve();
-        return;
-      }
 
-      let attempts = 0;
-      const maxAttempts = 50; // 5 seconds max wait
-
-      const checkEthereum = () => {
-        attempts++;
-        if (window.ethereum || attempts >= maxAttempts) {
-          resolve();
-        } else {
-          setTimeout(checkEthereum, 100);
-        }
-      };
-
-      checkEthereum();
-    });
-  };
 
   const showWalletSelection = () => {
     const selectionDiv = document.createElement("div");
@@ -389,7 +398,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       <div class="bg-gradient-to-br from-purple-900 to-purple-800 border-2 border-yellow-400 rounded-lg p-6 max-w-md mx-4 shadow-2xl">
         <div class="text-center">
           <h3 class="text-yellow-400 text-xl font-bold mb-3">${title}</h3>
-          <p class="text-white text-sm leading-relaxed mb-4">${message}</p>
+          <p class="text-white text-sm leading-relaxed mb-4 whitespace-pre-line">${message}</p>
           <div class="flex justify-center">
             ${downloadButton}
             ${retryButton}
@@ -418,6 +427,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     setAccount(null);
     setIsConnected(false);
     setProvider(null);
+    
+    // Clear cached wallet connection
+    localStorage.removeItem('realmkin_cached_wallet');
   };
 
   const value = {
