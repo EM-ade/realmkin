@@ -240,6 +240,8 @@ class RewardsService {
     } else {
       // Create new record with welcome bonus for initial NFTs
       const welcomeBonus = nftCount * this.NEW_NFT_BONUS;
+      const weeklyRewards = nftCount * this.WEEKLY_RATE_PER_NFT;
+      const totalInitialRewards = weeklyRewards + welcomeBonus; // Regular mining + bonus
 
       const newUserRewards: UserRewards = {
         userId,
@@ -248,17 +250,23 @@ class RewardsService {
         weeklyRate,
         totalEarned: 0,
         totalClaimed: 0,
-        pendingRewards: welcomeBonus, // Give bonus for initial NFTs
+        pendingRewards: totalInitialRewards, // Give weekly rewards + bonus for initial NFTs
         lastCalculated: now,
         lastClaimed: null,
         createdAt: now,
         updatedAt: now,
       };
 
-      // Log welcome bonus
+      // Log welcome bonus and weekly rewards
       if (nftCount > 0) {
         console.log(
           `🎁 Welcome bonus: ${nftCount} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${welcomeBonus}`
+        );
+        console.log(
+          `⛏️ Weekly mining rewards: ${nftCount} NFTs × ₥${this.WEEKLY_RATE_PER_NFT} = ₥${weeklyRewards}`
+        );
+        console.log(
+          `💰 Total initial rewards: ₥${totalInitialRewards}`
         );
       }
 
