@@ -1,10 +1,15 @@
 // Wallet connection utilities for better laptop support
+import { ethers } from "ethers";
 
 export interface WalletConnectionConfig {
   maxRetries: number;
   retryDelay: number;
   timeout: number;
   enablePopupDetection: boolean;
+}
+
+interface WalletError extends Error {
+  code?: number;
 }
 
 export const DEFAULT_CONFIG: WalletConnectionConfig = {
@@ -25,7 +30,7 @@ export const detectPopupBlocker = (): boolean => {
       return false; // Popup allowed
     }
     return true; // Popup blocked
-  } catch (error) {
+  } catch {
     return true; // Popup blocked
   }
 };
@@ -74,7 +79,7 @@ export const waitForEthereum = (timeout: number = 5000): Promise<void> => {
 export const connectMetaMask = async (
   config: WalletConnectionConfig = DEFAULT_CONFIG
 ): Promise<ethers.BrowserProvider> => {
-  let lastError: any = null;
+  let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
     try {
@@ -162,14 +167,15 @@ export const connectMetaMask = async (
     }
   }
 
-  throw lastError || new Error('All connection attempts failed');
+  throw (lastError instanceof Error ? lastError : new Error('All connection attempts failed'));
 };
 
 /**
  * Gets detailed error message for wallet connection issues
  */
-export const getConnectionErrorMessage = (error: any): { title: string; message: string; showRetry: boolean } => {
-  const errorCode = error?.code;
+export const getConnectionErrorMessage = (error: Error): { title: string; message: string; showRetry: boolean } => {
+  const walletError = error as WalletError;
+  const errorCode = walletError?.code;
   const errorMessage = error?.message || '';
 
   if (errorCode === 4001) {

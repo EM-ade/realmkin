@@ -12,7 +12,6 @@ import {
   connectMetaMask, 
   getConnectionErrorMessage, 
   getOptimizedConfig,
-  detectPopupBlocker,
   ensureWindowFocus 
 } from "@/utils/walletConnection";
 
@@ -101,7 +100,15 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         }
 
         // Check for Phantom wallet persistence
-        const phantom = (window as any).phantom?.solana;
+        interface PhantomWindow {
+          phantom?: {
+            solana: {
+              connect(): Promise<{ publicKey: { toString(): string } }>;
+              isConnected?: boolean;
+            };
+          };
+        }
+        const phantom = (window as unknown as PhantomWindow).phantom?.solana;
         if (phantom) {
           try {
             // Check if Phantom is already connected
@@ -129,9 +136,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         if (cachedWallet) {
           try {
             const walletData = JSON.parse(cachedWallet);
-            if (walletData.type === 'phantom' && (window as any).phantom?.solana) {
+            if (walletData.type === 'phantom' && (window as unknown as PhantomWindow).phantom?.solana) {
               // Try to reconnect Phantom
-              const response = await (window as any).phantom.solana.connect();
+              const response = await (window as unknown as PhantomWindow).phantom!.solana.connect();
               setAccount(response.publicKey.toString());
               setIsConnected(true);
               setProvider(null);
@@ -262,12 +269,12 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           timestamp: Date.now()
         }));
       }
-    } catch (error: unknown) {
-      console.error("Error connecting wallet:", error);
-      
-      // Use the utility function to get appropriate error message
-      const { title, message, showRetry } = getConnectionErrorMessage(error);
-      showCustomAlert(title, message, showRetry);
+          } catch (error: unknown) {
+        console.error("Error connecting wallet:", error);
+        
+        // Use the utility function to get appropriate error message
+        const { title, message, showRetry } = getConnectionErrorMessage(error as Error);
+        showCustomAlert(title, message, showRetry);
     } finally {
       setIsConnecting(false);
     }
