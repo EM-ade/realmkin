@@ -9,7 +9,6 @@ import {
   getDocs,
   orderBy,
   limit,
-  serverTimestamp,
   runTransaction,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -63,19 +62,19 @@ class RewardsService {
   /**
    * Convert timestamp to valid Date object with fallback
    */
-  private convertToValidDate(timestamp: any, fallbackDate: Date): Date {
+  private convertToValidDate(timestamp: unknown, fallbackDate: Date): Date {
     try {
       if (timestamp instanceof Date) {
         return isNaN(timestamp.getTime()) ? fallbackDate : timestamp;
       }
       
-      if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+      if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp && typeof (timestamp as { toDate: () => Date }).toDate === 'function') {
         // Handle Firestore Timestamp
-        const date = timestamp.toDate();
+        const date = (timestamp as { toDate: () => Date }).toDate();
         return isNaN(date.getTime()) ? fallbackDate : date;
       }
       
-      if (timestamp) {
+      if (timestamp && (typeof timestamp === 'string' || typeof timestamp === 'number')) {
         const date = new Date(timestamp);
         return isNaN(date.getTime()) ? fallbackDate : date;
       }
@@ -284,8 +283,6 @@ class RewardsService {
     
     // Ensure numeric fields are properly initialized
     const pendingRewards = userRewards.pendingRewards || 0;
-    const totalEarned = userRewards.totalEarned || 0;
-    const totalClaimed = userRewards.totalClaimed || 0;
 
     // Calculate weekly rate (200 MKIN per NFT per week)
     const weeklyRate = currentNFTCount * this.WEEKLY_RATE_PER_NFT;

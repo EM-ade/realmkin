@@ -11,7 +11,7 @@ import SocialLinks from "@/components/SocialLinks";
 
 export default function LoginPage() {
   // Simplified flow toggle - set to false to re-enable full email auth
-  const [useSimplifiedFlow, setUseSimplifiedFlow] = useState(true);
+  const [useSimplifiedFlow] = useState(true);
 
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");

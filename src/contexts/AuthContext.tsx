@@ -246,7 +246,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // For now, return null so the user can try to sign up again
           // The signup process will handle the "email already exists" error
           return null;
-        } catch (authError) {
+        } catch {
           console.log("❌ User doesn't exist in Firebase Auth either");
           return null;
         }
