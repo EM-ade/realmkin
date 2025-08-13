@@ -14,6 +14,7 @@ import {
   getOptimizedConfig,
   ensureWindowFocus 
 } from "@/utils/walletConnection";
+import { isValidSolanaAddress } from "@/utils/formatAddress";
 
 interface Web3ContextType {
   account: string | null;
@@ -161,9 +162,27 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             let address: string | null = null;
             
             try {
-              // Try to get the current connection
+              // Try to get the current connection - specifically for Solana
               const response = await phantom.connect();
               address = response.publicKey.toString();
+              
+              // Validate this is a Solana address (should be base58 encoded, typically 32-44 characters)
+              if (address && isValidSolanaAddress(address)) {
+                setAccount(address);
+                setIsConnected(true);
+                setProvider(null); // Phantom doesn't use ethers provider
+                
+                // Update cached wallet data
+                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                  type: 'phantom',
+                  address: address,
+                  timestamp: Date.now()
+                }));
+                return;
+              } else {
+                console.warn("Invalid Solana address received from Phantom:", address);
+                throw new Error("Invalid Solana address");
+              }
             } catch (error) {
               console.log("Phantom not connected, attempting fresh connection");
               // If connect fails, try a fresh connection
@@ -175,25 +194,28 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 // Try connecting again
                 const response = await phantom.connect();
                 address = response.publicKey.toString();
+                
+                // Validate this is a Solana address
+                if (address && isValidSolanaAddress(address)) {
+                  setAccount(address);
+                  setIsConnected(true);
+                  setProvider(null);
+                  
+                  // Update cached wallet data
+                  localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                    type: 'phantom',
+                    address: address,
+                    timestamp: Date.now()
+                  }));
+                  return;
+                } else {
+                  console.warn("Invalid Solana address received from Phantom retry:", address);
+                  throw new Error("Invalid Solana address");
+                }
               } catch (retryError) {
                 console.log("Phantom connection retry failed:", retryError);
                 throw retryError;
               }
-            }
-            
-            // Validate the address
-            if (address && address.length >= 10) {
-              setAccount(address);
-              setIsConnected(true);
-              setProvider(null); // Phantom doesn't use ethers provider
-              
-              // Update cached wallet data
-              localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                type: 'phantom',
-                address: address,
-                timestamp: Date.now()
-              }));
-              return;
             }
           } catch (error) {
             console.log("Phantom wallet connection failed:", error);
@@ -217,7 +239,8 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                   const response = await (window as unknown as PhantomWindow).phantom!.solana.connect();
                   const address = response.publicKey.toString();
                   
-                  if (address && address.length >= 10) {
+                  // Validate this is a Solana address
+                  if (address && isValidSolanaAddress(address)) {
                     setAccount(address);
                     setIsConnected(true);
                     setProvider(null);
@@ -229,6 +252,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                       timestamp: Date.now()
                     }));
                     return;
+                  } else {
+                    console.warn("Invalid Solana address from cache restoration:", address);
+                    localStorage.removeItem('realmkin_cached_wallet');
                   }
                 } catch (error) {
                   console.log("Failed to restore Phantom connection from cache:", error);
@@ -348,9 +374,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         const response = await phantom.connect();
         connectedAddress = response.publicKey.toString();
         
-        // Double-check the address is valid
-        if (!connectedAddress || connectedAddress.length < 10) {
-          throw new Error('Invalid address received from Phantom wallet');
+        // Validate this is a Solana address (should be base58 encoded, typically 32-44 characters)
+        if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
+          throw new Error('Invalid Solana address received from Phantom wallet');
         }
         
         // Cache the wallet connection
