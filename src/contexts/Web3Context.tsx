@@ -54,6 +54,24 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     checkConnection();
   }, []);
 
+  // Handle page visibility changes (important for mobile)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isConnected) {
+        // Page became visible again, refresh wallet state
+        console.log("🔍 Web3Context: Page became visible, refreshing wallet state");
+        setTimeout(() => {
+          checkConnection();
+        }, 500); // Small delay to ensure wallet is ready
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isConnected]);
+
   // Listen for account changes
   useEffect(() => {
     if (typeof window !== "undefined" && window.ethereum) {
@@ -131,34 +149,56 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             solana: {
               connect(): Promise<{ publicKey: { toString(): string } }>;
               isConnected?: boolean;
+              disconnect(): Promise<void>;
             };
           };
         }
         const phantom = (window as unknown as PhantomWindow).phantom?.solana;
         if (phantom) {
           try {
-            // Check if Phantom is already connected
-            if (phantom.isConnected) {
+            // For mobile Phantom, we need to be more careful about connection state
+            // Mobile Phantom might report isConnected as true but not actually be connected
+            let address: string | null = null;
+            
+            try {
+              // Try to get the current connection
               const response = await phantom.connect();
-              const address = response.publicKey.toString();
-              
-              // Validate the address
-              if (address && address.length >= 10) {
-                setAccount(address);
-                setIsConnected(true);
-                setProvider(null); // Phantom doesn't use ethers provider
-                
-                // Update cached wallet data
-                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                  type: 'phantom',
-                  address: address,
-                  timestamp: Date.now()
-                }));
-                return;
+              address = response.publicKey.toString();
+            } catch (error) {
+              console.log("Phantom not connected, attempting fresh connection");
+              // If connect fails, try a fresh connection
+              try {
+                // Disconnect first to ensure clean state
+                await phantom.disconnect();
+                // Wait a moment for disconnect to complete
+                await new Promise(resolve => setTimeout(resolve, 500));
+                // Try connecting again
+                const response = await phantom.connect();
+                address = response.publicKey.toString();
+              } catch (retryError) {
+                console.log("Phantom connection retry failed:", retryError);
+                throw retryError;
               }
             }
+            
+            // Validate the address
+            if (address && address.length >= 10) {
+              setAccount(address);
+              setIsConnected(true);
+              setProvider(null); // Phantom doesn't use ethers provider
+              
+              // Update cached wallet data
+              localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                type: 'phantom',
+                address: address,
+                timestamp: Date.now()
+              }));
+              return;
+            }
           } catch (error) {
-            console.log("Phantom wallet not connected:", error);
+            console.log("Phantom wallet connection failed:", error);
+            // Clear any stale cache
+            localStorage.removeItem('realmkin_cached_wallet');
           }
         }
 
@@ -169,25 +209,30 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             const walletData = JSON.parse(cachedWallet);
             const cacheAge = Date.now() - walletData.timestamp;
             
-            // Only use cache if it's less than 1 hour old
-            if (cacheAge < 3600000) {
+            // Only use cache if it's less than 30 minutes old (shorter for mobile)
+            if (cacheAge < 1800000) {
               if (walletData.type === 'phantom' && (window as unknown as PhantomWindow).phantom?.solana) {
-                // Try to reconnect Phantom
-                const response = await (window as unknown as PhantomWindow).phantom!.solana.connect();
-                const address = response.publicKey.toString();
-                
-                if (address && address.length >= 10) {
-                  setAccount(address);
-                  setIsConnected(true);
-                  setProvider(null);
+                // For mobile Phantom, always try a fresh connection instead of relying on cache
+                try {
+                  const response = await (window as unknown as PhantomWindow).phantom!.solana.connect();
+                  const address = response.publicKey.toString();
                   
-                  // Update cached data with fresh timestamp
-                  localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                    type: 'phantom',
-                    address: address,
-                    timestamp: Date.now()
-                  }));
-                  return;
+                  if (address && address.length >= 10) {
+                    setAccount(address);
+                    setIsConnected(true);
+                    setProvider(null);
+                    
+                    // Update cached data with fresh timestamp
+                    localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                      type: 'phantom',
+                      address: address,
+                      timestamp: Date.now()
+                    }));
+                    return;
+                  }
+                } catch (error) {
+                  console.log("Failed to restore Phantom connection from cache:", error);
+                  localStorage.removeItem('realmkin_cached_wallet');
                 }
               } else if (walletData.type === 'metamask' && window.ethereum) {
                 // Try to reconnect MetaMask
@@ -271,6 +316,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           phantom?: {
             solana: {
               connect(): Promise<{ publicKey: { toString(): string } }>;
+              disconnect(): Promise<void>;
             };
           };
         }
@@ -285,6 +331,17 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             "https://phantom.app/"
           );
           return;
+        }
+
+        // For mobile Phantom, ensure clean connection state
+        try {
+          // Disconnect first to ensure clean state (especially important for mobile)
+          await phantom.disconnect();
+          // Wait a moment for disconnect to complete
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (error) {
+          // Ignore disconnect errors, they might not be connected
+          console.log("Phantom disconnect before connect:", error);
         }
 
         // Connect to Phantom (Solana)
