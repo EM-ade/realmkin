@@ -75,60 +75,20 @@ export default function LoginPage() {
         if (existingUser) {
           console.log("✅ Existing user found:", existingUser.username);
           
-          // Try to log in using the temp email/password method
-          const tempEmail = `${address.toLowerCase()}@wallet.realmkin.com`;
-          
-          try {
-            await login(tempEmail, address);
-            console.log("✅ User logged in automatically");
+          // Store user data in local storage for faster future logins
+          localStorage.setItem(
+            `realmkin_user_${address.toLowerCase()}`,
+            JSON.stringify({
+              address: address,
+              username: existingUser.username,
+              lastLogin: new Date().toISOString(),
+              hasAccount: true,
+            })
+          );
 
-            // Store user data in local storage for faster future logins
-            localStorage.setItem(
-              `realmkin_user_${address.toLowerCase()}`,
-              JSON.stringify({
-                address: address,
-                username: existingUser.username,
-                lastLogin: new Date().toISOString(),
-                hasAccount: true,
-              })
-            );
-
-            setIsNewUser(false);
-            // User exists and is now logged in, redirect to main page
-            router.push("/");
-            return;
-          } catch (loginError) {
-            console.error("Login failed for existing user:", loginError);
-            
-            // Check if this is a known user from localStorage
-            const cachedUser = localStorage.getItem(`realmkin_user_${address.toLowerCase()}`);
-            if (cachedUser) {
-              try {
-                const userData = JSON.parse(cachedUser);
-                if (userData.hasAccount && userData.username) {
-                  console.log("✅ Found cached user data, treating as existing user");
-                  setIsNewUser(false);
-                  // Try to create the missing Firebase Auth account
-                  try {
-                    await signup(tempEmail, address, userData.username, address);
-                    console.log("✅ Recreated Firebase Auth account for existing user");
-                    router.push("/");
-                    return;
-                  } catch (signupError) {
-                    console.error("Failed to recreate Firebase Auth account:", signupError);
-                    // Still treat as existing user, let them try to sign up again
-                  }
-                }
-              } catch (parseError) {
-                console.error("Failed to parse cached user data:", parseError);
-              }
-            }
-            
-            // If we have existing user data but login failed, don't treat as new user
-            // Let them try to sign up again which will handle the "email already exists" case
-            setIsNewUser(false);
-            return;
-          }
+          setIsNewUser(false);
+          // User exists, show "ENTER THE REALM" button instead of username form
+          return;
         }
 
         // Check localStorage for cached user data even if Firebase lookup failed
@@ -176,7 +136,7 @@ export default function LoginPage() {
         setCheckingUser(false);
       }
     },
-    [login, router, getUserByWallet, signup]
+    [getUserByWallet]
   );
 
   // Check if wallet is connected and handle user state
@@ -258,6 +218,58 @@ export default function LoginPage() {
     } catch (error: unknown) {
       setError(
         error instanceof Error ? error.message : "Failed to create account"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle login for existing users
+  const handleExistingUserLogin = async () => {
+    if (!walletAddress) {
+      setError("Please connect your wallet first");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+
+      // Create a temporary email based on wallet address for Firebase Auth
+      const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
+      const tempPassword = walletAddress; // Use wallet address as password
+
+      // Try to log in with temporary credentials
+      await login(tempEmail, tempPassword);
+
+      console.log("✅ Existing user logged in successfully");
+
+      // Redirect to main page
+      router.push("/");
+    } catch (error: unknown) {
+      console.error("Login failed for existing user:", error);
+      
+      // If login fails, try to recreate the account
+      try {
+        const cachedUser = localStorage.getItem(`realmkin_user_${walletAddress.toLowerCase()}`);
+        if (cachedUser) {
+          const userData = JSON.parse(cachedUser);
+          if (userData.username) {
+            console.log("Attempting to recreate Firebase Auth account");
+            const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
+            const tempPassword = walletAddress;
+            await signup(tempEmail, tempPassword, userData.username, walletAddress);
+            console.log("✅ Recreated Firebase Auth account for existing user");
+            router.push("/");
+            return;
+          }
+        }
+      } catch (signupError) {
+        console.error("Failed to recreate account:", signupError);
+      }
+      
+      setError(
+        error instanceof Error ? error.message : "Failed to log in. Please try again."
       );
     } finally {
       setLoading(false);
@@ -659,11 +671,12 @@ export default function LoginPage() {
                               Welcome back! You can now access The Realm.
                             </p>
                             <button
-                              onClick={() => router.push("/")}
-                              className="w-full bg-[#d3b136] hover:bg-[#b8941f] text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105 shadow-lg shadow-[#d3b136]/30"
+                              onClick={handleExistingUserLogin}
+                              disabled={loading}
+                              className="w-full bg-[#d3b136] hover:bg-[#b8941f] disabled:bg-[#8a6b15] text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105 shadow-lg shadow-[#d3b136]/30"
                               style={{ fontFamily: "var(--font-amnestia)" }}
                             >
-                              ENTER THE REALM
+                              {loading ? "LOGGING IN..." : "ENTER THE REALM"}
                             </button>
                           </div>
                         )}
