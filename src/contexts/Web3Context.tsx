@@ -21,6 +21,7 @@ interface Web3ContextType {
   isConnecting: boolean;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
+  refreshWalletState: () => Promise<void>;
   provider: ethers.BrowserProvider | null;
 }
 
@@ -30,6 +31,7 @@ const Web3Context = createContext<Web3ContextType>({
   isConnecting: false,
   connectWallet: async () => {},
   disconnectWallet: () => {},
+  refreshWalletState: async () => {},
   provider: null,
 });
 
@@ -56,15 +58,27 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   useEffect(() => {
     if (typeof window !== "undefined" && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
+        console.log("🔍 Web3Context: accountsChanged event triggered:", accounts);
         if (accounts.length === 0) {
+          console.log("🔍 Web3Context: No accounts, disconnecting wallet");
           disconnectWallet();
         } else {
-          setAccount(accounts[0]);
+          const newAddress = accounts[0];
+          console.log("🔍 Web3Context: Account changed to:", newAddress);
+          setAccount(newAddress);
           setIsConnected(true);
+          
+          // Update cached data
+          localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+            type: 'metamask',
+            address: newAddress,
+            timestamp: Date.now()
+          }));
         }
       };
 
       const handleChainChanged = () => {
+        console.log("🔍 Web3Context: Chain changed, reloading page");
         window.location.reload();
       };
 
@@ -92,10 +106,22 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           const accounts = await provider.listAccounts();
 
           if (accounts.length > 0) {
-            setAccount(accounts[0].address);
-            setIsConnected(true);
-            setProvider(provider);
-            return;
+            const address = accounts[0].address;
+            
+            // Validate the address
+            if (address && address.length >= 10) {
+              setAccount(address);
+              setIsConnected(true);
+              setProvider(provider);
+              
+              // Update cached wallet data
+              localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                type: 'metamask',
+                address: address,
+                timestamp: Date.now()
+              }));
+              return;
+            }
           }
         }
 
@@ -114,18 +140,23 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             // Check if Phantom is already connected
             if (phantom.isConnected) {
               const response = await phantom.connect();
-              setAccount(response.publicKey.toString());
-              setIsConnected(true);
-              setProvider(null); // Phantom doesn't use ethers provider
-              return;
+              const address = response.publicKey.toString();
+              
+              // Validate the address
+              if (address && address.length >= 10) {
+                setAccount(address);
+                setIsConnected(true);
+                setProvider(null); // Phantom doesn't use ethers provider
+                
+                // Update cached wallet data
+                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                  type: 'phantom',
+                  address: address,
+                  timestamp: Date.now()
+                }));
+                return;
+              }
             }
-            
-            // Try to connect if not already connected
-            const response = await phantom.connect();
-            setAccount(response.publicKey.toString());
-            setIsConnected(true);
-            setProvider(null);
-            return;
           } catch (error) {
             console.log("Phantom wallet not connected:", error);
           }
@@ -136,13 +167,53 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         if (cachedWallet) {
           try {
             const walletData = JSON.parse(cachedWallet);
-            if (walletData.type === 'phantom' && (window as unknown as PhantomWindow).phantom?.solana) {
-              // Try to reconnect Phantom
-              const response = await (window as unknown as PhantomWindow).phantom!.solana.connect();
-              setAccount(response.publicKey.toString());
-              setIsConnected(true);
-              setProvider(null);
-              return;
+            const cacheAge = Date.now() - walletData.timestamp;
+            
+            // Only use cache if it's less than 1 hour old
+            if (cacheAge < 3600000) {
+              if (walletData.type === 'phantom' && (window as unknown as PhantomWindow).phantom?.solana) {
+                // Try to reconnect Phantom
+                const response = await (window as unknown as PhantomWindow).phantom!.solana.connect();
+                const address = response.publicKey.toString();
+                
+                if (address && address.length >= 10) {
+                  setAccount(address);
+                  setIsConnected(true);
+                  setProvider(null);
+                  
+                  // Update cached data with fresh timestamp
+                  localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                    type: 'phantom',
+                    address: address,
+                    timestamp: Date.now()
+                  }));
+                  return;
+                }
+              } else if (walletData.type === 'metamask' && window.ethereum) {
+                // Try to reconnect MetaMask
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const accounts = await provider.listAccounts();
+                
+                if (accounts.length > 0) {
+                  const address = accounts[0].address;
+                  if (address && address.length >= 10) {
+                    setAccount(address);
+                    setIsConnected(true);
+                    setProvider(provider);
+                    
+                    // Update cached data with fresh timestamp
+                    localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                      type: 'metamask',
+                      address: address,
+                      timestamp: Date.now()
+                    }));
+                    return;
+                  }
+                }
+              }
+            } else {
+              // Cache is too old, remove it
+              localStorage.removeItem('realmkin_cached_wallet');
             }
           } catch (error) {
             console.log("Failed to restore cached wallet:", error);
@@ -175,12 +246,22 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
     try {
       let provider;
+      let connectedAddress: string | null = null;
 
       if (walletType === "metamask") {
         try {
           // Use the optimized connection utility
           const config = getOptimizedConfig();
           provider = await connectMetaMask(config);
+          
+          // Ensure we get the correct address after connection
+          const signer = await provider.getSigner();
+          connectedAddress = await signer.getAddress();
+          
+          // Double-check the address is valid
+          if (!connectedAddress || connectedAddress.length < 10) {
+            throw new Error('Invalid address received from wallet');
+          }
         } catch (error) {
           console.error("MetaMask connection failed:", error);
           throw error;
@@ -208,18 +289,23 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
         // Connect to Phantom (Solana)
         const response = await phantom.connect();
-        const publicKey = response.publicKey.toString();
-        setAccount(publicKey);
-        setIsConnected(true);
-        setProvider(null); // Phantom doesn't use ethers provider
+        connectedAddress = response.publicKey.toString();
+        
+        // Double-check the address is valid
+        if (!connectedAddress || connectedAddress.length < 10) {
+          throw new Error('Invalid address received from Phantom wallet');
+        }
         
         // Cache the wallet connection
         localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
           type: 'phantom',
-          address: publicKey,
+          address: connectedAddress,
           timestamp: Date.now()
         }));
         
+        setAccount(connectedAddress);
+        setIsConnected(true);
+        setProvider(null); // Phantom doesn't use ethers provider
         return;
       } else if (walletType === "walletconnect") {
         showCustomAlert(
@@ -252,29 +338,57 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         
         provider = new ethers.BrowserProvider(coinbase);
         await provider.send("eth_requestAccounts", []);
+        
+        // Ensure we get the correct address after connection
+        const signer = await provider.getSigner();
+        connectedAddress = await signer.getAddress();
+        
+        // Double-check the address is valid
+        if (!connectedAddress || connectedAddress.length < 10) {
+          throw new Error('Invalid address received from Coinbase wallet');
+        }
       }
 
-      if (provider) {
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
-
-        setAccount(address);
+      if (provider && connectedAddress) {
+        setAccount(connectedAddress);
         setIsConnected(true);
         setProvider(provider);
         
         // Cache the wallet connection
         localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
           type: walletType,
-          address: address,
+          address: connectedAddress,
           timestamp: Date.now()
         }));
-      }
-          } catch (error: unknown) {
-        console.error("Error connecting wallet:", error);
         
-        // Use the utility function to get appropriate error message
-        const { title, message, showRetry } = getConnectionErrorMessage(error as Error);
-        showCustomAlert(title, message, showRetry);
+        // Verify the connection is stable by checking again after a short delay
+        setTimeout(async () => {
+          try {
+            if (provider) {
+              const signer = await provider.getSigner();
+              const currentAddress = await signer.getAddress();
+              if (currentAddress !== connectedAddress) {
+                console.warn('Address mismatch detected, updating state');
+                setAccount(currentAddress);
+                // Update cached data
+                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                  type: walletType,
+                  address: currentAddress,
+                  timestamp: Date.now()
+                }));
+              }
+            }
+          } catch (error) {
+            console.error('Error verifying wallet connection:', error);
+          }
+        }, 1000);
+      }
+    } catch (error: unknown) {
+      console.error("Error connecting wallet:", error);
+      
+      // Use the utility function to get appropriate error message
+      const { title, message, showRetry } = getConnectionErrorMessage(error as Error);
+      showCustomAlert(title, message, showRetry);
     } finally {
       setIsConnecting(false);
     }
@@ -439,12 +553,17 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     localStorage.removeItem('realmkin_cached_wallet');
   };
 
+  const refreshWalletState = async () => {
+    await checkConnection();
+  };
+
   const value = {
     account,
     isConnected,
     isConnecting,
     connectWallet,
     disconnectWallet,
+    refreshWalletState,
     provider,
   };
 

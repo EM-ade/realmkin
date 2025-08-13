@@ -27,6 +27,7 @@ export default function Home() {
     isConnecting,
     connectWallet,
     disconnectWallet,
+    refreshWalletState,
   } = useWeb3();
 
   // NFT state
@@ -244,8 +245,6 @@ export default function Home() {
                     </span>
                   </div>
                 </button>
-
-
 
                 {/* Logout Button */}
                 <button
