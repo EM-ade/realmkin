@@ -58,14 +58,12 @@ const UserManagementDashboard = () => {
       await updateDoc(userRef, {
         totalRealmkin: increment(amount)
       });
-      // Refresh the user list to show the updated balance
-      const usersCollection = collection(firestore, 'userRewards');
-      const userSnapshot = await getDocs(usersCollection);
-      const usersList = userSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as User[];
-      setUsers(usersList);
+      // Update only the changed user to preserve usernames
+      setUsers(prevUsers => prevUsers.map(user =>
+        user.id === selectedUser.id
+          ? { ...user, totalRealmkin: user.totalRealmkin + amount }
+          : user
+      ));
     }
   };
 
@@ -75,14 +73,12 @@ const UserManagementDashboard = () => {
       await updateDoc(userRef, {
         totalRealmkin: increment(-amount)
       });
-      // Refresh the user list to show the updated balance
-      const usersCollection = collection(firestore, 'userRewards');
-      const userSnapshot = await getDocs(usersCollection);
-      const usersList = userSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as User[];
-      setUsers(usersList);
+      // Update only the changed user to preserve usernames
+      setUsers(prevUsers => prevUsers.map(user =>
+        user.id === selectedUser.id
+          ? { ...user, totalRealmkin: Math.max(0, user.totalRealmkin - amount) }
+          : user
+      ));
     }
   };
 
@@ -92,14 +88,12 @@ const UserManagementDashboard = () => {
       await updateDoc(userRef, {
         totalRealmkin: amount
       });
-      // Refresh the user list to show the updated balance
-      const usersCollection = collection(firestore, 'userRewards');
-      const userSnapshot = await getDocs(usersCollection);
-      const usersList = userSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as User[];
-      setUsers(usersList);
+      // Update only the changed user to preserve usernames
+      setUsers(prevUsers => prevUsers.map(user =>
+        user.id === selectedUser.id
+          ? { ...user, totalRealmkin: amount }
+          : user
+      ));
     }
   };
 
@@ -140,9 +134,9 @@ const UserManagementDashboard = () => {
         <table className="min-w-full bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg">
           <thead>
             <tr className="border-b-2 border-[#d3b136]">
-              <th className="py-3 px-4 text-left text-lg font-bold text-glow">Username</th>
-              <th className="py-3 px-4 text-left text-lg font-bold text-glow">Wallet Address</th>
-              <th className="py-3 px-4 text-left text-lg font-bold text-glow">Total Realmkin</th>
+              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">Username</th>
+              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">Wallet Address</th>
+              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">Total Realmkin</th>
             </tr>
           </thead>
           <tbody>
@@ -152,9 +146,9 @@ const UserManagementDashboard = () => {
                 onClick={() => setSelectedUser(user)}
                 className="cursor-pointer hover:bg-[#2b1c3b] transition-colors"
               >
-                <td className="border-t border-[#d3b136] px-4 py-3">{user.username}</td>
-                <td className="border-t border-[#d3b136] px-4 py-3 font-mono">{user.walletAddress}</td>
-                <td className="border-t border-[#d3b136] px-4 py-3 font-bold text-yellow-400">₥{user.totalRealmkin}</td>
+                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base">{user.username}</td>
+                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 font-mono text-xs sm:text-sm">{user.walletAddress}</td>
+                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 font-bold text-yellow-400 text-sm sm:text-base">₥{user.totalRealmkin}</td>
               </tr>
             ))}
           </tbody>
@@ -162,34 +156,34 @@ const UserManagementDashboard = () => {
       </div>
 
       {selectedUser && (
-        <div className="mt-8 p-6 bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg">
-          <h2 className="text-3xl font-bold mb-6 text-glow">
+        <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg">
+          <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-6 text-glow">
             Manage {selectedUser.username}
           </h2>
-          <div className="flex items-center mb-6">
+          <div className="flex items-center mb-4 sm:mb-6">
             <input
               type="number"
               value={amount}
               onChange={e => setAmount(Number(e.target.value))}
-              className="w-full p-3 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d3b136]"
+              className="w-full p-2 sm:p-3 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d3b136] text-sm sm:text-base"
             />
           </div>
-          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <button
               onClick={handleAddRealmkin}
-              className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-green-500/30"
+              className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-green-500/30 text-sm sm:text-base"
             >
               Add Realmkin
             </button>
             <button
               onClick={handleSubtractRealmkin}
-              className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/30"
+              className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/30 text-sm sm:text-base"
             >
               Subtract Realmkin
             </button>
             <button
               onClick={handleSetRealmkin}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/30"
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/30 text-sm sm:text-base"
             >
               Set Realmkin
             </button>
