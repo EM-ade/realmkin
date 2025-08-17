@@ -21,6 +21,7 @@ export interface UserRewards {
   weeklyRate: number; // $0.37 per NFT per week
   totalEarned: number;
   totalClaimed: number;
+  totalRealmkin: number; // New field for the balance
   pendingRewards: number;
   lastCalculated: Date;
   lastClaimed: Date | null;
@@ -193,6 +194,7 @@ class RewardsService {
         weeklyRate: existingData.weeklyRate || 0,
         totalEarned: existingData.totalEarned || 0,
         totalClaimed: existingData.totalClaimed || 0,
+        totalRealmkin: existingData.totalRealmkin || 0,
         pendingRewards: existingData.pendingRewards || 0,
         // Convert timestamps with validation
         lastCalculated: this.convertToValidDate(existingData.lastCalculated, now),
@@ -250,6 +252,7 @@ class RewardsService {
         weeklyRate,
         totalEarned: 0,
         totalClaimed: 0,
+        totalRealmkin: 0,
         pendingRewards: totalInitialRewards, // Give weekly rewards + bonus for initial NFTs
         lastCalculated: now,
         lastClaimed: null,
@@ -452,6 +455,7 @@ class RewardsService {
       const updatedUserRewards: Partial<UserRewards> = {
         totalClaimed: currentUserRewards.totalClaimed + claimAmount,
         totalEarned: currentUserRewards.totalEarned + claimAmount,
+        totalRealmkin: (currentUserRewards.totalRealmkin || 0) + claimAmount,
         pendingRewards: 0, // Reset pending rewards
         lastClaimed: now,
         lastCalculated: now,

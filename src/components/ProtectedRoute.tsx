@@ -6,28 +6,32 @@ import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  adminWallets?: string[];
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+export default function ProtectedRoute({ children, adminWallets }: ProtectedRouteProps) {
+  const { user, userData, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
+    if (loading) return;
 
-  if (loading) {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    if (adminWallets && userData && !adminWallets.includes(userData.walletAddress ?? '')) {
+      router.push('/');
+    }
+  }, [user, userData, loading, router, adminWallets]);
+
+  if (loading || !user || (adminWallets && userData && !adminWallets.includes(userData.walletAddress ?? ''))) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center">
         <div className="text-white text-2xl">Loading...</div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   return <>{children}</>;

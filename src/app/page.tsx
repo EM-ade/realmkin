@@ -36,7 +36,7 @@ export default function Home() {
   const [nftError, setNftError] = useState<string | null>(null);
 
   // Rewards state
-  const [, setUserRewards] = useState<UserRewards | null>(null);
+  const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   const [rewardsCalculation, setRewardsCalculation] =
     useState<RewardsCalculation | null>(null);
   const [claimLoading, setClaimLoading] = useState(false);
@@ -152,6 +152,10 @@ export default function Home() {
       );
       setRewardsCalculation(calculation);
 
+      // Refetch user rewards to update the total balance
+      const updatedRewards = await rewardsService.getUserRewards(user.uid);
+      setUserRewards(updatedRewards);
+
       // Show withdrawal confirmation modal
       setLastClaimAmount(claimRecord.amount);
       setLastClaimWallet(account);
@@ -215,9 +219,30 @@ export default function Home() {
                 </h1>
               </div>
               <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-                {/* Connect Wallet Button */}
-                <button
-                  onClick={isConnected ? disconnectWallet : connectWallet}
+            {/* Admin Button */}
+            {userData && ['ABjnax7QfDmG6wR2KJoNc3UyiouwTEZ3b5tnTrLLyNSp', 'F1p6dNLSSTHi4QkUkRVXZw8QurZJKUDcvVBjfF683nU'].includes(userData.walletAddress ?? '') && (
+              <a
+                href="/admin"
+                className="relative group border-2 border-[#d3b136] bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-3 sm:px-4 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/20 w-full sm:w-auto btn-enhanced"
+                style={{
+                  clipPath:
+                    "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
+                }}
+              >
+                <div
+                  className="flex items-center justify-center space-x-2"
+                  style={{ fontFamily: "var(--font-gothic-cg)" }}
+                >
+                  <span className="text-base sm:text-lg">👑</span>
+                  <span className="text-xs sm:text-sm font-bold tracking-wide">
+                    ADMIN
+                  </span>
+                </div>
+              </a>
+            )}
+            {/* Connect Wallet Button */}
+            <button
+              onClick={isConnected ? disconnectWallet : connectWallet}
                   disabled={isConnecting}
                   className={`relative group border-2 border-[#d3b136] font-bold py-2 px-3 sm:px-4 transition-all duration-300 transform hover:scale-105 w-full sm:w-auto btn-enhanced ${
                     isConnected
@@ -333,13 +358,21 @@ export default function Home() {
                       </div>
                       <div className="flex-1 text-center sm:text-left">
                         <div className="text-4xl sm:text-6xl lg:text-8xl font-bold mb-4 text-gradient">
-                          {rewardsCalculation
+                          {userRewards
                             ? rewardsService.formatMKIN(
-                                rewardsCalculation.pendingAmount
+                                userRewards.totalRealmkin
                               )
                             : "₥0 MKIN"}
                         </div>
                         <div className="mb-4">
+                          <div className="text-lg text-cyan-400 mb-2">
+                            Claimable:{" "}
+                            {rewardsCalculation
+                              ? rewardsService.formatMKIN(
+                                  rewardsCalculation.pendingAmount
+                                )
+                              : "₥0"}
+                          </div>
                           <div className="text-sm text-gray-300 mb-2">
                             {nfts.length} NFTs × ₥200/week ={" "}
                             {rewardsService.formatMKIN(nfts.length * 200)}
