@@ -1,8 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { db as firestore } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc, increment, writeBatch } from 'firebase/firestore';
+import { useState, useEffect } from "react";
+import { db as firestore } from "@/lib/firebase";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  increment,
+  writeBatch,
+} from "firebase/firestore";
+import backfillTotalRealmkin from "@/lib/functions/backfillTotalRealmkin";
 
 interface User {
   id: string;
@@ -13,26 +21,32 @@ interface User {
 
 const UserManagementDashboard = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [amount, setAmount] = useState(0);
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const userRewardsCollection = collection(firestore, 'userRewards');
+      const userRewardsCollection = collection(firestore, "userRewards");
       const userRewardsSnapshot = await getDocs(userRewardsCollection);
-      const userRewardsData = userRewardsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const userRewardsData = userRewardsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-      const usersCollection = collection(firestore, 'users');
+      const usersCollection = collection(firestore, "users");
       const usersSnapshot = await getDocs(usersCollection);
       type UserDoc = { id: string; username: string; [key: string]: unknown };
-      const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as UserDoc[];
+      const usersData = usersSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as UserDoc[];
 
-      const mergedUsers = userRewardsData.map(reward => {
-        const user = usersData.find(u => u.id === reward.id);
+      const mergedUsers = userRewardsData.map((reward) => {
+        const user = usersData.find((u) => u.id === reward.id);
         return {
           ...reward,
-          username: user ? user.username : 'N/A',
+          username: user ? user.username : "N/A",
         };
       }) as User[];
 
@@ -47,70 +61,94 @@ const UserManagementDashboard = () => {
   };
 
   const filteredUsers = users.filter(
-    user =>
-      (user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.walletAddress && user.walletAddress.toLowerCase().includes(searchTerm.toLowerCase()))
+    (user) =>
+      (user.username &&
+        user.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.walletAddress &&
+        user.walletAddress.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleAddRealmkin = async () => {
     if (selectedUser) {
-      const userRef = doc(firestore, 'userRewards', selectedUser.id);
+      const userRef = doc(firestore, "userRewards", selectedUser.id);
       await updateDoc(userRef, {
-        totalRealmkin: increment(amount)
+        totalRealmkin: increment(amount),
       });
       // Update only the changed user to preserve usernames
-      setUsers(prevUsers => prevUsers.map(user =>
-        user.id === selectedUser.id
-          ? { ...user, totalRealmkin: user.totalRealmkin + amount }
-          : user
-      ));
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === selectedUser.id
+            ? { ...user, totalRealmkin: user.totalRealmkin + amount }
+            : user
+        )
+      );
     }
   };
 
   const handleSubtractRealmkin = async () => {
     if (selectedUser) {
-      const userRef = doc(firestore, 'userRewards', selectedUser.id);
+      const userRef = doc(firestore, "userRewards", selectedUser.id);
       await updateDoc(userRef, {
-        totalRealmkin: increment(-amount)
+        totalRealmkin: increment(-amount),
       });
       // Update only the changed user to preserve usernames
-      setUsers(prevUsers => prevUsers.map(user =>
-        user.id === selectedUser.id
-          ? { ...user, totalRealmkin: Math.max(0, user.totalRealmkin - amount) }
-          : user
-      ));
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === selectedUser.id
+            ? {
+                ...user,
+                totalRealmkin: Math.max(0, user.totalRealmkin - amount),
+              }
+            : user
+        )
+      );
     }
   };
 
   const handleSetRealmkin = async () => {
     if (selectedUser) {
-      const userRef = doc(firestore, 'userRewards', selectedUser.id);
+      const userRef = doc(firestore, "userRewards", selectedUser.id);
       await updateDoc(userRef, {
-        totalRealmkin: amount
+        totalRealmkin: amount,
       });
       // Update only the changed user to preserve usernames
-      setUsers(prevUsers => prevUsers.map(user =>
-        user.id === selectedUser.id
-          ? { ...user, totalRealmkin: amount }
-          : user
-      ));
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === selectedUser.id
+            ? { ...user, totalRealmkin: amount }
+            : user
+        )
+      );
     }
   };
 
   const handleMigration = async () => {
-    const usersCollection = collection(firestore, 'userRewards');
+    const usersCollection = collection(firestore, "userRewards");
     const userSnapshot = await getDocs(usersCollection);
     const batch = writeBatch(firestore);
 
-    userSnapshot.forEach(doc => {
+    userSnapshot.forEach((doc) => {
       const data = doc.data();
-      if ((!data.totalRealmkin || data.totalRealmkin === 0) && data.totalClaimed > 0) {
+      if (
+        (!data.totalRealmkin || data.totalRealmkin === 0) &&
+        data.totalClaimed > 0
+      ) {
         batch.update(doc.ref, { totalRealmkin: data.totalClaimed });
       }
     });
 
     await batch.commit();
-    alert('Migration complete!');
+    alert("Migration complete!");
+  };
+
+  const handleBackfill = async () => {
+    try {
+      const result = await backfillTotalRealmkin();
+      alert(result);
+    } catch (error) {
+      console.error("Error during backfill:", error);
+      alert("Error during backfill: " + (error instanceof Error ? error.message : String(error)));
+    }
   };
 
   return (
@@ -123,32 +161,52 @@ const UserManagementDashboard = () => {
           onChange={handleSearch}
           className="w-full p-3 bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d3b136]"
         />
-        <button
-          onClick={handleMigration}
-          className="ml-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-yellow-500/30"
-        >
-          Run Migration
-        </button>
+        <div className="flex space-x-4">
+          <button
+            onClick={handleMigration}
+            className="ml-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-yellow-500/30"
+          >
+            Run Migration
+          </button>
+          <button
+            onClick={handleBackfill}
+            className="ml-4 bg-blue-500 hover:bg-blue-400 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/30"
+          >
+            Run Backfill
+          </button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg">
           <thead>
             <tr className="border-b-2 border-[#d3b136]">
-              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">Username</th>
-              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">Wallet Address</th>
-              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">Total Realmkin</th>
+              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">
+                Username
+              </th>
+              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">
+                Wallet Address
+              </th>
+              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">
+                Total Realmkin
+              </th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map(user => (
+            {filteredUsers.map((user) => (
               <tr
                 key={user.id}
                 onClick={() => setSelectedUser(user)}
                 className="cursor-pointer hover:bg-[#2b1c3b] transition-colors"
               >
-                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base">{user.username}</td>
-                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 font-mono text-xs sm:text-sm">{user.walletAddress}</td>
-                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 font-bold text-yellow-400 text-sm sm:text-base">₥{user.totalRealmkin}</td>
+                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base">
+                  {user.username}
+                </td>
+                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 font-mono text-xs sm:text-sm">
+                  {user.walletAddress}
+                </td>
+                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 font-bold text-yellow-400 text-sm sm:text-base">
+                  ₥{user.totalRealmkin}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -164,7 +222,7 @@ const UserManagementDashboard = () => {
             <input
               type="number"
               value={amount}
-              onChange={e => setAmount(Number(e.target.value))}
+              onChange={(e) => setAmount(Number(e.target.value))}
               className="w-full p-2 sm:p-3 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d3b136] text-sm sm:text-base"
             />
           </div>
