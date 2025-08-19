@@ -220,7 +220,8 @@ class RewardsService {
       const updatedData: Partial<UserRewards> = {
         totalNFTs: nftCount,
         weeklyRate,
-        pendingRewards: totalPendingRewards,
+        totalRealmkin: (processedData.totalRealmkin || 0) + newNFTBonus, // Add new NFT bonus to balance
+        pendingRewards: weeklyRewards, // Only weekly rewards for pending
         lastCalculated: now,
         updatedAt: now,
         walletAddress, // Update in case wallet changed
