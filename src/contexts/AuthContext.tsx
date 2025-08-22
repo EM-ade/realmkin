@@ -16,6 +16,7 @@ interface UserData {
   email: string;
   walletAddress?: string;
   createdAt: Date;
+  admin?: boolean; // Add admin property
 }
 
 interface AuthContextType {
@@ -23,7 +24,12 @@ interface AuthContextType {
   userData: UserData | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, username: string, walletAddress?: string) => Promise<void>;
+  signup: (
+    email: string,
+    password: string,
+    username: string,
+    walletAddress?: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
   getUserByWallet: (walletAddress: string) => Promise<UserData | null>;
@@ -86,7 +92,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signup = async (email: string, password: string, username: string, walletAddress?: string) => {
+  const signup = async (
+    email: string,
+    password: string,
+    username: string,
+    walletAddress?: string
+  ) => {
     try {
       console.log("Starting signup process for:", email);
 
@@ -113,6 +124,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           email,
           walletAddress,
           createdAt: new Date(),
+          admin: false, // Default to non-admin
         };
 
         console.log("Saving user data to Firestore...");
@@ -120,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await setDoc(doc(db, "usernames", username.toLowerCase()), {
           uid: user.uid,
         });
-        
+
         // If wallet address provided, create wallet mapping for easy lookup
         if (walletAddress) {
           const walletMappingPath = `wallets/${walletAddress.toLowerCase()}`;
@@ -130,9 +142,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             username: username,
             createdAt: new Date(),
           });
-          console.log("✅ Wallet mapping created successfully at:", walletMappingPath);
+          console.log(
+            "✅ Wallet mapping created successfully at:",
+            walletMappingPath
+          );
         }
-        
+
         console.log("User data saved successfully");
       } catch (firestoreError) {
         console.warn("Failed to save user data to Firestore:", firestoreError);
@@ -144,13 +159,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error instanceof Error) {
         // Handle specific Firebase Auth errors
         if (error.message.includes("email-already-in-use")) {
-          console.log("🔄 User already exists in Firebase Auth, attempting to log in...");
-          
+          console.log(
+            "🔄 User already exists in Firebase Auth, attempting to log in..."
+          );
+
           // Try to log in the existing user
           try {
             await signInWithEmailAndPassword(auth, email, password);
             console.log("✅ Successfully logged in existing user");
-            
+
             // Now try to create the missing wallet mapping and user data
             if (walletAddress) {
               try {
@@ -163,16 +180,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     createdAt: new Date(),
                   };
 
-                  console.log("🔧 Creating missing wallet mapping and user data...");
+                  console.log(
+                    "🔧 Creating missing wallet mapping and user data..."
+                  );
                   await setDoc(doc(db, "users", currentUser.uid), userData);
                   await setDoc(doc(db, "usernames", username.toLowerCase()), {
                     uid: currentUser.uid,
                   });
-                  await setDoc(doc(db, "wallets", walletAddress.toLowerCase()), {
-                    uid: currentUser.uid,
-                    username: username,
-                    createdAt: new Date(),
-                  });
+                  await setDoc(
+                    doc(db, "wallets", walletAddress.toLowerCase()),
+                    {
+                      uid: currentUser.uid,
+                      username: username,
+                      createdAt: new Date(),
+                    }
+                  );
                   console.log("✅ Missing data created successfully");
                 }
               } catch (firestoreError) {
@@ -180,7 +202,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 // Don't fail the login if Firestore fails
               }
             }
-            
+
             return; // Successfully handled the existing user
           } catch (loginError) {
             console.error("Failed to log in existing user:", loginError);
@@ -221,26 +243,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const getUserByWallet = async (walletAddress: string): Promise<UserData | null> => {
+  const getUserByWallet = async (
+    walletAddress: string
+  ): Promise<UserData | null> => {
     try {
       console.log("🔍 Looking up user by wallet address:", walletAddress);
-      
+
       // Check if wallet mapping exists
-      const walletDoc = await getDoc(doc(db, "wallets", walletAddress.toLowerCase()));
-      
+      const walletDoc = await getDoc(
+        doc(db, "wallets", walletAddress.toLowerCase())
+      );
+
       if (!walletDoc.exists()) {
         console.log("❌ No wallet mapping found");
-        
+
         // Check if user exists in Firebase Auth but wallet mapping is missing
         // This can happen if the signup process was interrupted
         const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
-        console.log("🔍 Checking if user exists in Firebase Auth with email:", tempEmail);
-        
+        console.log(
+          "🔍 Checking if user exists in Firebase Auth with email:",
+          tempEmail
+        );
+
         try {
           // Try to sign in to see if the user exists in Firebase Auth
           await signInWithEmailAndPassword(auth, tempEmail, walletAddress);
-          console.log("✅ User exists in Firebase Auth but missing wallet mapping");
-          
+          console.log(
+            "✅ User exists in Firebase Auth but missing wallet mapping"
+          );
+
           // User exists in Firebase Auth but not in wallet mapping
           // This is a data inconsistency that needs to be fixed
           // For now, return null so the user can try to sign up again
@@ -251,22 +282,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return null;
         }
       }
-      
+
       const walletData = walletDoc.data();
       const uid = walletData.uid;
-      
+
       // Get user data using the UID
       const userDoc = await getDoc(doc(db, "users", uid));
-      
+
       if (!userDoc.exists()) {
         console.log("❌ User document not found for UID:", uid);
         return null;
       }
-      
+
       const userData = userDoc.data() as UserData;
-      console.log("✅ User found:", userData.username);
+      console.log(
+        "✅ User found:",
+        userData.username,
+        "Admin:",
+        userData.admin
+      );
       return userData;
-      
     } catch (error) {
       console.error("Error getting user by wallet:", error);
       return null;

@@ -11,6 +11,8 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import backfillTotalRealmkin from "@/lib/functions/backfillTotalRealmkin";
+import { useAuth } from "@/contexts/AuthContext";
+import UserDetailsModal from "./UserDetailsModal";
 
 interface User {
   id: string;
@@ -23,7 +25,9 @@ const UserManagementDashboard = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [amount, setAmount] = useState(0);
+  const { user, userData, loading } = useAuth();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -147,7 +151,10 @@ const UserManagementDashboard = () => {
       alert(result);
     } catch (error) {
       console.error("Error during backfill:", error);
-      alert("Error during backfill: " + (error instanceof Error ? error.message : String(error)));
+      alert(
+        "Error during backfill: " +
+          (error instanceof Error ? error.message : String(error))
+      );
     }
   };
 
@@ -162,7 +169,7 @@ const UserManagementDashboard = () => {
           className="w-full p-3 bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d3b136]"
         />
         <div className="flex space-x-4">
-          <button
+          {/* <button
             onClick={handleMigration}
             className="ml-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-yellow-500/30"
           >
@@ -173,7 +180,7 @@ const UserManagementDashboard = () => {
             className="ml-4 bg-blue-500 hover:bg-blue-400 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/30"
           >
             Run Backfill
-          </button>
+          </button> */}
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -195,7 +202,10 @@ const UserManagementDashboard = () => {
             {filteredUsers.map((user) => (
               <tr
                 key={user.id}
-                onClick={() => setSelectedUser(user)}
+                onClick={() => {
+                  setSelectedUser(user);
+                  setIsModalOpen(true);
+                }}
                 className="cursor-pointer hover:bg-[#2b1c3b] transition-colors"
               >
                 <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base">
@@ -213,40 +223,19 @@ const UserManagementDashboard = () => {
         </table>
       </div>
 
-      {selectedUser && (
-        <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg">
-          <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-6 text-glow">
-            Manage {selectedUser.username}
-          </h2>
-          <div className="flex items-center mb-4 sm:mb-6">
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full p-2 sm:p-3 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d3b136] text-sm sm:text-base"
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <button
-              onClick={handleAddRealmkin}
-              className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-green-500/30 text-sm sm:text-base"
-            >
-              Add Realmkin
-            </button>
-            <button
-              onClick={handleSubtractRealmkin}
-              className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/30 text-sm sm:text-base"
-            >
-              Subtract Realmkin
-            </button>
-            <button
-              onClick={handleSetRealmkin}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/30 text-sm sm:text-base"
-            >
-              Set Realmkin
-            </button>
-          </div>
-        </div>
+      {isModalOpen && selectedUser && (
+        <UserDetailsModal
+          user={selectedUser}
+          onClose={() => setIsModalOpen(false)}
+          onUpdate={(updatedUser) => {
+            setUsers((prevUsers) =>
+              prevUsers.map((user) =>
+                user.id === updatedUser.id ? updatedUser : user
+              )
+            );
+            setSelectedUser(updatedUser);
+          }}
+        />
       )}
     </div>
   );

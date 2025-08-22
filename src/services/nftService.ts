@@ -102,10 +102,18 @@ class NFTService {
   private readonly TEST_WALLET_ADDRESS =
     "F1p6dNLSSTHi4QkUkRVXZw8QurZJKUDcvVBjfF683nU";
 
+  // Cache for NFT data
+  private nftCache = new Map<string, NFTCollection>();
+
   /**
    * Fetch NFTs owned by a Solana wallet using Helius API
    */
   async fetchNFTsWithHelius(walletAddress: string): Promise<NFTCollection> {
+    // Check cache first
+    if (this.nftCache.has(walletAddress)) {
+      return this.nftCache.get(walletAddress)!;
+    }
+
     if (!this.HELIUS_API_KEY) {
       console.warn("Helius API key not configured, falling back to Magic Eden");
       return await this.fetchNFTsWithMagicEdenSolana(walletAddress);
@@ -150,10 +158,14 @@ class NFTService {
         })
       );
 
-      return {
+      const result = {
         nfts: nfts.filter((nft) => nft !== null),
         totalCount: realmkinNFTs.length,
       };
+
+      // Cache the result
+      this.nftCache.set(walletAddress, result);
+      return result;
     } catch (error) {
       console.error("Error fetching NFTs with Helius:", error);
       // Fallback to Magic Eden
@@ -167,6 +179,11 @@ class NFTService {
   async fetchNFTsWithMagicEdenSolana(
     walletAddress: string
   ): Promise<NFTCollection> {
+    // Check cache first
+    if (this.nftCache.has(walletAddress)) {
+      return this.nftCache.get(walletAddress)!;
+    }
+
     try {
       // Magic Eden V2 API endpoint for wallet tokens (no API key required)
       const response = await axios.get<MagicEdenSolanaNFT[]>(
@@ -189,10 +206,14 @@ class NFTService {
         })
       );
 
-      return {
+      const result = {
         nfts: nfts.filter((nft) => nft !== null),
         totalCount: response.data.length,
       };
+
+      // Cache the result
+      this.nftCache.set(walletAddress, result);
+      return result;
     } catch (error) {
       console.error("Error fetching NFTs with Magic Eden V2:", error);
 

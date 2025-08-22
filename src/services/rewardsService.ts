@@ -279,6 +279,9 @@ class RewardsService {
     }
   }
 
+  // Cache for reward calculations
+  private rewardCalculationCache = new Map<string, RewardsCalculation>();
+
   /**
    * Calculate pending rewards for a user
    */
@@ -291,8 +294,17 @@ class RewardsService {
       console.error("Invalid NFT count:", currentNFTCount);
       throw new Error("Invalid NFT count provided");
     }
+
+    // Create cache key
+    const cacheKey = `${userRewards.userId}_${currentNFTCount}_${userRewards.lastClaimed?.getTime() || userRewards.createdAt.getTime()}`;
+
+    // Check cache first
+    if (this.rewardCalculationCache.has(cacheKey)) {
+      return this.rewardCalculationCache.get(cacheKey)!;
+    }
+
     const now = new Date();
-    
+
     // Ensure numeric fields are properly initialized
     const pendingRewards = userRewards.pendingRewards || 0;
 
@@ -302,11 +314,11 @@ class RewardsService {
     // Calculate next claim date (1 week from last claim or creation)
     const claimDate = userRewards.lastClaimed || userRewards.createdAt;
     const lastClaimDate = this.convertToValidDate(claimDate, now);
-    
+
     const nextClaimDate = new Date(
       lastClaimDate.getTime() + this.MILLISECONDS_PER_WEEK
     );
-    
+
     // Check if user can claim (must meet time constraint and minimum amount)
     const canClaim = now >= nextClaimDate && pendingRewards >= this.MIN_CLAIM_AMOUNT;
 
@@ -320,7 +332,7 @@ class RewardsService {
       now: now.toISOString()
     });
 
-    return {
+    const result = {
       totalNFTs: currentNFTCount,
       weeklyRate,
       weeksElapsed: 1, // Always 1 week since we give full amount
@@ -328,6 +340,10 @@ class RewardsService {
       canClaim,
       nextClaimDate: canClaim ? null : nextClaimDate,
     };
+
+    // Cache the result
+    this.rewardCalculationCache.set(cacheKey, result);
+    return result;
   }
 
   /**
