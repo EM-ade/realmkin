@@ -287,7 +287,8 @@ class RewardsService {
    */
   calculatePendingRewards(
     userRewards: UserRewards,
-    currentNFTCount: number
+    currentNFTCount: number,
+    bypassWaitTime: boolean = false
   ): RewardsCalculation {
     // Validate inputs
     if (!this.validateNFTCount(currentNFTCount)) {
@@ -295,8 +296,11 @@ class RewardsService {
       throw new Error("Invalid NFT count provided");
     }
 
-    // Create cache key
-    const cacheKey = `${userRewards.userId}_${currentNFTCount}_${userRewards.lastClaimed?.getTime() || userRewards.createdAt.getTime()}`;
+    // Create cache key - handle case where createdAt might not be a Date object
+    const claimDate = userRewards.lastClaimed || userRewards.createdAt;
+    const claimDateTime = claimDate instanceof Date ? claimDate.getTime() : new Date().getTime();
+
+    const cacheKey = `${userRewards.userId}_${currentNFTCount}_${claimDateTime}_${bypassWaitTime}`;
 
     // Check cache first
     if (this.rewardCalculationCache.has(cacheKey)) {
@@ -311,8 +315,10 @@ class RewardsService {
     // Calculate weekly rate (200 MKIN per NFT per week)
     const weeklyRate = currentNFTCount * this.WEEKLY_RATE_PER_NFT;
 
+
     // Calculate next claim date and weeks elapsed since last claim
     const claimDate = userRewards.lastClaimed || userRewards.createdAt;
+
     const lastClaimDate = this.convertToValidDate(claimDate, now);
 
     // Calculate how many full weeks have elapsed
@@ -324,11 +330,13 @@ class RewardsService {
       lastClaimDate.getTime() + (weeksElapsed + 1) * this.MILLISECONDS_PER_WEEK
     );
 
+
     // Calculate accumulated reward amount (200 MKIN per week per NFT)
     const accumulatedReward = weeklyRate * weeksElapsed;
 
     // Check if user can claim (must have at least 1 full week and meet minimum amount)
     const canClaim = weeksElapsed >= 1 && accumulatedReward >= this.MIN_CLAIM_AMOUNT;
+
 
     // Debug logging to track calculations
     console.log("🔧 Rewards calculation debug:", {
@@ -337,6 +345,7 @@ class RewardsService {
       weeksElapsed,
       accumulatedReward,
       canClaim,
+      bypassWaitTime,
       nextClaimDate: nextClaimDate.toISOString(),
       now: now.toISOString()
     });
@@ -393,7 +402,8 @@ class RewardsService {
    */
   async claimRewards(
     userId: string,
-    walletAddress: string
+    walletAddress: string,
+    bypassWaitTime: boolean = false
   ): Promise<ClaimRecord> {
     // Security validations
     if (!this.validateUserId(userId)) {
@@ -419,7 +429,8 @@ class RewardsService {
 
     const calculation = this.calculatePendingRewards(
       userRewards,
-      userRewards.totalNFTs
+      userRewards.totalNFTs,
+      bypassWaitTime
     );
 
     if (!calculation.canClaim) {
@@ -456,7 +467,8 @@ class RewardsService {
       // Re-validate claim eligibility
       const currentCalculation = this.calculatePendingRewards(
         currentUserRewards,
-        currentUserRewards.totalNFTs
+        currentUserRewards.totalNFTs,
+        bypassWaitTime
       );
 
       if (!currentCalculation.canClaim) {
