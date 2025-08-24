@@ -38,6 +38,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+/src/app/test
 next-env.d.ts
 
 .firestore.rules
