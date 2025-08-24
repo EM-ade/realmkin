@@ -315,21 +315,30 @@ class RewardsService {
     // Calculate weekly rate (200 MKIN per NFT per week)
     const weeklyRate = currentNFTCount * this.WEEKLY_RATE_PER_NFT;
 
-    // Calculate next claim date (1 week from last claim or creation)
+    // Calculate next claim date and weeks elapsed since last claim
     const lastClaimDate = this.convertToValidDate(claimDate, now);
 
+    // Calculate how many full weeks have elapsed
+    const timeSinceLastClaim = now.getTime() - lastClaimDate.getTime();
+    const weeksElapsed = Math.floor(timeSinceLastClaim / this.MILLISECONDS_PER_WEEK);
+
+    // Calculate next claim date (based on full weeks)
     const nextClaimDate = new Date(
-      lastClaimDate.getTime() + this.MILLISECONDS_PER_WEEK
+      lastClaimDate.getTime() + (weeksElapsed + 1) * this.MILLISECONDS_PER_WEEK
     );
 
-    // Check if user can claim (must meet time constraint and minimum amount)
-    const canClaim = (bypassWaitTime || now >= nextClaimDate) && pendingRewards >= this.MIN_CLAIM_AMOUNT;
+    // Calculate accumulated reward amount (200 MKIN per week per NFT)
+    const accumulatedReward = weeklyRate * weeksElapsed;
+
+    // Check if user can claim (must have at least 1 full week and meet minimum amount)
+    const canClaim = (bypassWaitTime || weeksElapsed >= 1) && accumulatedReward >= this.MIN_CLAIM_AMOUNT;
 
     // Debug logging to track calculations
     console.log("🔧 Rewards calculation debug:", {
       currentNFTCount,
       weeklyRate,
-      pendingRewards,
+      weeksElapsed,
+      accumulatedReward,
       canClaim,
       bypassWaitTime,
       nextClaimDate: nextClaimDate.toISOString(),
@@ -339,8 +348,8 @@ class RewardsService {
     const result = {
       totalNFTs: currentNFTCount,
       weeklyRate,
-      weeksElapsed: 1, // Always 1 week since we give full amount
-      pendingAmount: pendingRewards, // Use existing pending rewards
+      weeksElapsed,
+      pendingAmount: accumulatedReward,
       canClaim,
       nextClaimDate: canClaim ? null : nextClaimDate,
     };
@@ -429,6 +438,9 @@ class RewardsService {
 
     const now = new Date();
     const claimAmount = Math.floor(calculation.pendingAmount * 100) / 100; // Round to 2 decimal places
+
+    // Log accumulator details
+    console.log(`💰 Claiming accumulated rewards: ₥${claimAmount} for ${calculation.weeksElapsed} weeks`);
 
     // Additional security validation
     if (!this.validateAmount(claimAmount)) {
