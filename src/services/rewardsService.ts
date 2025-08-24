@@ -322,12 +322,22 @@ class RewardsService {
     const timeSinceLastClaim = now.getTime() - lastClaimDate.getTime();
     const weeksElapsed = Math.floor(timeSinceLastClaim / this.MILLISECONDS_PER_WEEK);
 
-    // Calculate next claim date (based on full weeks)
-    const nextClaimDate = new Date(
-      lastClaimDate.getTime() + (weeksElapsed + 1) * this.MILLISECONDS_PER_WEEK
-    );
+    // Calculate next claim date with late withdrawal handling
+    let nextClaimDate;
+    if (now.getTime() > lastClaimDate.getTime() + (weeksElapsed * this.MILLISECONDS_PER_WEEK)) {
+      // User is withdrawing late, calculate remaining time
+      const timeSinceLastClaim = now.getTime() - lastClaimDate.getTime();
+      const remainingTime = this.MILLISECONDS_PER_WEEK - (timeSinceLastClaim % this.MILLISECONDS_PER_WEEK);
+      nextClaimDate = new Date(now.getTime() + remainingTime);
+    } else {
+      // Normal case - user is withdrawing on time
+      nextClaimDate = new Date(
+        lastClaimDate.getTime() + (weeksElapsed + 1) * this.MILLISECONDS_PER_WEEK
+      );
+    }
 
     // Calculate accumulated reward amount (200 MKIN per week per NFT)
+    // For each full week that has passed, add the weekly reward
     const accumulatedReward = weeklyRate * weeksElapsed;
 
     // Check if user can claim (must have at least 1 full week and meet minimum amount)
