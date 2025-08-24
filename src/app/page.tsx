@@ -17,8 +17,6 @@ import {
   RewardsCalculation,
 } from "@/services/rewardsService";
 
-
-
 export default function Home() {
   const { user, userData, logout } = useAuth();
   const {
@@ -50,15 +48,16 @@ export default function Home() {
   const [lastClaimAmount, setLastClaimAmount] = useState<number>(0);
   const [lastClaimWallet, setLastClaimWallet] = useState<string>("");
 
-
-
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
 
     console.log("🔍 Main Page: Fetching NFTs for account:", account);
     console.log("🔍 Main Page: Account type:", typeof account);
     console.log("🔍 Main Page: Account length:", account?.length);
-    console.log("🔍 Main Page: Detected wallet type:", detectWalletType(account));
+    console.log(
+      "🔍 Main Page: Detected wallet type:",
+      detectWalletType(account)
+    );
 
     setNftLoading(true);
     setNftError(null);
@@ -170,9 +169,60 @@ export default function Home() {
     }
   }, [user, account, rewardsCalculation, nfts.length]);
 
+  // Handle test reward claim (bypasses wait time)
+  const handleTestClaimRewards = useCallback(async () => {
+    if (!user || !account) return;
+
+    setClaimLoading(true);
+    setClaimError(null);
+
+    try {
+      const claimRecord = await rewardsService.claimRewards(
+        user.uid,
+        account,
+        true
+      );
+
+      // Refresh rewards data after claim
+      const rewards = await rewardsService.initializeUserRewards(
+        user.uid,
+        account,
+        nfts.length
+      );
+      setUserRewards(rewards);
+
+      const calculation = rewardsService.calculatePendingRewards(
+        rewards,
+        nfts.length
+      );
+      setRewardsCalculation(calculation);
+
+      // Refetch user rewards to update the total balance
+      const updatedRewards = await rewardsService.getUserRewards(user.uid);
+      setUserRewards(updatedRewards);
+
+      // Show withdrawal confirmation modal
+      setLastClaimAmount(claimRecord.amount);
+      setLastClaimWallet(account);
+      setShowWithdrawalConfirmation(true);
+    } catch (error) {
+      console.error("Error claiming test rewards:", error);
+      setClaimError(
+        error instanceof Error ? error.message : "Failed to claim test rewards"
+      );
+    } finally {
+      setClaimLoading(false);
+    }
+  }, [user, account, nfts.length]);
+
   // Fetch NFTs when wallet connects
   useEffect(() => {
-    console.log("🔍 Main Page: useEffect triggered - isConnected:", isConnected, "account:", account);
+    console.log(
+      "🔍 Main Page: useEffect triggered - isConnected:",
+      isConnected,
+      "account:",
+      account
+    );
     if (isConnected && account) {
       console.log("🔍 Main Page: Fetching NFTs for connected wallet");
       fetchUserNFTs();
@@ -182,8 +232,6 @@ export default function Home() {
       setNftError(null);
     }
   }, [isConnected, account, fetchUserNFTs]);
-
-
 
   // Dynamic welcome message logic
   const getWelcomeMessage = () => {
@@ -219,30 +267,35 @@ export default function Home() {
                 </h1>
               </div>
               <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 md:space-x-3 w-full sm:w-auto">
-            {/* Admin Button */}
-            {userData && ['ABjnax7QfDmG6wR2KJoNc3UyiouwTEZ3b5tnTrLLyNSp', 'F1p6dNLSSTHi4QkUkRVXZw8QurZJKUDcvVBjfF683nU'].includes(userData.walletAddress ?? '') && (
-              <a
-                href="/admin"
-                className="relative group border-2 border-[#d3b136] bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-3 sm:px-4 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/20 w-full sm:w-auto btn-enhanced"
-                style={{
-                  clipPath:
-                    "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
-                }}
-              >
-                <div
-                  className="flex items-center justify-center space-x-2"
-                  style={{ fontFamily: "var(--font-gothic-cg)" }}
-                >
-                  <span className="text-base sm:text-lg">👑</span>
-                  <span className="text-xs sm:text-sm font-bold tracking-wide">
-                    ADMIN
-                  </span>
-                </div>
-              </a>
-            )}
-            {/* Connect Wallet Button */}
-            <button
-              onClick={isConnected ? disconnectWallet : connectWallet}
+                {/* Admin Button */}
+                {userData &&
+                  [
+                    "ABjnax7QfDmG6wR2KJoNc3UyiouwTEZ3b5tnTrLLyNSp",
+                    "F1p6dNLSSTHi4QkUkRVXZw8QurZJKUDcvVBjfF683nU",
+                  ].includes(userData.walletAddress ?? "") && (
+                    <a
+                      href="/admin"
+                      className="relative group border-2 border-[#d3b136] bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-3 sm:px-4 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/20 w-full sm:w-auto btn-enhanced"
+                      style={{
+                        clipPath:
+                          "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
+                      }}
+                    >
+                      <div
+                        className="flex items-center justify-center space-x-2"
+                        style={{ fontFamily: "var(--font-gothic-cg)" }}
+                      >
+                        <span className="text-base sm:text-lg">👑</span>
+                        <span className="text-xs sm:text-sm font-bold tracking-wide">
+                          ADMIN
+                        </span>
+                      </div>
+                    </a>
+                  )}
+
+                {/* Connect Wallet Button */}
+                <button
+                  onClick={isConnected ? disconnectWallet : connectWallet}
                   disabled={isConnecting}
                   className={`relative group border-2 border-[#d3b136] font-bold py-2 px-3 sm:px-4 transition-all duration-300 transform hover:scale-105 w-full sm:w-auto btn-enhanced ${
                     isConnected
@@ -294,8 +347,6 @@ export default function Home() {
             </header>
 
             <div className="px-2 sm:px-6 max-w-7xl mx-auto">
-
-
               {/* Welcome Section */}
               <div className="border-6 border-[#d3b136] p-4 sm:p-8 pt-6 sm:pt-10 mb-2 card-hover">
                 <h2
@@ -312,9 +363,7 @@ export default function Home() {
                     {formatAddress(account)}
                   </p>
                 )}
-                
 
-                
                 <p className="text-sm sm:text-base lg:text-lg text-gray-300 max-w-2xl mx-auto sm:mx-0 text-center sm:text-left">
                   &ldquo; INCREASE YOUR WEEKLY EARNINGS BY HOLDING MORE NFTS-
                   EACH WARDEN KIN BOOSTS YOUR $MKIN REWARD &rdquo;
@@ -419,6 +468,7 @@ export default function Home() {
                             ? "CLAIM"
                             : "NOT READY"}
                         </button>
+
                         <button
                           onClick={() => setShowRewardsDashboard(true)}
                           className="ml-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 text-xs sm:text-sm transition-all duration-300 btn-enhanced transform hover:scale-105 shadow-lg shadow-purple-500/30"
@@ -432,7 +482,9 @@ export default function Home() {
                   <div className="border-6 border-[#d3b136] p-6 sm:p-8 card-hover">
                     <div className="text-center py-8">
                       <div className="mb-6">
-                        <div className="text-5xl sm:text-6xl mb-3 sm:mb-4 animate-float">💰</div>
+                        <div className="text-5xl sm:text-6xl mb-3 sm:mb-4 animate-float">
+                          💰
+                        </div>
                         <h3
                           className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4 text-glow"
                           style={{ fontFamily: "var(--font-gothic-cg)" }}
@@ -602,7 +654,9 @@ export default function Home() {
                     <div className="sm:hidden">
                       <div className="text-center py-8">
                         <div className="mb-6">
-                          <div className="text-5xl sm:text-6xl mb-3 sm:mb-4 animate-float">🔗</div>
+                          <div className="text-5xl sm:text-6xl mb-3 sm:mb-4 animate-float">
+                            🔗
+                          </div>
                           <h3
                             className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 text-glow"
                             style={{ fontFamily: "var(--font-gothic-cg)" }}
@@ -638,7 +692,9 @@ export default function Home() {
                     <div className="hidden sm:block">
                       <div className="text-center py-12">
                         <div className="mb-8">
-                          <div className="text-7xl sm:text-8xl mb-5 sm:mb-6 animate-float">🔗</div>
+                          <div className="text-7xl sm:text-8xl mb-5 sm:mb-6 animate-float">
+                            🔗
+                          </div>
                           <h3
                             className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-5 sm:mb-6 text-glow"
                             style={{ fontFamily: "var(--font-gothic-cg)" }}
@@ -711,8 +767,6 @@ export default function Home() {
         amount={lastClaimAmount}
         walletAddress={lastClaimWallet}
       />
-
-
     </ProtectedRoute>
   );
 }
