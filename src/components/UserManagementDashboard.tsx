@@ -235,6 +235,12 @@ const UserManagementDashboard = () => {
             );
             setSelectedUser(updatedUser);
           }}
+          onDelete={(userId) => {
+            setUsers((prevUsers) =>
+              prevUsers.filter((user) => user.id !== userId)
+            );
+            setIsModalOpen(false);
+          }}
         />
       )}
     </div>
