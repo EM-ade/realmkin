@@ -133,8 +133,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           uid: user.uid,
         });
 
-        // If wallet address provided, create wallet mapping for easy lookup
-        if (walletAddress) {
+        // Only create wallet mapping if username is provided and walletAddress exists
+        if (walletAddress && username) {
           const walletMappingPath = `wallets/${walletAddress.toLowerCase()}`;
           console.log("🔧 Creating wallet mapping at:", walletMappingPath);
           await setDoc(doc(db, "wallets", walletAddress.toLowerCase()), {
@@ -169,7 +169,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.log("✅ Successfully logged in existing user");
 
             // Now try to create the missing wallet mapping and user data
-            if (walletAddress) {
+            if (walletAddress && username) {
               try {
                 const currentUser = auth.currentUser;
                 if (currentUser) {
@@ -249,6 +249,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("🔍 Looking up user by wallet address:", walletAddress);
 
+      // Check cache first
+      const cacheKey = `realmkin_wallet_user_${walletAddress.toLowerCase()}`;
+      const cachedUserData = localStorage.getItem(cacheKey);
+
+      if (cachedUserData) {
+        try {
+          const parsedData = JSON.parse(cachedUserData);
+          // Check if cache is still valid (less than 1 hour old)
+          if (parsedData.timestamp && Date.now() - parsedData.timestamp < 3600000) {
+            console.log("✅ User data found in cache");
+            return parsedData.userData;
+          }
+        } catch (error) {
+          console.log("Failed to parse cached user data:", error);
+          localStorage.removeItem(cacheKey);
+        }
+      }
+
       // Check if wallet mapping exists
       const walletDoc = await getDoc(
         doc(db, "wallets", walletAddress.toLowerCase())
@@ -301,6 +319,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         "Admin:",
         userData.admin
       );
+
+      // Cache the user data
+      localStorage.setItem(cacheKey, JSON.stringify({
+        userData,
+        timestamp: Date.now()
+      }));
+
       return userData;
     } catch (error) {
       console.error("Error getting user by wallet:", error);

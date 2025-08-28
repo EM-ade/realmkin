@@ -81,93 +81,106 @@ export const connectMetaMask = async (
 ): Promise<ethers.BrowserProvider> => {
   let lastError: unknown = null;
 
-  for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
-    try {
-      console.log(`MetaMask connection attempt ${attempt}/${config.maxRetries}`);
-
-      // Ensure window focus
-      await ensureWindowFocus();
-
-      // Check for popup blockers on first attempt
-      if (attempt === 1 && config.enablePopupDetection) {
-        if (detectPopupBlocker()) {
-          throw new Error('Popup blocker detected');
-        }
-      }
-
-      // Wait for ethereum object
-      await waitForEthereum(config.timeout);
-
-      if (!window.ethereum || !window.ethereum.isMetaMask) {
-        throw new Error('MetaMask not found');
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-
-      // Try multiple connection methods
-      let connected = false;
-
-      // Method 1: Standard ethers request
-      try {
-        await provider.send("eth_requestAccounts", []);
-        connected = true;
-      } catch (error) {
-        console.log(`Method 1 failed on attempt ${attempt}:`, error);
-        lastError = error;
-      }
-
-      // Method 2: Direct ethereum request
-      if (!connected) {
-        try {
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          connected = true;
-        } catch (error) {
-          console.log(`Method 2 failed on attempt ${attempt}:`, error);
-          lastError = error;
-        }
-      }
-
-      // Method 3: With timeout
-      if (!connected) {
-        try {
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Connection timeout')), config.timeout)
-          );
-          const connectionPromise = window.ethereum.request({ method: "eth_requestAccounts" });
-          await Promise.race([connectionPromise, timeoutPromise]);
-          connected = true;
-        } catch (error) {
-          console.log(`Method 3 failed on attempt ${attempt}:`, error);
-          lastError = error;
-        }
-      }
-
-      if (connected) {
-        return provider;
-      }
-
-    } catch (error) {
-      console.log(`Attempt ${attempt} failed:`, error);
-      lastError = error;
-
-      // Don't retry on certain errors
-      if (error instanceof Error) {
-        if (error.message.includes('User rejected') || error.message.includes('User denied')) {
-          throw error; // Don't retry user rejections
-        }
-        if (error.message.includes('Popup blocker detected')) {
-          throw error; // Don't retry if popup is blocked
-        }
-      }
-
-      // Wait before retry (except on last attempt)
-      if (attempt < config.maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, config.retryDelay));
-      }
-    }
+  // Check if we're already in the process of connecting
+  if (window.__metaMaskConnectionInProgress) {
+    throw new Error('Wallet connection already in progress');
   }
 
-  throw (lastError instanceof Error ? lastError : new Error('All connection attempts failed'));
+  // Mark connection as in progress
+  window.__metaMaskConnectionInProgress = true;
+
+  try {
+    for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
+      try {
+        console.log(`MetaMask connection attempt ${attempt}/${config.maxRetries}`);
+
+        // Ensure window focus
+        await ensureWindowFocus();
+
+        // Check for popup blockers on first attempt
+        if (attempt === 1 && config.enablePopupDetection) {
+          if (detectPopupBlocker()) {
+            throw new Error('Popup blocker detected');
+          }
+        }
+
+        // Wait for ethereum object
+        await waitForEthereum(config.timeout);
+
+        if (!window.ethereum || !window.ethereum.isMetaMask) {
+          throw new Error('MetaMask not found');
+        }
+
+        const provider = new ethers.BrowserProvider(window.ethereum);
+
+        // Try multiple connection methods
+        let connected = false;
+
+        // Method 1: Standard ethers request
+        try {
+          await provider.send("eth_requestAccounts", []);
+          connected = true;
+        } catch (error) {
+          console.log(`Method 1 failed on attempt ${attempt}:`, error);
+          lastError = error;
+        }
+
+        // Method 2: Direct ethereum request
+        if (!connected) {
+          try {
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            connected = true;
+          } catch (error) {
+            console.log(`Method 2 failed on attempt ${attempt}:`, error);
+            lastError = error;
+          }
+        }
+
+        // Method 3: With timeout
+        if (!connected) {
+          try {
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Connection timeout')), config.timeout)
+            );
+            const connectionPromise = window.ethereum.request({ method: "eth_requestAccounts" });
+            await Promise.race([connectionPromise, timeoutPromise]);
+            connected = true;
+          } catch (error) {
+            console.log(`Method 3 failed on attempt ${attempt}:`, error);
+            lastError = error;
+          }
+        }
+
+        if (connected) {
+          return provider;
+        }
+
+      } catch (error) {
+        console.log(`Attempt ${attempt} failed:`, error);
+        lastError = error;
+
+        // Don't retry on certain errors
+        if (error instanceof Error) {
+          if (error.message.includes('User rejected') || error.message.includes('User denied')) {
+            throw error; // Don't retry user rejections
+          }
+          if (error.message.includes('Popup blocker detected')) {
+            throw error; // Don't retry if popup is blocked
+          }
+        }
+
+        // Wait before retry (except on last attempt)
+        if (attempt < config.maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, config.retryDelay));
+        }
+      }
+    }
+
+    throw (lastError instanceof Error ? lastError : new Error('All connection attempts failed'));
+  } finally {
+    // Reset connection flag
+    window.__metaMaskConnectionInProgress = false;
+  }
 };
 
 /**
