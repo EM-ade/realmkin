@@ -212,7 +212,6 @@ class RewardsService {
 
       // Give full weekly amount for current NFT count
       const weeklyRewards = nftCount * this.WEEKLY_RATE_PER_NFT;
-      const totalPendingRewards = weeklyRewards + newNFTBonus;
 
       console.log("🔧 Updating rewards for user:", userId);
       console.log("🔧 Weekly rewards:", weeklyRewards, "New NFT bonus:", newNFTBonus);
@@ -310,7 +309,6 @@ class RewardsService {
     const now = new Date();
 
     // Ensure numeric fields are properly initialized
-    const pendingRewards = userRewards.pendingRewards || 0;
 
     // Calculate weekly rate (200 MKIN per NFT per week)
     const weeklyRate = currentNFTCount * this.WEEKLY_RATE_PER_NFT;

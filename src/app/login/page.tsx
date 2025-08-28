@@ -50,15 +50,6 @@ export default function LoginPage() {
         !!(window as unknown as { phantom?: { solana?: unknown } }).phantom
           ?.solana
       );
-      console.log(
-        "MetaMask available:",
-        !!(window as unknown as { ethereum?: { isMetaMask?: boolean } })
-          .ethereum?.isMetaMask
-      );
-      console.log(
-        "Ethereum available:",
-        !!(window as unknown as { ethereum?: unknown }).ethereum
-      );
     }
   }, []);
 

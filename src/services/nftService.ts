@@ -236,17 +236,11 @@ class NFTService {
         console.error("❌ NFT Service: Invalid wallet address format:", walletAddress);
         throw new Error("Invalid wallet address format");
       }
-      
-      // Check wallet type
+
+      // Check wallet type (only Solana is supported)
       const walletType = detectWalletType(walletAddress);
       console.log("🔍 NFT Service: Detected wallet type:", walletType);
-      
-      if (walletType === 'ethereum') {
-        console.warn("⚠️ NFT Service: Ethereum wallet detected, but this app is designed for Solana NFTs");
-        // For now, return empty collection for Ethereum wallets
-        return { nfts: [], totalCount: 0 };
-      }
-      
+
       if (walletType !== 'solana') {
         console.error("❌ NFT Service: Unsupported wallet type:", walletType);
         throw new Error("Unsupported wallet type");
@@ -411,7 +405,7 @@ class NFTService {
             { trait_type: "Power", value: 2000 },
             { trait_type: "Element", value: "Fire" },
           ],
-          contractAddress: "0x...",
+          contractAddress: this.REALMKIN_SOLANA_CONTRACT_ADDRESS,
           tokenId: "1",
           rarity: "LEGENDARY",
           power: 2000,
@@ -426,7 +420,7 @@ class NFTService {
             { trait_type: "Power", value: 1840 },
             { trait_type: "Element", value: "Dark" },
           ],
-          contractAddress: "0x...",
+          contractAddress: this.REALMKIN_SOLANA_CONTRACT_ADDRESS,
           tokenId: "2",
           rarity: "LEGENDARY",
           power: 1840,
@@ -441,7 +435,7 @@ class NFTService {
             { trait_type: "Power", value: 2100 },
             { trait_type: "Element", value: "Light" },
           ],
-          contractAddress: "0x...",
+          contractAddress: this.REALMKIN_SOLANA_CONTRACT_ADDRESS,
           tokenId: "3",
           rarity: "LEGENDARY",
           power: 2100,

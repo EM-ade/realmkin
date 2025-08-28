@@ -26,8 +26,6 @@ const UserManagementDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [amount, setAmount] = useState(0);
-  const { user, userData, loading } = useAuth();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -72,91 +70,7 @@ const UserManagementDashboard = () => {
         user.walletAddress.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleAddRealmkin = async () => {
-    if (selectedUser) {
-      const userRef = doc(firestore, "userRewards", selectedUser.id);
-      await updateDoc(userRef, {
-        totalRealmkin: increment(amount),
-      });
-      // Update only the changed user to preserve usernames
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === selectedUser.id
-            ? { ...user, totalRealmkin: user.totalRealmkin + amount }
-            : user
-        )
-      );
-    }
-  };
 
-  const handleSubtractRealmkin = async () => {
-    if (selectedUser) {
-      const userRef = doc(firestore, "userRewards", selectedUser.id);
-      await updateDoc(userRef, {
-        totalRealmkin: increment(-amount),
-      });
-      // Update only the changed user to preserve usernames
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === selectedUser.id
-            ? {
-                ...user,
-                totalRealmkin: Math.max(0, user.totalRealmkin - amount),
-              }
-            : user
-        )
-      );
-    }
-  };
-
-  const handleSetRealmkin = async () => {
-    if (selectedUser) {
-      const userRef = doc(firestore, "userRewards", selectedUser.id);
-      await updateDoc(userRef, {
-        totalRealmkin: amount,
-      });
-      // Update only the changed user to preserve usernames
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === selectedUser.id
-            ? { ...user, totalRealmkin: amount }
-            : user
-        )
-      );
-    }
-  };
-
-  const handleMigration = async () => {
-    const usersCollection = collection(firestore, "userRewards");
-    const userSnapshot = await getDocs(usersCollection);
-    const batch = writeBatch(firestore);
-
-    userSnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (
-        (!data.totalRealmkin || data.totalRealmkin === 0) &&
-        data.totalClaimed > 0
-      ) {
-        batch.update(doc.ref, { totalRealmkin: data.totalClaimed });
-      }
-    });
-
-    await batch.commit();
-    alert("Migration complete!");
-  };
-
-  const handleBackfill = async () => {
-    try {
-      const result = await backfillTotalRealmkin();
-      alert(result);
-    } catch (error) {
-      console.error("Error during backfill:", error);
-      alert(
-        "Error during backfill: " +
-          (error instanceof Error ? error.message : String(error))
-      );
-    }
-  };
 
   return (
     <div className="text-white">

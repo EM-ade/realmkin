@@ -22,21 +22,16 @@ export const formatAddress = (
 /**
  * Detects the type of wallet address
  * @param address - The wallet address to check
- * @returns 'ethereum' | 'solana' | 'unknown'
+ * @returns 'solana' | 'unknown'
  */
-export const detectWalletType = (address: string): 'ethereum' | 'solana' | 'unknown' => {
+export const detectWalletType = (address: string): 'solana' | 'unknown' => {
   if (!address) return 'unknown';
-  
+
   // Solana addresses are base58 encoded and typically 32-44 characters
   if (address.length >= 32 && address.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(address)) {
     return 'solana';
   }
-  
-  // Ethereum addresses are 42 characters starting with 0x
-  if (address.length === 42 && address.startsWith('0x') && /^0x[a-fA-F0-9]{40}$/.test(address)) {
-    return 'ethereum';
-  }
-  
+
   return 'unknown';
 };
 
@@ -61,7 +56,6 @@ export const isValidSolanaAddress = (address: string): boolean => {
  */
 export const isValidWalletAddress = (address: string): boolean => {
   if (!address) return false;
-  
-  const walletType = detectWalletType(address);
-  return walletType !== 'unknown';
+
+  return isValidSolanaAddress(address);
 };

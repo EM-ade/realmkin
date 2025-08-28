@@ -25,7 +25,6 @@ export default function Home() {
     isConnecting,
     connectWallet,
     disconnectWallet,
-    refreshWalletState,
   } = useWeb3();
 
   // NFT state
@@ -169,51 +168,7 @@ export default function Home() {
     }
   }, [user, account, rewardsCalculation, nfts.length]);
 
-  // Handle test reward claim (bypasses wait time)
-  const handleTestClaimRewards = useCallback(async () => {
-    if (!user || !account) return;
 
-    setClaimLoading(true);
-    setClaimError(null);
-
-    try {
-      const claimRecord = await rewardsService.claimRewards(
-        user.uid,
-        account,
-        true
-      );
-
-      // Refresh rewards data after claim
-      const rewards = await rewardsService.initializeUserRewards(
-        user.uid,
-        account,
-        nfts.length
-      );
-      setUserRewards(rewards);
-
-      const calculation = rewardsService.calculatePendingRewards(
-        rewards,
-        nfts.length
-      );
-      setRewardsCalculation(calculation);
-
-      // Refetch user rewards to update the total balance
-      const updatedRewards = await rewardsService.getUserRewards(user.uid);
-      setUserRewards(updatedRewards);
-
-      // Show withdrawal confirmation modal
-      setLastClaimAmount(claimRecord.amount);
-      setLastClaimWallet(account);
-      setShowWithdrawalConfirmation(true);
-    } catch (error) {
-      console.error("Error claiming test rewards:", error);
-      setClaimError(
-        error instanceof Error ? error.message : "Failed to claim test rewards"
-      );
-    } finally {
-      setClaimLoading(false);
-    }
-  }, [user, account, nfts.length]);
 
   // Fetch NFTs when wallet connects
   useEffect(() => {

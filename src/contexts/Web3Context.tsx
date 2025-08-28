@@ -102,39 +102,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const checkConnection = async () => {
     try {
       if (typeof window !== "undefined") {
-        // Check for Solana wallets
-        interface SolanaWallets {
-          phantom?: {
-            solana: {
-              connect(): Promise<{ publicKey: { toString(): string } }>;
-              isConnected?: boolean;
-              disconnect(): Promise<void>;
-            };
-          };
-          solflare?: {
-            connect(): Promise<{ publicKey: { toString(): string } }>;
-            disconnect(): Promise<void>;
-          };
-          backpack?: {
-            connect(): Promise<{ publicKey: { toString(): string } }>;
-            disconnect(): Promise<void>;
-          };
-          glow?: {
-            connect(): Promise<{ publicKey: { toString(): string } }>;
-            disconnect(): Promise<void>;
-          };
-        }
-
-        const wallets = window as unknown as SolanaWallets;
+        const solanaWindow = window as WindowWithSolanaWallets;
         let connectedAddress: string | null = null;
         let walletType: string | null = null;
 
         // Try Phantom first
-        if (wallets.phantom?.solana) {
+        if (solanaWindow.phantom?.solana) {
           try {
-            const response = await wallets.phantom.solana.connect();
+            const response = await solanaWindow.phantom.solana.connect();
             const address = response.publicKey.toString();
-            
+
             if (address && isValidSolanaAddress(address)) {
               connectedAddress = address;
               walletType = 'phantom';
@@ -145,11 +122,11 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         }
 
         // Try Solflare if Phantom didn't work
-        if (!connectedAddress && wallets.solflare) {
+        if (!connectedAddress && solanaWindow.solflare) {
           try {
-            const response = await wallets.solflare.connect();
+            const response = await solanaWindow.solflare.connect();
             const address = response.publicKey.toString();
-            
+
             if (address && isValidSolanaAddress(address)) {
               connectedAddress = address;
               walletType = 'solflare';
@@ -160,11 +137,11 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         }
 
         // Try Backpack if others didn't work
-        if (!connectedAddress && wallets.backpack) {
+        if (!connectedAddress && solanaWindow.backpack) {
           try {
-            const response = await wallets.backpack.connect();
+            const response = await solanaWindow.backpack.connect();
             const address = response.publicKey.toString();
-            
+
             if (address && isValidSolanaAddress(address)) {
               connectedAddress = address;
               walletType = 'backpack';
@@ -175,11 +152,11 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         }
 
         // Try Glow if others didn't work
-        if (!connectedAddress && wallets.glow) {
+        if (!connectedAddress && solanaWindow.glow) {
           try {
-            const response = await wallets.glow.connect();
+            const response = await solanaWindow.glow.connect();
             const address = response.publicKey.toString();
-            
+
             if (address && isValidSolanaAddress(address)) {
               connectedAddress = address;
               walletType = 'glow';
@@ -194,7 +171,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           setAccount(connectedAddress);
           setIsConnected(true);
           setProvider(null);
-          
+
           // Update cached wallet data
           localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
             type: walletType,
@@ -210,20 +187,20 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           try {
             const walletData = JSON.parse(cachedWallet);
             const cacheAge = Date.now() - walletData.timestamp;
-            
+
             // Only use cache if it's less than 30 minutes old
             if (cacheAge < 1800000) {
               // Try to reconnect based on cached wallet type
-              if (walletData.type === 'phantom' && wallets.phantom?.solana) {
+              if (walletData.type === 'phantom' && solanaWindow.phantom?.solana) {
                 try {
-                  const response = await wallets.phantom.solana.connect();
+                  const response = await solanaWindow.phantom.solana.connect();
                   const address = response.publicKey.toString();
-                  
+
                   if (address && isValidSolanaAddress(address)) {
                     setAccount(address);
                     setIsConnected(true);
                     setProvider(null);
-                    
+
                     localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
                       type: 'phantom',
                       address: address,
@@ -234,16 +211,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 } catch (error) {
                   console.log("Failed to restore Phantom connection from cache:", error);
                 }
-              } else if (walletData.type === 'solflare' && wallets.solflare) {
+              } else if (walletData.type === 'solflare' && solanaWindow.solflare) {
                 try {
-                  const response = await wallets.solflare.connect();
+                  const response = await solanaWindow.solflare.connect();
                   const address = response.publicKey.toString();
-                  
+
                   if (address && isValidSolanaAddress(address)) {
                     setAccount(address);
                     setIsConnected(true);
                     setProvider(null);
-                    
+
                     localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
                       type: 'solflare',
                       address: address,
@@ -254,16 +231,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 } catch (error) {
                   console.log("Failed to restore Solflare connection from cache:", error);
                 }
-              } else if (walletData.type === 'backpack' && wallets.backpack) {
+              } else if (walletData.type === 'backpack' && solanaWindow.backpack) {
                 try {
-                  const response = await wallets.backpack.connect();
+                  const response = await solanaWindow.backpack.connect();
                   const address = response.publicKey.toString();
-                  
+
                   if (address && isValidSolanaAddress(address)) {
                     setAccount(address);
                     setIsConnected(true);
                     setProvider(null);
-                    
+
                     localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
                       type: 'backpack',
                       address: address,
@@ -274,16 +251,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 } catch (error) {
                   console.log("Failed to restore Backpack connection from cache:", error);
                 }
-              } else if (walletData.type === 'glow' && wallets.glow) {
+              } else if (walletData.type === 'glow' && solanaWindow.glow) {
                 try {
-                  const response = await wallets.glow.connect();
+                  const response = await solanaWindow.glow.connect();
                   const address = response.publicKey.toString();
-                  
+
                   if (address && isValidSolanaAddress(address)) {
                     setAccount(address);
                     setIsConnected(true);
                     setProvider(null);
-                    
+
                     localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
                       type: 'glow',
                       address: address,
@@ -324,26 +301,37 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     showWalletSelection();
   };
 
-  // Enhanced connection function with better laptop support
+  // Define types for Solana wallet providers
+  interface SolanaWalletProvider {
+    connect(): Promise<{ publicKey: { toString(): string } }>;
+    disconnect?(): Promise<void>;
+    isConnected?: boolean;
+  }
+
+  interface PhantomWallet extends SolanaWalletProvider {
+    isConnected?: boolean;
+  }
+
+  interface WindowWithSolanaWallets extends Window {
+    phantom?: {
+      solana?: PhantomWallet;
+    };
+    solflare?: SolanaWalletProvider;
+    backpack?: SolanaWalletProvider;
+    glow?: SolanaWalletProvider;
+  }
+
+  // Enhanced connection function with better error handling
   const connectSpecificWallet = async (walletType: string) => {
     setIsConnecting(true);
 
     try {
       let connectedAddress: string | null = null;
+      const solanaWindow = window as WindowWithSolanaWallets;
 
       if (walletType === "phantom") {
-        interface PhantomWindow {
-          phantom?: {
-            solana: {
-              connect(): Promise<{ publicKey: { toString(): string } }>;
-              disconnect(): Promise<void>;
-            };
-          };
-        }
-
-        const phantom = (window as unknown as PhantomWindow).phantom?.solana;
-
-        if (!phantom) {
+        // Check if Phantom is available
+        if (typeof solanaWindow === "undefined" || !solanaWindow.phantom?.solana) {
           showCustomAlert(
             "👻 PHANTOM NOT FOUND",
             "Phantom wallet is not installed. Please install Phantom extension and try again.",
@@ -353,48 +341,31 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           return;
         }
 
-        // For mobile Phantom, ensure clean connection state
-        try {
-          // Disconnect first to ensure clean state (especially important for mobile)
-          await phantom.disconnect();
-          // Wait a moment for disconnect to complete
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (error) {
-          // Ignore disconnect errors, they might not be connected
-          console.log("Phantom disconnect before connect:", error);
-        }
+        const phantom = solanaWindow.phantom.solana as PhantomWallet;
 
-        // Connect to Phantom (Solana)
+        // Request connection
         const response = await phantom.connect();
         connectedAddress = response.publicKey.toString();
-        
+
         // Validate this is a Solana address
         if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
           throw new Error('Invalid Solana address received from Phantom wallet');
         }
-        
+
         // Cache the wallet connection
         localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
           type: 'phantom',
           address: connectedAddress,
           timestamp: Date.now()
         }));
-        
+
         setAccount(connectedAddress);
         setIsConnected(true);
         setProvider(null);
         return;
       } else if (walletType === "solflare") {
-        interface SolflareWindow {
-          solflare?: {
-            connect(): Promise<{ publicKey: { toString(): string } }>;
-            disconnect(): Promise<void>;
-          };
-        }
-
-        const solflare = (window as unknown as SolflareWindow).solflare;
-
-        if (!solflare) {
+        // Check if Solflare is available
+        if (typeof solanaWindow === "undefined" || !solanaWindow.solflare) {
           showCustomAlert(
             "🔥 SOLFLARE NOT FOUND",
             "Solflare wallet is not installed. Please install Solflare extension and try again.",
@@ -404,37 +375,31 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           return;
         }
 
+        const solflare = solanaWindow.solflare as SolanaWalletProvider;
+
         // Connect to Solflare (Solana)
         const response = await solflare.connect();
         connectedAddress = response.publicKey.toString();
-        
+
         // Validate this is a Solana address
         if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
           throw new Error('Invalid Solana address received from Solflare wallet');
         }
-        
+
         // Cache the wallet connection
         localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
           type: 'solflare',
           address: connectedAddress,
           timestamp: Date.now()
         }));
-        
+
         setAccount(connectedAddress);
         setIsConnected(true);
         setProvider(null);
         return;
       } else if (walletType === "backpack") {
-        interface BackpackWindow {
-          backpack?: {
-            connect(): Promise<{ publicKey: { toString(): string } }>;
-            disconnect(): Promise<void>;
-          };
-        }
-
-        const backpack = (window as unknown as BackpackWindow).backpack;
-
-        if (!backpack) {
+        // Check if Backpack is available
+        if (typeof solanaWindow === "undefined" || !solanaWindow.backpack) {
           showCustomAlert(
             "🎒 BACKPACK NOT FOUND",
             "Backpack wallet is not installed. Please install Backpack extension and try again.",
@@ -444,37 +409,31 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           return;
         }
 
+        const backpack = solanaWindow.backpack as SolanaWalletProvider;
+
         // Connect to Backpack (Solana)
         const response = await backpack.connect();
         connectedAddress = response.publicKey.toString();
-        
+
         // Validate this is a Solana address
         if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
           throw new Error('Invalid Solana address received from Backpack wallet');
         }
-        
+
         // Cache the wallet connection
         localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
           type: 'backpack',
           address: connectedAddress,
           timestamp: Date.now()
         }));
-        
+
         setAccount(connectedAddress);
         setIsConnected(true);
         setProvider(null);
         return;
       } else if (walletType === "glow") {
-        interface GlowWindow {
-          glow?: {
-            connect(): Promise<{ publicKey: { toString(): string } }>;
-            disconnect(): Promise<void>;
-          };
-        }
-
-        const glow = (window as unknown as GlowWindow).glow;
-
-        if (!glow) {
+        // Check if Glow is available
+        if (typeof solanaWindow === "undefined" || !solanaWindow.glow) {
           showCustomAlert(
             "✨ GLOW NOT FOUND",
             "Glow wallet is not installed. Please install Glow extension and try again.",
@@ -484,22 +443,24 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           return;
         }
 
+        const glow = solanaWindow.glow as SolanaWalletProvider;
+
         // Connect to Glow (Solana)
         const response = await glow.connect();
         connectedAddress = response.publicKey.toString();
-        
+
         // Validate this is a Solana address
         if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
           throw new Error('Invalid Solana address received from Glow wallet');
         }
-        
+
         // Cache the wallet connection
         localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
           type: 'glow',
           address: connectedAddress,
           timestamp: Date.now()
         }));
-        
+
         setAccount(connectedAddress);
         setIsConnected(true);
         setProvider(null);
@@ -513,7 +474,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       }
     } catch (error: unknown) {
       console.error("Error connecting wallet:", error);
-      
+
       // Use the utility function to get appropriate error message
       const { title, message, showRetry } = getSolanaConnectionErrorMessage(error as Error);
       showCustomAlert(title, message, showRetry);
