@@ -277,7 +277,20 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           if (!connectedAddress && wallet.provider) {
             try {
               const response = await wallet.provider.connect();
-              const address = response.publicKey.toString();
+              let address: string | null = null;
+
+              // Handle different wallet response types
+              if (wallet.name === 'solflare') {
+                // Type narrow to SolflareWallet
+                const solflareProvider = wallet.provider as SolflareWallet;
+                // Solflare returns boolean and stores publicKey on the wallet object
+                if (response === true && solflareProvider.publicKey) {
+                  address = solflareProvider.publicKey.toString();
+                }
+              } else {
+                // Other wallets return object with publicKey property
+                address = (response as { publicKey?: { toString(): string } | string })?.publicKey?.toString() || null;
+              }
 
               if (address && isValidSolanaAddress(address)) {
                 connectedAddress = address;
@@ -353,7 +366,12 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               }
             } else if (walletData.type === 'solflare' && solanaWindow.solflare) {
               const response = await solanaWindow.solflare.connect();
-              const address = response.publicKey.toString();
+              let address: string | null = null;
+
+              // Solflare returns boolean and stores publicKey on the wallet object
+              if (response === true && solanaWindow.solflare.publicKey) {
+                address = solanaWindow.solflare.publicKey.toString();
+              }
 
               if (address && isValidSolanaAddress(address)) {
                 setAccount(address);
