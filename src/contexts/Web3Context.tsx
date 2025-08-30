@@ -10,8 +10,15 @@ import {
 } from "react";
 import { isValidSolanaAddress } from "@/utils/formatAddress";
 
-// Simple error message function for Solana wallet connections
-const getSolanaConnectionErrorMessage = (error: Error): { title: string; message: string; showRetry: boolean } => {
+// Enhanced error message function for Solana wallet connections with mobile support
+interface ConnectionErrorResponse {
+  title: string;
+  message: string;
+  showRetry: boolean;
+  downloadUrl?: string;
+}
+
+const getSolanaConnectionErrorMessage = (error: Error, isMobile: boolean = false): ConnectionErrorResponse => {
   const errorMessage = error?.message || '';
   
   if (errorMessage.includes('User rejected') || errorMessage.includes('User denied')) {
@@ -29,12 +36,64 @@ const getSolanaConnectionErrorMessage = (error: Error): { title: string; message
       showRetry: true
     };
   }
+
+  if (errorMessage.includes('Connection timeout')) {
+    return {
+      title: "⏰ CONNECTION TIMEOUT",
+      message: isMobile 
+        ? "Wallet connection timed out. This can happen when switching between browser and wallet app. Please ensure you return to the browser after approving the connection in Phantom."
+        : "Wallet connection timed out. This can happen when the wallet app is slow to respond. Please try again.",
+      showRetry: true
+    };
+  }
+
+  if (errorMessage.includes('Mobile connection failed')) {
+    return {
+      title: "📱 MOBILE CONNECTION ISSUE",
+      message: "Failed to connect on mobile. Please ensure you have the Phantom app installed and try again. If the issue persists, try clearing your browser cache.",
+      showRetry: true
+    };
+  }
+
+  if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+    return {
+      title: "🌐 NETWORK ISSUE",
+      message: "Network connection issue detected. Please check your internet connection and try again.",
+      showRetry: true
+    };
+  }
+
+  if (errorMessage.includes('not found') || errorMessage.includes('unavailable')) {
+    return {
+      title: isMobile ? "📱 PHANTOM APP REQUIRED" : "🔌 WALLET UNAVAILABLE",
+      message: isMobile
+        ? "Phantom app not found. Please install Phantom from the App Store or Google Play Store to connect your wallet."
+        : "Wallet extension not detected. Please ensure your wallet is installed and enabled.",
+      showRetry: false,
+      downloadUrl: isMobile ? "https://phantom.app/download" : undefined
+    };
+  }
   
   return {
-    title: "🔮 CONNECTION FAILED",
-    message: "Failed to connect to your Solana wallet. Please try again or ensure Phantom wallet is properly installed.",
+    title: isMobile ? "📱 MOBILE CONNECTION FAILED" : "🔮 CONNECTION FAILED",
+    message: isMobile
+      ? "Failed to connect to your Phantom wallet on mobile. This could be due to app switching issues. Please try again and ensure you return to the browser after approving the connection."
+      : "Failed to connect to your Solana wallet. Please try again or ensure your wallet is properly installed.",
     showRetry: true
   };
+};
+
+// Detect if running in Phantom mobile browser
+const isPhantomMobileBrowser = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const userAgent = navigator.userAgent.toLowerCase();
+  return userAgent.includes('phantom') && (userAgent.includes('mobile') || userAgent.includes('android') || userAgent.includes('iphone') || userAgent.includes('ipad'));
+};
+
+// Detect if running on mobile device
+const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
 interface Web3ContextType {
@@ -420,45 +479,77 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       const solanaWindow = window as WindowWithSolanaWallets;
       const maxRetries = 3;
       let retryCount = 0;
+      const isMobile = isMobileDevice();
+      const isPhantomMobile = isPhantomMobileBrowser();
 
       while (retryCount < maxRetries) {
         try {
           if (walletType === "phantom") {
             // Check if Phantom is available
             if (typeof solanaWindow === "undefined" || !solanaWindow.phantom?.solana) {
-              showCustomAlert(
-                "👻 PHANTOM NOT FOUND",
-                "Phantom wallet is not installed. Please install Phantom extension and try again.",
-                false,
-                "https://phantom.app/"
-              );
-              return;
+              // For mobile, check if we should use deep linking
+              if (isMobile) {
+                showCustomAlert(
+                  "📱 PHANTOM APP REQUIRED",
+                  "Phantom app not found. Please install Phantom from the App Store or Google Play Store to connect your wallet.",
+                  false,
+                  "https://phantom.app/download"
+                );
+                return;
+              } else {
+                showCustomAlert(
+                  "👻 PHANTOM NOT FOUND",
+                  "Phantom wallet is not installed. Please install Phantom extension and try again.",
+                  false,
+                  "https://phantom.app/"
+                );
+                return;
+              }
             }
 
             const phantom = solanaWindow.phantom.solana as PhantomWallet;
 
-            // Request connection with timeout
-            const connectionPromise = phantom.connect();
-            const timeoutPromise = new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Connection timeout')), 10000)
-            );
+            // Special handling for mobile devices
+            if (isMobile) {
+              console.log("📱 Mobile device detected, using mobile connection flow");
+              
+              // For mobile, we need to handle the connection differently
+              // Use a shorter timeout for mobile since users need to switch apps
+              const connectionPromise = phantom.connect();
+              const timeoutPromise = new Promise<never>((_, reject) => 
+                setTimeout(() => reject(new Error('Connection timeout')), 8000)
+              );
 
-            const response = await Promise.race([connectionPromise, timeoutPromise]);
-            connectedAddress = response.publicKey.toString();
+              const response = await Promise.race([connectionPromise, timeoutPromise]);
+              connectedAddress = response.publicKey.toString();
+            } else {
+              // Standard desktop connection
+              const connectionPromise = phantom.connect();
+              const timeoutPromise = new Promise<never>((_, reject) => 
+                setTimeout(() => reject(new Error('Connection timeout')), 10000)
+              );
+
+              const response = await Promise.race([connectionPromise, timeoutPromise]);
+              connectedAddress = response.publicKey.toString();
+            }
 
             // Validate this is a Solana address
             if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
               throw new Error('Invalid Solana address received from Phantom wallet');
             }
 
-            // Setup event listeners
-            setupPhantomEventListeners(phantom);
+            // Setup event listeners (only for desktop)
+            if (!isMobile) {
+              setupPhantomEventListeners(phantom);
+            }
 
-            // Cache the wallet connection
-            localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+            // Cache the wallet connection - use sessionStorage for mobile for better reliability
+            const storage = isMobile ? sessionStorage : localStorage;
+            storage.setItem('realmkin_cached_wallet', JSON.stringify({
               type: 'phantom',
               address: connectedAddress,
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              isMobile: isMobile
             }));
 
             setAccount(connectedAddress);
