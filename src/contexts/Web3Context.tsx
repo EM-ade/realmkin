@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   ReactNode,
+  useRef,
 } from "react";
 import { isValidSolanaAddress } from "@/utils/formatAddress";
 
@@ -69,6 +70,79 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [provider, setProvider] = useState<null>(null);
+  const connectionLockRef = useRef(false);
+  const phantomEventListenerRef = useRef<(() => void) | null>(null);
+
+  // Prevent multiple simultaneous connection attempts
+  const acquireConnectionLock = () => {
+    if (connectionLockRef.current) return false;
+    connectionLockRef.current = true;
+    return true;
+  };
+
+  const releaseConnectionLock = () => {
+    connectionLockRef.current = false;
+  };
+
+  // Setup Phantom event listeners
+  const setupPhantomEventListeners = (phantom: PhantomWallet) => {
+    // Remove existing listeners first
+    removePhantomEventListeners();
+
+    const handleAccountChanged = (publicKey: unknown) => {
+      console.log("🔍 Phantom account changed:", publicKey);
+      if (publicKey && typeof publicKey === 'object' && 'toString' in publicKey) {
+        const address = publicKey.toString();
+        if (isValidSolanaAddress(address)) {
+          setAccount(address);
+          setIsConnected(true);
+          
+          // Update cached wallet data
+          localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+            type: 'phantom',
+            address: address,
+            timestamp: Date.now()
+          }));
+        }
+      } else {
+        // Account disconnected
+        disconnectWallet();
+      }
+    };
+
+    const handleDisconnect = () => {
+      console.log("🔌 Phantom disconnected");
+      disconnectWallet();
+    };
+
+    // Add new listeners
+    if (phantom.on) {
+      phantom.on('accountChanged', handleAccountChanged);
+      phantom.on('disconnect', handleDisconnect);
+    }
+
+    // Store cleanup function
+    phantomEventListenerRef.current = () => {
+      if (phantom.off) {
+        phantom.off('accountChanged', handleAccountChanged);
+        phantom.off('disconnect', handleDisconnect);
+      }
+    };
+  };
+
+  const removePhantomEventListeners = () => {
+    if (phantomEventListenerRef.current) {
+      phantomEventListenerRef.current();
+      phantomEventListenerRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      removePhantomEventListeners();
+    };
+  }, []);
 
   // Check if wallet is already connected on page load
   useEffect(() => {
@@ -100,69 +174,60 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   }, []);
 
   const checkConnection = async () => {
+    if (!acquireConnectionLock()) {
+      console.log("🔒 Connection check already in progress");
+      return;
+    }
+
     try {
       if (typeof window !== "undefined") {
         const solanaWindow = window as WindowWithSolanaWallets;
         let connectedAddress: string | null = null;
         let walletType: string | null = null;
 
-        // Try Phantom first
+        // Try Phantom first with better error handling
         if (solanaWindow.phantom?.solana) {
           try {
-            const response = await solanaWindow.phantom.solana.connect();
-            const address = response.publicKey.toString();
+            const phantom = solanaWindow.phantom.solana;
+            
+            // Check if already connected
+            if (phantom.isConnected) {
+              const response = await phantom.connect();
+              const address = response.publicKey.toString();
 
-            if (address && isValidSolanaAddress(address)) {
-              connectedAddress = address;
-              walletType = 'phantom';
+              if (address && isValidSolanaAddress(address)) {
+                connectedAddress = address;
+                walletType = 'phantom';
+                setupPhantomEventListeners(phantom);
+              }
             }
           } catch (error) {
-            console.log("Phantom not connected:", error);
+            console.log("Phantom connection check failed:", error);
+            // Continue to try other wallets
           }
         }
 
-        // Try Solflare if Phantom didn't work
-        if (!connectedAddress && solanaWindow.solflare) {
-          try {
-            const response = await solanaWindow.solflare.connect();
-            const address = response.publicKey.toString();
+        // Try other wallets if Phantom didn't work
+        const walletsToTry = [
+          { name: 'solflare', provider: solanaWindow.solflare },
+          { name: 'backpack', provider: solanaWindow.backpack },
+          { name: 'glow', provider: solanaWindow.glow }
+        ];
 
-            if (address && isValidSolanaAddress(address)) {
-              connectedAddress = address;
-              walletType = 'solflare';
+        for (const wallet of walletsToTry) {
+          if (!connectedAddress && wallet.provider) {
+            try {
+              const response = await wallet.provider.connect();
+              const address = response.publicKey.toString();
+
+              if (address && isValidSolanaAddress(address)) {
+                connectedAddress = address;
+                walletType = wallet.name;
+                break;
+              }
+            } catch (error) {
+              console.log(`${wallet.name} connection failed:`, error);
             }
-          } catch (error) {
-            console.log("Solflare not connected:", error);
-          }
-        }
-
-        // Try Backpack if others didn't work
-        if (!connectedAddress && solanaWindow.backpack) {
-          try {
-            const response = await solanaWindow.backpack.connect();
-            const address = response.publicKey.toString();
-
-            if (address && isValidSolanaAddress(address)) {
-              connectedAddress = address;
-              walletType = 'backpack';
-            }
-          } catch (error) {
-            console.log("Backpack not connected:", error);
-          }
-        }
-
-        // Try Glow if others didn't work
-        if (!connectedAddress && solanaWindow.glow) {
-          try {
-            const response = await solanaWindow.glow.connect();
-            const address = response.publicKey.toString();
-
-            if (address && isValidSolanaAddress(address)) {
-              connectedAddress = address;
-              walletType = 'glow';
-            }
-          } catch (error) {
-            console.log("Glow not connected:", error);
           }
         }
 
@@ -181,124 +246,142 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           return;
         }
 
-        // Check localStorage for cached wallet connection
-        const cachedWallet = localStorage.getItem('realmkin_cached_wallet');
-        if (cachedWallet) {
-          try {
-            const walletData = JSON.parse(cachedWallet);
-            const cacheAge = Date.now() - walletData.timestamp;
-
-            // Only use cache if it's less than 30 minutes old
-            if (cacheAge < 1800000) {
-              // Try to reconnect based on cached wallet type
-              if (walletData.type === 'phantom' && solanaWindow.phantom?.solana) {
-                try {
-                  const response = await solanaWindow.phantom.solana.connect();
-                  const address = response.publicKey.toString();
-
-                  if (address && isValidSolanaAddress(address)) {
-                    setAccount(address);
-                    setIsConnected(true);
-                    setProvider(null);
-
-                    localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                      type: 'phantom',
-                      address: address,
-                      timestamp: Date.now()
-                    }));
-                    return;
-                  }
-                } catch (error) {
-                  console.log("Failed to restore Phantom connection from cache:", error);
-                }
-              } else if (walletData.type === 'solflare' && solanaWindow.solflare) {
-                try {
-                  const response = await solanaWindow.solflare.connect();
-                  const address = response.publicKey.toString();
-
-                  if (address && isValidSolanaAddress(address)) {
-                    setAccount(address);
-                    setIsConnected(true);
-                    setProvider(null);
-
-                    localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                      type: 'solflare',
-                      address: address,
-                      timestamp: Date.now()
-                    }));
-                    return;
-                  }
-                } catch (error) {
-                  console.log("Failed to restore Solflare connection from cache:", error);
-                }
-              } else if (walletData.type === 'backpack' && solanaWindow.backpack) {
-                try {
-                  const response = await solanaWindow.backpack.connect();
-                  const address = response.publicKey.toString();
-
-                  if (address && isValidSolanaAddress(address)) {
-                    setAccount(address);
-                    setIsConnected(true);
-                    setProvider(null);
-
-                    localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                      type: 'backpack',
-                      address: address,
-                      timestamp: Date.now()
-                    }));
-                    return;
-                  }
-                } catch (error) {
-                  console.log("Failed to restore Backpack connection from cache:", error);
-                }
-              } else if (walletData.type === 'glow' && solanaWindow.glow) {
-                try {
-                  const response = await solanaWindow.glow.connect();
-                  const address = response.publicKey.toString();
-
-                  if (address && isValidSolanaAddress(address)) {
-                    setAccount(address);
-                    setIsConnected(true);
-                    setProvider(null);
-
-                    localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                      type: 'glow',
-                      address: address,
-                      timestamp: Date.now()
-                    }));
-                    return;
-                  }
-                } catch (error) {
-                  console.log("Failed to restore Glow connection from cache:", error);
-                }
-              }
-            } else {
-              // Cache is too old, remove it
-              localStorage.removeItem('realmkin_cached_wallet');
-            }
-          } catch (error) {
-            console.log("Failed to restore cached wallet:", error);
-            localStorage.removeItem('realmkin_cached_wallet');
-          }
-        }
+        // Check localStorage for cached wallet connection with retry logic
+        await checkCachedWalletConnection();
       }
     } catch (error) {
       console.error("Error checking wallet connection:", error);
+    } finally {
+      releaseConnectionLock();
+    }
+  };
+
+  const checkCachedWalletConnection = async () => {
+    const cachedWallet = localStorage.getItem('realmkin_cached_wallet');
+    if (!cachedWallet) return;
+
+    try {
+      const walletData = JSON.parse(cachedWallet);
+      const cacheAge = Date.now() - walletData.timestamp;
+
+      // Only use cache if it's less than 2 hours old (more generous for mobile)
+      if (cacheAge < 7200000) {
+        const solanaWindow = window as WindowWithSolanaWallets;
+        
+        // Try to reconnect based on cached wallet type with retry logic
+        const maxRetries = 2;
+        let retryCount = 0;
+
+        while (retryCount < maxRetries) {
+          try {
+            if (walletData.type === 'phantom' && solanaWindow.phantom?.solana) {
+              const phantom = solanaWindow.phantom.solana;
+              const response = await phantom.connect();
+              const address = response.publicKey.toString();
+
+              if (address && isValidSolanaAddress(address)) {
+                setAccount(address);
+                setIsConnected(true);
+                setProvider(null);
+                setupPhantomEventListeners(phantom);
+
+                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                  type: 'phantom',
+                  address: address,
+                  timestamp: Date.now()
+                }));
+                return;
+              }
+            } else if (walletData.type === 'solflare' && solanaWindow.solflare) {
+              const response = await solanaWindow.solflare.connect();
+              const address = response.publicKey.toString();
+
+              if (address && isValidSolanaAddress(address)) {
+                setAccount(address);
+                setIsConnected(true);
+                setProvider(null);
+
+                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                  type: 'solflare',
+                  address: address,
+                  timestamp: Date.now()
+                }));
+                return;
+              }
+            } else if (walletData.type === 'backpack' && solanaWindow.backpack) {
+              const response = await solanaWindow.backpack.connect();
+              const address = response.publicKey.toString();
+
+              if (address && isValidSolanaAddress(address)) {
+                setAccount(address);
+                setIsConnected(true);
+                setProvider(null);
+
+                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                  type: 'backpack',
+                  address: address,
+                  timestamp: Date.now()
+                }));
+                return;
+              }
+            } else if (walletData.type === 'glow' && solanaWindow.glow) {
+              const response = await solanaWindow.glow.connect();
+              const address = response.publicKey.toString();
+
+              if (address && isValidSolanaAddress(address)) {
+                setAccount(address);
+                setIsConnected(true);
+                setProvider(null);
+
+                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+                  type: 'glow',
+                  address: address,
+                  timestamp: Date.now()
+                }));
+                return;
+              }
+            }
+            break; // Break if wallet type doesn't match
+          } catch (error) {
+            retryCount++;
+            if (retryCount >= maxRetries) {
+              console.log(`Failed to restore ${walletData.type} connection from cache after ${maxRetries} attempts:`, error);
+              break;
+            }
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+        }
+      } else {
+        // Cache is too old, remove it
+        localStorage.removeItem('realmkin_cached_wallet');
+      }
+    } catch (error) {
+      console.log("Failed to restore cached wallet:", error);
+      localStorage.removeItem('realmkin_cached_wallet');
     }
   };
 
   const connectWallet = async () => {
-    // Enhanced wallet detection
-    if (typeof window === "undefined") {
-      showCustomAlert(
-        "🔮 REALM ACCESS DENIED",
-        "Web3 functionality is not available in this environment."
-      );
+    if (!acquireConnectionLock()) {
+      console.log("🔒 Connection already in progress");
       return;
     }
 
-    // Show wallet selection popup
-    showWalletSelection();
+    try {
+      if (typeof window === "undefined") {
+        showCustomAlert(
+          "🔮 REALM ACCESS DENIED",
+          "Web3 functionality is not available in this environment."
+        );
+        return;
+      }
+
+      // Show wallet selection popup
+      showWalletSelection();
+    } finally {
+      releaseConnectionLock();
+    }
   };
 
   // Define types for Solana wallet providers
@@ -310,6 +393,8 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
   interface PhantomWallet extends SolanaWalletProvider {
     isConnected?: boolean;
+    on?(event: 'accountChanged' | 'disconnect', callback: (...args: unknown[]) => void): void;
+    off?(event: 'accountChanged' | 'disconnect', callback: (...args: unknown[]) => void): void;
   }
 
   interface WindowWithSolanaWallets extends Window {
@@ -321,165 +406,206 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     glow?: SolanaWalletProvider;
   }
 
-  // Enhanced connection function with better error handling
+  // Enhanced connection function with better error handling and retry logic
   const connectSpecificWallet = async (walletType: string) => {
+    if (!acquireConnectionLock()) {
+      console.log("🔒 Connection already in progress");
+      return;
+    }
+
     setIsConnecting(true);
 
     try {
       let connectedAddress: string | null = null;
       const solanaWindow = window as WindowWithSolanaWallets;
+      const maxRetries = 3;
+      let retryCount = 0;
 
-      if (walletType === "phantom") {
-        // Check if Phantom is available
-        if (typeof solanaWindow === "undefined" || !solanaWindow.phantom?.solana) {
-          showCustomAlert(
-            "👻 PHANTOM NOT FOUND",
-            "Phantom wallet is not installed. Please install Phantom extension and try again.",
-            false,
-            "https://phantom.app/"
-          );
-          return;
+      while (retryCount < maxRetries) {
+        try {
+          if (walletType === "phantom") {
+            // Check if Phantom is available
+            if (typeof solanaWindow === "undefined" || !solanaWindow.phantom?.solana) {
+              showCustomAlert(
+                "👻 PHANTOM NOT FOUND",
+                "Phantom wallet is not installed. Please install Phantom extension and try again.",
+                false,
+                "https://phantom.app/"
+              );
+              return;
+            }
+
+            const phantom = solanaWindow.phantom.solana as PhantomWallet;
+
+            // Request connection with timeout
+            const connectionPromise = phantom.connect();
+            const timeoutPromise = new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Connection timeout')), 10000)
+            );
+
+            const response = await Promise.race([connectionPromise, timeoutPromise]);
+            connectedAddress = response.publicKey.toString();
+
+            // Validate this is a Solana address
+            if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
+              throw new Error('Invalid Solana address received from Phantom wallet');
+            }
+
+            // Setup event listeners
+            setupPhantomEventListeners(phantom);
+
+            // Cache the wallet connection
+            localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+              type: 'phantom',
+              address: connectedAddress,
+              timestamp: Date.now()
+            }));
+
+            setAccount(connectedAddress);
+            setIsConnected(true);
+            setProvider(null);
+            return;
+
+          } else if (walletType === "solflare") {
+            // Check if Solflare is available
+            if (typeof solanaWindow === "undefined" || !solanaWindow.solflare) {
+              showCustomAlert(
+                "🔥 SOLFLARE NOT FOUND",
+                "Solflare wallet is not installed. Please install Solflare extension and try again.",
+                false,
+                "https://solflare.com/"
+              );
+              return;
+            }
+
+            const solflare = solanaWindow.solflare as SolanaWalletProvider;
+
+            // Request connection with timeout
+            const connectionPromise = solflare.connect();
+            const timeoutPromise = new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Connection timeout')), 10000)
+            );
+
+            const response = await Promise.race([connectionPromise, timeoutPromise]);
+            connectedAddress = response.publicKey.toString();
+
+            if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
+              throw new Error('Invalid Solana address received from Solflare wallet');
+            }
+
+            localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+              type: 'solflare',
+              address: connectedAddress,
+              timestamp: Date.now()
+            }));
+
+            setAccount(connectedAddress);
+            setIsConnected(true);
+            setProvider(null);
+            return;
+
+          } else if (walletType === "backpack") {
+            // Check if Backpack is available
+            if (typeof solanaWindow === "undefined" || !solanaWindow.backpack) {
+              showCustomAlert(
+                "🎒 BACKPACK NOT FOUND",
+                "Backpack wallet is not installed. Please install Backpack extension and try again.",
+                false,
+                "https://backpack.app/"
+              );
+              return;
+            }
+
+            const backpack = solanaWindow.backpack as SolanaWalletProvider;
+
+            // Request connection with timeout
+            const connectionPromise = backpack.connect();
+            const timeoutPromise = new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Connection timeout')), 10000)
+            );
+
+            const response = await Promise.race([connectionPromise, timeoutPromise]);
+            connectedAddress = response.publicKey.toString();
+
+            if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
+              throw new Error('Invalid Solana address received from Backpack wallet');
+            }
+
+            localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+              type: 'backpack',
+              address: connectedAddress,
+              timestamp: Date.now()
+            }));
+
+            setAccount(connectedAddress);
+            setIsConnected(true);
+            setProvider(null);
+            return;
+
+          } else if (walletType === "glow") {
+            // Check if Glow is available
+            if (typeof solanaWindow === "undefined" || !solanaWindow.glow) {
+              showCustomAlert(
+                "✨ GLOW NOT FOUND",
+                "Glow wallet is not installed. Please install Glow extension and try again.",
+                false,
+                "https://glow.app/"
+              );
+              return;
+            }
+
+            const glow = solanaWindow.glow as SolanaWalletProvider;
+
+            // Request connection with timeout
+            const connectionPromise = glow.connect();
+            const timeoutPromise = new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Connection timeout')), 10000)
+            );
+
+            const response = await Promise.race([connectionPromise, timeoutPromise]);
+            connectedAddress = response.publicKey.toString();
+
+            if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
+              throw new Error('Invalid Solana address received from Glow wallet');
+            }
+
+            localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+              type: 'glow',
+              address: connectedAddress,
+              timestamp: Date.now()
+            }));
+
+            setAccount(connectedAddress);
+            setIsConnected(true);
+            setProvider(null);
+            return;
+
+          } else {
+            showCustomAlert(
+              "🔮 UNSUPPORTED WALLET",
+              "This wallet type is not supported. Please use Phantom, Solflare, Backpack, or Glow."
+            );
+            return;
+          }
+
+        } catch (error: unknown) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            console.error(`Error connecting wallet after ${maxRetries} attempts:`, error);
+            
+            // Use the utility function to get appropriate error message
+            const { title, message, showRetry } = getSolanaConnectionErrorMessage(error as Error);
+            showCustomAlert(title, message, showRetry);
+            break;
+          }
+          
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
         }
-
-        const phantom = solanaWindow.phantom.solana as PhantomWallet;
-
-        // Request connection
-        const response = await phantom.connect();
-        connectedAddress = response.publicKey.toString();
-
-        // Validate this is a Solana address
-        if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
-          throw new Error('Invalid Solana address received from Phantom wallet');
-        }
-
-        // Cache the wallet connection
-        localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-          type: 'phantom',
-          address: connectedAddress,
-          timestamp: Date.now()
-        }));
-
-        setAccount(connectedAddress);
-        setIsConnected(true);
-        setProvider(null);
-        return;
-      } else if (walletType === "solflare") {
-        // Check if Solflare is available
-        if (typeof solanaWindow === "undefined" || !solanaWindow.solflare) {
-          showCustomAlert(
-            "🔥 SOLFLARE NOT FOUND",
-            "Solflare wallet is not installed. Please install Solflare extension and try again.",
-            false,
-            "https://solflare.com/"
-          );
-          return;
-        }
-
-        const solflare = solanaWindow.solflare as SolanaWalletProvider;
-
-        // Connect to Solflare (Solana)
-        const response = await solflare.connect();
-        connectedAddress = response.publicKey.toString();
-
-        // Validate this is a Solana address
-        if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
-          throw new Error('Invalid Solana address received from Solflare wallet');
-        }
-
-        // Cache the wallet connection
-        localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-          type: 'solflare',
-          address: connectedAddress,
-          timestamp: Date.now()
-        }));
-
-        setAccount(connectedAddress);
-        setIsConnected(true);
-        setProvider(null);
-        return;
-      } else if (walletType === "backpack") {
-        // Check if Backpack is available
-        if (typeof solanaWindow === "undefined" || !solanaWindow.backpack) {
-          showCustomAlert(
-            "🎒 BACKPACK NOT FOUND",
-            "Backpack wallet is not installed. Please install Backpack extension and try again.",
-            false,
-            "https://backpack.app/"
-          );
-          return;
-        }
-
-        const backpack = solanaWindow.backpack as SolanaWalletProvider;
-
-        // Connect to Backpack (Solana)
-        const response = await backpack.connect();
-        connectedAddress = response.publicKey.toString();
-
-        // Validate this is a Solana address
-        if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
-          throw new Error('Invalid Solana address received from Backpack wallet');
-        }
-
-        // Cache the wallet connection
-        localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-          type: 'backpack',
-          address: connectedAddress,
-          timestamp: Date.now()
-        }));
-
-        setAccount(connectedAddress);
-        setIsConnected(true);
-        setProvider(null);
-        return;
-      } else if (walletType === "glow") {
-        // Check if Glow is available
-        if (typeof solanaWindow === "undefined" || !solanaWindow.glow) {
-          showCustomAlert(
-            "✨ GLOW NOT FOUND",
-            "Glow wallet is not installed. Please install Glow extension and try again.",
-            false,
-            "https://glow.app/"
-          );
-          return;
-        }
-
-        const glow = solanaWindow.glow as SolanaWalletProvider;
-
-        // Connect to Glow (Solana)
-        const response = await glow.connect();
-        connectedAddress = response.publicKey.toString();
-
-        // Validate this is a Solana address
-        if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
-          throw new Error('Invalid Solana address received from Glow wallet');
-        }
-
-        // Cache the wallet connection
-        localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-          type: 'glow',
-          address: connectedAddress,
-          timestamp: Date.now()
-        }));
-
-        setAccount(connectedAddress);
-        setIsConnected(true);
-        setProvider(null);
-        return;
-      } else {
-        showCustomAlert(
-          "🔮 UNSUPPORTED WALLET",
-          "This wallet type is not supported. Please use Phantom, Solflare, Backpack, or Glow."
-        );
-        return;
       }
-    } catch (error: unknown) {
-      console.error("Error connecting wallet:", error);
-
-      // Use the utility function to get appropriate error message
-      const { title, message, showRetry } = getSolanaConnectionErrorMessage(error as Error);
-      showCustomAlert(title, message, showRetry);
     } finally {
       setIsConnecting(false);
+      releaseConnectionLock();
     }
   };
 
