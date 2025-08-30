@@ -443,27 +443,67 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     }
   };
 
-  // Define types for Solana wallet providers
-  interface SolanaWalletProvider {
+  // Define types for Solana wallet providers with their specific response structures
+  interface PhantomWallet {
     connect(): Promise<{ publicKey: { toString(): string } }>;
+    disconnect?(): Promise<void>;
+    isConnected?: boolean;
+    on?(event: 'accountChanged' | 'disconnect', callback: (...args: unknown[]) => void): void;
+    off?(event: 'accountChanged' | 'disconnect', callback: (...args: unknown[]) => void): void;
+  }
+
+  interface SolflareWallet {
+    connect(): Promise<boolean>;
+    disconnect?(): Promise<void>;
+    isConnected?: boolean;
+    publicKey?: { toString(): string };
+  }
+
+  interface BackpackWallet {
+    connect(): Promise<{ publicKey: string }>;
     disconnect?(): Promise<void>;
     isConnected?: boolean;
   }
 
-  interface PhantomWallet extends SolanaWalletProvider {
+  interface GlowWallet {
+    connect(): Promise<{ publicKey: string }>;
+    disconnect?(): Promise<void>;
     isConnected?: boolean;
-    on?(event: 'accountChanged' | 'disconnect', callback: (...args: unknown[]) => void): void;
-    off?(event: 'accountChanged' | 'disconnect', callback: (...args: unknown[]) => void): void;
   }
 
   interface WindowWithSolanaWallets extends Window {
     phantom?: {
       solana?: PhantomWallet;
     };
-    solflare?: SolanaWalletProvider;
-    backpack?: SolanaWalletProvider;
-    glow?: SolanaWalletProvider;
+    solflare?: SolflareWallet;
+    backpack?: BackpackWallet;
+    glow?: GlowWallet;
   }
+
+  // Helper function to extract address from wallet response
+  const extractAddressFromResponse = (response: unknown, walletType: string): string | null => {
+    try {
+      switch (walletType) {
+        case 'phantom':
+          // Phantom returns { publicKey: { toString() } }
+          return (response as { publicKey?: { toString(): string } })?.publicKey?.toString() || null;
+        case 'solflare':
+          // Solflare returns { publicKey: string } directly
+          return (response as { publicKey?: string })?.publicKey || null;
+        case 'backpack':
+          // Backpack returns { publicKey: string } directly
+          return (response as { publicKey?: string })?.publicKey || null;
+        case 'glow':
+          // Glow returns { publicKey: string } directly
+          return (response as { publicKey?: string })?.publicKey || null;
+        default:
+          return null;
+      }
+    } catch (error) {
+      console.error(`Error extracting address from ${walletType} response:`, error);
+      return null;
+    }
+  };
 
   // Enhanced connection function with better error handling and retry logic
   const connectSpecificWallet = async (walletType: string) => {
@@ -569,7 +609,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               return;
             }
 
-            const solflare = solanaWindow.solflare as SolanaWalletProvider;
+            const solflare = solanaWindow.solflare as SolflareWallet;
 
             // Request connection with timeout
             const connectionPromise = solflare.connect();
@@ -578,9 +618,21 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             );
 
             const response = await Promise.race([connectionPromise, timeoutPromise]);
-            connectedAddress = response.publicKey.toString();
+            
+            console.log('🔍 Solflare connection response:', response);
+            console.log('🔍 Solflare wallet object after connection:', solflare);
+
+            // Solflare returns boolean true on success, and stores publicKey on the wallet object
+            if (response === true && solflare.publicKey) {
+              connectedAddress = solflare.publicKey.toString();
+              console.log('🔍 Solflare publicKey from wallet object:', connectedAddress);
+            } else {
+              console.error('❌ Solflare connection failed or publicKey not available');
+              throw new Error('Solflare connection failed or publicKey not available');
+            }
 
             if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
+              console.error('❌ Invalid Solana address from Solflare:', connectedAddress);
               throw new Error('Invalid Solana address received from Solflare wallet');
             }
 
@@ -607,7 +659,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               return;
             }
 
-            const backpack = solanaWindow.backpack as SolanaWalletProvider;
+            const backpack = solanaWindow.backpack as BackpackWallet;
 
             // Request connection with timeout
             const connectionPromise = backpack.connect();
@@ -616,7 +668,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             );
 
             const response = await Promise.race([connectionPromise, timeoutPromise]);
-            connectedAddress = response.publicKey.toString();
+            connectedAddress = extractAddressFromResponse(response, 'backpack');
 
             if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
               throw new Error('Invalid Solana address received from Backpack wallet');
@@ -645,7 +697,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               return;
             }
 
-            const glow = solanaWindow.glow as SolanaWalletProvider;
+            const glow = solanaWindow.glow as GlowWallet;
 
             // Request connection with timeout
             const connectionPromise = glow.connect();
@@ -654,7 +706,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             );
 
             const response = await Promise.race([connectionPromise, timeoutPromise]);
-            connectedAddress = response.publicKey.toString();
+            connectedAddress = extractAddressFromResponse(response, 'glow');
 
             if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
               throw new Error('Invalid Solana address received from Glow wallet');
