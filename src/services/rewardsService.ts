@@ -581,6 +581,109 @@ class RewardsService {
   }
 
   /**
+   * Transfer MKIN from one user to another
+   */
+  async transferMKIN(
+    senderUserId: string,
+    recipientUserId: string,
+    amount: number
+  ): Promise<void> {
+    // Security validations
+    if (!this.validateUserId(senderUserId)) {
+      throw new Error("Invalid sender user ID");
+    }
+
+    if (!this.validateUserId(recipientUserId)) {
+      throw new Error("Invalid recipient user ID");
+    }
+
+    if (!this.validateAmount(amount)) {
+      throw new Error("Invalid transfer amount");
+    }
+
+    if (senderUserId === recipientUserId) {
+      throw new Error("Cannot transfer to yourself");
+    }
+
+    // Use transaction for atomic operations
+    await runTransaction(db, async (transaction) => {
+      // Get sender rewards
+      const senderRef = doc(db, "userRewards", senderUserId);
+      const senderDoc = await transaction.get(senderRef);
+
+      if (!senderDoc.exists()) {
+        throw new Error("Sender rewards not found");
+      }
+
+      const senderRewards = senderDoc.data() as UserRewards;
+
+      // Check if sender has sufficient balance
+      if (senderRewards.totalRealmkin < amount) {
+        throw new Error("Insufficient funds for transfer");
+      }
+
+      // Get recipient rewards
+      const recipientRef = doc(db, "userRewards", recipientUserId);
+      const recipientDoc = await transaction.get(recipientRef);
+
+      if (!recipientDoc.exists()) {
+        throw new Error("Recipient rewards not found");
+      }
+
+      const recipientRewards = recipientDoc.data() as UserRewards;
+
+      const now = new Date();
+
+      // Update sender balance (deduct amount)
+      transaction.update(senderRef, {
+        totalRealmkin: senderRewards.totalRealmkin - amount,
+        updatedAt: now,
+      });
+
+      // Update recipient balance (add amount)
+      transaction.update(recipientRef, {
+        totalRealmkin: (recipientRewards.totalRealmkin || 0) + amount,
+        updatedAt: now,
+      });
+
+      // Create transfer record
+      const transferRecord = {
+        id: `${senderUserId}_${recipientUserId}_${now.getTime()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`,
+        senderUserId,
+        recipientUserId,
+        amount,
+        transferredAt: now,
+      };
+
+      const transferRef = doc(db, "transferRecords", transferRecord.id);
+      transaction.set(transferRef, transferRecord);
+    });
+  }
+
+  /**
+   * Get user ID by wallet address
+   */
+  async getUserIdByWallet(walletAddress: string): Promise<string | null> {
+    try {
+      const walletDoc = await getDoc(
+        doc(db, "wallets", walletAddress.toLowerCase())
+      );
+
+      if (!walletDoc.exists()) {
+        return null;
+      }
+
+      const walletData = walletDoc.data();
+      return walletData.uid || null;
+    } catch (error) {
+      console.error("Error getting user ID by wallet:", error);
+      return null;
+    }
+  }
+
+  /**
    * Format MKIN tokens for display
    */
   formatMKIN(amount: number): string {

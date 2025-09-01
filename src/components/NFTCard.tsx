@@ -22,24 +22,24 @@ const NFTCard: React.FC<NFTCardProps> = ({
 
   const sizeClasses = {
     small: {
-      container: "w-32 h-auto",
-      image: "p-0", // Remove padding for full image
+      container: "w-full",
+      image: "w-full aspect-square",
       text: "text-xs",
       title: "text-xs",
       power: "text-[10px]",
     },
     medium: {
-      container: "w-40 h-auto",
-      image: "p-0", // Remove padding for full image
+      container: "w-full",
+      image: "w-full aspect-square",
       text: "text-sm",
       title: "text-sm",
       power: "text-xs",
     },
     large: {
-      container: "w-full max-w-[400px]",
-      image: "p-0", // Remove padding for full image
-      text: "text-base lg:text-lg",
-      title: "text-base lg:text-lg",
+      container: "w-full max-w-[280px]",
+      image: "w-full aspect-square",
+      text: "text-base",
+      title: "text-base",
       power: "text-sm",
     },
   };
@@ -58,34 +58,41 @@ const NFTCard: React.FC<NFTCardProps> = ({
   const getRarityColor = (rarity: string) => {
     switch (rarity?.toUpperCase()) {
       case "LEGENDARY":
-        return "from-yellow-500 to-orange-600";
+        return "#d4af37";
       case "EPIC":
-        return "from-purple-500 to-pink-600";
+        return "#9333ea";
       case "RARE":
-        return "from-blue-500 to-cyan-600";
+        return "#3b82f6";
       case "COMMON":
-        return "from-gray-500 to-gray-600";
+        return "#6b7280";
       default:
-        return "from-red-500 to-purple-600";
+        return "#ef4444";
     }
   };
 
   return (
     <div
-      className={`border-4 border-[#d3b136] bg-[#2b1c3b] p-2 overflow-hidden ${currentSize.container} card-hover flex-shrink-0`}
+      className={`bg-[#2d2d2d] border border-[#404040] rounded-lg overflow-hidden ${currentSize.container} transition-all duration-200 hover:border-[#d4af37]`}
       style={{ animationDelay }}
     >
       {/* NFT Image */}
       <div
-        className={`border-2 border-[#d3b136] ${
-          currentSize.image
-        } mb-2 aspect-square bg-gradient-to-br ${getRarityColor(
-          nft.rarity || ""
-        )} flex items-center justify-center shadow-lg shadow-purple-500/30 relative`}
+        className={`${currentSize.image} bg-[#3d3d3d] flex items-center justify-center relative`}
+        style={{
+          borderBottom: `2px solid ${getRarityColor(nft.rarity || "")}`,
+        }}
       >
         {imageLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            <div className="loading-realmkin">
+              <div className="loading-realmkin-spinner"></div>
+              <div className="loading-realmkin-particles">
+                <div className="loading-realmkin-particle"></div>
+                <div className="loading-realmkin-particle"></div>
+                <div className="loading-realmkin-particle"></div>
+                <div className="loading-realmkin-particle"></div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -95,42 +102,39 @@ const NFTCard: React.FC<NFTCardProps> = ({
             alt={nft.name}
             width={200}
             height={200}
-            className="w-full h-full object-cover rounded animate-float"
-            style={{ animationDelay }}
+            className="w-full h-full object-cover"
             onError={handleImageError}
             onLoad={handleImageLoad}
             priority={false}
           />
         ) : (
-          <div
-            className="absolute inset-0 flex items-center justify-center text-4xl lg:text-6xl animate-float"
-            style={{ animationDelay }}
-          >
-            🎭
-          </div>
+          <div className="text-3xl">🎭</div>
         )}
       </div>
 
       {/* NFT Details */}
       {showDetails && (
-        <div className="bg-[#2b1c3b] text-center p-2">
-          <div
-            className={`text-white px-2 font-bold ${currentSize.title} mb-1 truncate`}
-          >
-            {nft.rarity || "LEGENDARY"}
+        <div className="p-3">
+          <div className="flex justify-between items-center mb-2">
+            <div
+              className={`text-white font-semibold ${currentSize.title} truncate`}
+              style={{ color: getRarityColor(nft.rarity || "") }}
+            >
+              {nft.rarity || "LEGENDARY"}
+            </div>
+            <div className={`text-white font-medium ${currentSize.power}`}>
+              {nft.power || 0}
+            </div>
           </div>
-          <div className={`font-bold text-white ${currentSize.power} mb-1`}>
-            POWER: {nft.power || 0}
-          </div>
-          <div className="text-[10px] text-gray-400">OWNED</div>
 
-          {/* NFT Name (tooltip on hover) */}
           <div
-            className={`text-gray-300 ${currentSize.text} mt-1 truncate cursor-help`}
+            className={`text-gray-300 ${currentSize.text} truncate mb-1`}
             title={nft.name}
           >
             {nft.name}
           </div>
+
+          <div className="text-[#10b981] text-xs font-medium">OWNED</div>
         </div>
       )}
     </div>
