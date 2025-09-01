@@ -80,34 +80,20 @@ const UserManagementDashboard = () => {
           placeholder="Search by username or wallet address"
           value={searchTerm}
           onChange={handleSearch}
-          className="w-full p-3 bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#d3b136]"
+          className="w-full p-3 bg-[#0B0B09] border border-[#404040] rounded-lg text-white placeholder-[#666] focus:outline-none focus:ring-2 focus:ring-[#DA9C2F]"
         />
-        <div className="flex space-x-4">
-          {/* <button
-            onClick={handleMigration}
-            className="ml-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-yellow-500/30"
-          >
-            Run Migration
-          </button>
-          <button
-            onClick={handleBackfill}
-            className="ml-4 bg-blue-500 hover:bg-blue-400 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/30"
-          >
-            Run Backfill
-          </button> */}
-        </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg">
+        <table className="min-w-full bg-[#0B0B09] border border-[#404040] rounded-lg">
           <thead>
-            <tr className="border-b-2 border-[#d3b136]">
-              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">
+            <tr className="border-b border-[#404040]">
+              <th className="py-3 px-2 sm:px-4 text-left text-sm sm:text-base font-bold text-[#DA9C2F]">
                 Username
               </th>
-              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">
+              <th className="py-3 px-2 sm:px-4 text-left text-sm sm:text-base font-bold text-[#DA9C2F]">
                 Wallet Address
               </th>
-              <th className="py-3 px-2 sm:px-4 text-left text-base sm:text-lg font-bold text-glow">
+              <th className="py-3 px-2 sm:px-4 text-left text-sm sm:text-base font-bold text-[#DA9C2F]">
                 Total Realmkin
               </th>
             </tr>
@@ -120,15 +106,15 @@ const UserManagementDashboard = () => {
                   setSelectedUser(user);
                   setIsModalOpen(true);
                 }}
-                className="cursor-pointer hover:bg-[#2b1c3b] transition-colors"
+                className="cursor-pointer hover:bg-[#1a1a1a] transition-colors"
               >
-                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base">
+                <td className="border-t border-[#404040] px-2 sm:px-4 py-2 sm:py-3 text-sm">
                   {user.username}
                 </td>
-                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 font-mono text-xs sm:text-sm">
+                <td className="border-t border-[#404040] px-2 sm:px-4 py-2 sm:py-3 font-mono text-xs">
                   {user.walletAddress}
                 </td>
-                <td className="border-t border-[#d3b136] px-2 sm:px-4 py-2 sm:py-3 font-bold text-yellow-400 text-sm sm:text-base">
+                <td className="border-t border-[#404040] px-2 sm:px-4 py-2 sm:py-3 font-bold text-[#DA9C2F] text-sm">
                   ₥{user.totalRealmkin}
                 </td>
               </tr>

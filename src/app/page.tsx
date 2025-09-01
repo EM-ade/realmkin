@@ -24,6 +24,7 @@ import {
   ConstellationBackground,
   MagicalLoading
 } from "@/components/MagicalAnimations";
+import UserManagementDashboard from "@/components/UserManagementDashboard";
 
 export default function Home() {
   const { user, userData, logout, getUserByWallet } = useAuth();
@@ -80,6 +81,10 @@ export default function Home() {
       date: Date;
     }>
   >([]);
+
+  // Admin state
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -269,19 +274,19 @@ export default function Home() {
     setTransferError(null);
 
     try {
-      // Check if recipient is a registered user
-      const recipientUser = await getUserByWallet(transferRecipient);
-      if (!recipientUser) {
-        setTransferError(
-          "Recipient is not a registered user. They must create an account first."
-        );
-        return;
-      }
+  // Check if recipient is a registered user
+  const recipientUser = await getUserByWallet(transferRecipient);
+  if (!recipientUser) {
+    setTransferError(
+      "Recipient is not a registered user. They must create an account first."
+    );
+    return;
+  }
 
-      // Get recipient user ID from wallet mapping
-      const recipientUserId = await rewardsService.getUserIdByWallet(
-        transferRecipient
-      );
+  // Get recipient user ID from wallet mapping
+  const recipientUserId = await rewardsService.getUserIdByWallet(
+    transferRecipient
+  );
       if (!recipientUserId) {
         setTransferError("Could not find recipient user ID");
         return;
@@ -317,7 +322,7 @@ export default function Home() {
         walletAddress: account,
         type: "transfer",
         amount: amount,
-        description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient)}`,
+        description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient || '')}`,
         recipientAddress: transferRecipient,
       });
 
@@ -326,7 +331,7 @@ export default function Home() {
         {
           type: "transfer",
           amount: amount,
-          description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient)}`,
+          description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient || '')}`,
           date: new Date(),
         },
         ...prev.slice(0, 9), // Keep only last 10 transactions
@@ -408,23 +413,43 @@ export default function Home() {
           </div>
 
           {isConnected && account && (
-            <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040]">
-              <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
-                <Image
-                  src="/wallet.jpeg"
-                  alt="Wallet Logo"
-                  width={16}
-                  height={16}
-                  className="w-6 h-6 object-contain"
-                />
-                {userRewards
-                  ? rewardsService.formatMKIN(userRewards.totalRealmkin)
-                  : "0"}{" "}
-                MKIN
+            <div className="flex items-center gap-3">
+              <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040]">
+                <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
+                  <Image
+                    src="/wallet.jpeg"
+                    alt="Wallet Logo"
+                    width={16}
+                    height={16}
+                    className="w-6 h-6 object-contain"
+                  />
+                  {userRewards
+                    ? rewardsService.formatMKIN(userRewards.totalRealmkin)
+                    : "0"}{" "}
+                  MKIN
+                </div>
               </div>
+              
+              {/* Admin Toggle Button */}
+              {userData?.admin && (
+                <button
+                  onClick={() => setShowAdminDashboard(!showAdminDashboard)}
+                  className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+                >
+                  {showAdminDashboard ? "USER VIEW" : "ADMIN"}
+                </button>
+              )}
             </div>
           )}
         </header>
+
+        {/* Admin Dashboard Section */}
+        {showAdminDashboard && userData?.admin && (
+          <section className="card mb-6 premium-card interactive-element">
+            <h2 className="text-label mb-4">ADMIN DASHBOARD</h2>
+            <UserManagementDashboard />
+          </section>
+        )}
 
         {/* Reward Section */}
         <section className="card mb-6 premium-card interactive-element">
