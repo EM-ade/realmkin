@@ -395,7 +395,7 @@ export default function Home() {
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14  animate-float">
               <Image
-                src="/realmkin-logo.jpeg"
+                src="/realmkin-logo.png"
                 alt="Realmkin Logo"
                 width={48}
                 height={48}
@@ -433,8 +433,8 @@ export default function Home() {
             <div className="text-white font-bold text-2xl mb-2">
               Claimable:{" "}
               <span className="">
-                {rewardsCalculation
-                  ? rewardsService.formatMKIN(rewardsCalculation.pendingAmount)
+                {userRewards
+                  ? rewardsService.formatMKIN(userRewards.pendingRewards)
                   : "₥0"}{" "}
                 MKIN
               </span>
@@ -489,10 +489,10 @@ export default function Home() {
                 )}
                 <button
                   onClick={handleWithdraw}
-                  disabled={withdrawLoading}
-                  className="btn-primary w-full text-sm"
+                  disabled={true}
+                  className="btn-primary w-full text-sm opacity-50 cursor-not-allowed"
                 >
-                  {withdrawLoading ? "PROCESSING..." : "WITHDRAW"}
+                  WITHDRAW (DISABLED)
                 </button>
               </div>
 
