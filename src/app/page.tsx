@@ -152,18 +152,25 @@ export default function Home() {
       setLastClaimWallet(account);
       setShowWithdrawalConfirmation(true);
 
-      // Add to transaction history
+      // Save to transaction history in Firestore
+      await rewardsService.saveTransactionHistory({
+        userId: user.uid,
+        walletAddress: account,
+        type: "claim",
+        amount: claimRecord.amount,
+        description: `Claimed ${rewardsService.formatMKIN(claimRecord.amount)}`,
+      });
+
+      // Add to local state
       setTransactionHistory((prev) => [
         {
           type: "claim",
           amount: claimRecord.amount,
-          description: `Claimed ${rewardsService.formatMKIN(
-            claimRecord.amount
-          )}`,
+          description: `Claimed ${rewardsService.formatMKIN(claimRecord.amount)}`,
           date: new Date(),
         },
-        ...prev.slice(0, 4),
-      ]); // Keep only last 5 transactions
+        ...prev.slice(0, 9), // Keep only last 10 transactions
+      ]);
     } catch (error) {
       console.error("Error claiming rewards:", error);
       setClaimError(
@@ -203,7 +210,16 @@ export default function Home() {
       setLastClaimWallet(account);
       setShowWithdrawalConfirmation(true);
 
-      // Add to transaction history
+      // Save to transaction history in Firestore
+      await rewardsService.saveTransactionHistory({
+        userId: user.uid,
+        walletAddress: account,
+        type: "withdraw",
+        amount: amount,
+        description: `Withdrawn ${rewardsService.formatMKIN(amount)}`,
+      });
+
+      // Add to local state
       setTransactionHistory((prev) => [
         {
           type: "withdraw",
@@ -211,8 +227,8 @@ export default function Home() {
           description: `Withdrawn ${rewardsService.formatMKIN(amount)}`,
           date: new Date(),
         },
-        ...prev.slice(0, 4),
-      ]); // Keep only last 5 transactions
+        ...prev.slice(0, 9), // Keep only last 10 transactions
+      ]);
 
       // Clear input field
       setWithdrawAmount("");
@@ -295,18 +311,26 @@ export default function Home() {
       setLastTransferRecipient(transferRecipient);
       setShowTransferConfirmation(true);
 
-      // Add to transaction history
+      // Save to transaction history in Firestore
+      await rewardsService.saveTransactionHistory({
+        userId: user.uid,
+        walletAddress: account,
+        type: "transfer",
+        amount: amount,
+        description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient)}`,
+        recipientAddress: transferRecipient,
+      });
+
+      // Add to local state
       setTransactionHistory((prev) => [
         {
           type: "transfer",
           amount: amount,
-          description: `Sent ${rewardsService.formatMKIN(
-            amount
-          )} to ${formatAddress(transferRecipient)}`,
+          description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient)}`,
           date: new Date(),
         },
-        ...prev.slice(0, 4),
-      ]); // Keep only last 5 transactions
+        ...prev.slice(0, 9), // Keep only last 10 transactions
+      ]);
 
       // Clear input fields
       setTransferRecipient("");
@@ -328,6 +352,28 @@ export default function Home() {
     getUserByWallet,
     nfts.length,
   ]);
+
+  // Fetch transaction history when user changes
+  useEffect(() => {
+    const fetchTransactionHistory = async () => {
+      if (user?.uid) {
+        try {
+          const history = await rewardsService.getTransactionHistory(user.uid, 10);
+          const formattedHistory = history.map(transaction => ({
+            type: transaction.type as "claim" | "withdraw" | "transfer",
+            amount: transaction.amount,
+            description: transaction.description,
+            date: transaction.createdAt
+          }));
+          setTransactionHistory(formattedHistory);
+        } catch (error) {
+          console.error("Error fetching transaction history:", error);
+        }
+      }
+    };
+
+    fetchTransactionHistory();
+  }, [user?.uid]);
 
   // Fetch NFTs when wallet connects
   useEffect(() => {

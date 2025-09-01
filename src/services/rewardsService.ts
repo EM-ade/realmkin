@@ -18,10 +18,10 @@ export interface UserRewards {
   userId: string;
   walletAddress: string;
   totalNFTs: number;
-  weeklyRate: number; // $0.37 per NFT per week
+  weeklyRate: number;
   totalEarned: number;
   totalClaimed: number;
-  totalRealmkin: number; // New field for the balance
+  totalRealmkin: number;
   pendingRewards: number;
   lastCalculated: Date;
   lastClaimed: Date | null;
@@ -37,7 +37,7 @@ export interface ClaimRecord {
   nftCount: number;
   claimedAt: Date;
   weeksClaimed: number;
-  transactionHash?: string; // For future blockchain integration
+  transactionHash?: string;
 }
 
 export interface RewardsCalculation {
@@ -49,20 +49,26 @@ export interface RewardsCalculation {
   nextClaimDate: Date | null;
 }
 
+export interface TransactionHistory {
+  id: string;
+  userId: string;
+  walletAddress: string;
+  type: "claim" | "withdraw" | "transfer";
+  amount: number;
+  description: string;
+  recipientAddress?: string;
+  createdAt: Date;
+}
+
 class RewardsService {
-  private readonly WEEKLY_RATE_PER_NFT = 200; // 200 MKIN per NFT per week
+  private readonly WEEKLY_RATE_PER_NFT = 200;
   private readonly MILLISECONDS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
-  private readonly MIN_CLAIM_AMOUNT = 1; // Minimum 1 MKIN to claim
-  private readonly NEW_NFT_BONUS = 200; // 200 MKIN bonus for each new NFT acquired
-  private readonly MAX_CLAIM_AMOUNT = 100000; // Maximum claim amount for security
-  private readonly RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute rate limit window
-  private readonly MAX_CLAIMS_PER_WINDOW = 3; // Max 3 claim attempts per minute
+  private readonly MIN_CLAIM_AMOUNT = 1;
+  private readonly NEW_NFT_BONUS = 200;
+  private readonly MAX_CLAIM_AMOUNT = 100000;
+  private readonly RATE_LIMIT_WINDOW = 60 * 1000;
+  private readonly MAX_CLAIMS_PER_WINDOW = 3;
 
-
-
-  /**
-   * Convert timestamp to valid Date object with fallback
-   */
   private convertToValidDate(timestamp: unknown, fallbackDate: Date): Date {
     try {
       if (timestamp instanceof Date) {
@@ -70,7 +76,6 @@ class RewardsService {
       }
       
       if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp && typeof (timestamp as { toDate: () => Date }).toDate === 'function') {
-        // Handle Firestore Timestamp
         const date = (timestamp as { toDate: () => Date }).toDate();
         return isNaN(date.getTime()) ? fallbackDate : date;
       }
@@ -87,9 +92,6 @@ class RewardsService {
     }
   }
 
-  /**
-   * Security validation methods
-   */
   private validateUserId(userId: string): boolean {
     return (
       typeof userId === "string" && userId.length > 0 && userId.length <= 128
@@ -118,14 +120,11 @@ class RewardsService {
     return (
       typeof count === "number" &&
       count >= 0 &&
-      count <= 10000 && // Reasonable upper limit
+      count <= 10000 &&
       Number.isInteger(count)
     );
   }
 
-  /**
-   * Rate limiting check
-   */
   private async checkRateLimit(userId: string): Promise<void> {
     const rateLimitRef = doc(db, "rateLimits", userId);
     const rateLimitDoc = await getDoc(rateLimitRef);
@@ -137,21 +136,16 @@ class RewardsService {
       const windowStart = data.windowStart || 0;
       const attempts = data.attempts || 0;
 
-      // Check if we're still in the same window
       if (now - windowStart < this.RATE_LIMIT_WINDOW) {
         if (attempts >= this.MAX_CLAIMS_PER_WINDOW) {
-          throw new Error(
-            "Rate limit exceeded. Please wait before trying again."
-          );
+          throw new Error("Rate limit exceeded. Please wait before trying again.");
         }
 
-        // Increment attempts in current window
         await updateDoc(rateLimitRef, {
           attempts: attempts + 1,
           lastAttempt: now,
         });
       } else {
-        // Start new window
         await setDoc(rateLimitRef, {
           windowStart: now,
           attempts: 1,
@@ -159,7 +153,6 @@ class RewardsService {
         });
       }
     } else {
-      // First attempt
       await setDoc(rateLimitRef, {
         windowStart: now,
         attempts: 1,
@@ -168,9 +161,6 @@ class RewardsService {
     }
   }
 
-  /**
-   * Initialize or update user rewards data
-   */
   async initializeUserRewards(
     userId: string,
     walletAddress: string,
@@ -183,20 +173,16 @@ class RewardsService {
     const weeklyRate = nftCount * this.WEEKLY_RATE_PER_NFT;
 
     if (existingDoc.exists()) {
-      // Update existing record
       const existingData = existingDoc.data() as UserRewards;
 
-      // Convert Firestore timestamps to Date objects and ensure numeric fields are initialized
       const processedData: UserRewards = {
         ...existingData,
-        // Ensure numeric fields are properly initialized
         totalNFTs: existingData.totalNFTs || 0,
         weeklyRate: existingData.weeklyRate || 0,
         totalEarned: existingData.totalEarned || 0,
         totalClaimed: existingData.totalClaimed || 0,
         totalRealmkin: existingData.totalRealmkin || 0,
         pendingRewards: existingData.pendingRewards || 0,
-        // Convert timestamps with validation
         lastCalculated: this.convertToValidDate(existingData.lastCalculated, now),
         lastClaimed: existingData.lastClaimed 
           ? this.convertToValidDate(existingData.lastClaimed, now)
@@ -205,32 +191,23 @@ class RewardsService {
         updatedAt: this.convertToValidDate(existingData.updatedAt, now),
       };
 
-      // Check for new NFTs and add bonus
       const previousNFTCount = processedData.totalNFTs;
       const newNFTsAcquired = Math.max(0, nftCount - previousNFTCount);
       const newNFTBonus = newNFTsAcquired * this.NEW_NFT_BONUS;
-
-      // Give full weekly amount for current NFT count
       const weeklyRewards = nftCount * this.WEEKLY_RATE_PER_NFT;
-
-      console.log("🔧 Updating rewards for user:", userId);
-      console.log("🔧 Weekly rewards:", weeklyRewards, "New NFT bonus:", newNFTBonus);
 
       const updatedData: Partial<UserRewards> = {
         totalNFTs: nftCount,
         weeklyRate,
-        totalRealmkin: (processedData.totalRealmkin || 0) + newNFTBonus, // Add new NFT bonus to balance
-        pendingRewards: weeklyRewards, // Only weekly rewards for pending
+        totalRealmkin: (processedData.totalRealmkin || 0) + newNFTBonus,
+        pendingRewards: weeklyRewards,
         lastCalculated: now,
         updatedAt: now,
-        walletAddress, // Update in case wallet changed
+        walletAddress,
       };
 
-      // Log new NFT bonus if applicable
       if (newNFTsAcquired > 0) {
-        console.log(
-          `🎉 New NFT bonus: ${newNFTsAcquired} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${newNFTBonus}`
-        );
+        console.log(`🎉 New NFT bonus: ${newNFTsAcquired} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${newNFTBonus}`);
       }
 
       await updateDoc(userRewardsRef, updatedData);
@@ -240,10 +217,9 @@ class RewardsService {
         ...updatedData,
       } as UserRewards;
     } else {
-      // Create new record with welcome bonus for initial NFTs
       const welcomeBonus = nftCount * this.NEW_NFT_BONUS;
       const weeklyRewards = nftCount * this.WEEKLY_RATE_PER_NFT;
-      const totalInitialRewards = weeklyRewards + welcomeBonus; // Regular mining + bonus
+      const totalInitialRewards = weeklyRewards + welcomeBonus;
 
       const newUserRewards: UserRewards = {
         userId,
@@ -253,24 +229,17 @@ class RewardsService {
         totalEarned: 0,
         totalClaimed: 0,
         totalRealmkin: 0,
-        pendingRewards: totalInitialRewards, // Give weekly rewards + bonus for initial NFTs
+        pendingRewards: totalInitialRewards,
         lastCalculated: now,
         lastClaimed: null,
         createdAt: now,
         updatedAt: now,
       };
 
-      // Log welcome bonus and weekly rewards
       if (nftCount > 0) {
-        console.log(
-          `🎁 Welcome bonus: ${nftCount} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${welcomeBonus}`
-        );
-        console.log(
-          `⛏️ Weekly mining rewards: ${nftCount} NFTs × ₥${this.WEEKLY_RATE_PER_NFT} = ₥${weeklyRewards}`
-        );
-        console.log(
-          `💰 Total initial rewards: ₥${totalInitialRewards}`
-        );
+        console.log(`🎁 Welcome bonus: ${nftCount} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${welcomeBonus}`);
+        console.log(`⛏️ Weekly mining rewards: ${nftCount} NFTs × ₥${this.WEEKLY_RATE_PER_NFT} = ₥${weeklyRewards}`);
+        console.log(`💰 Total initial rewards: ₥${totalInitialRewards}`);
       }
 
       await setDoc(userRewardsRef, newUserRewards);
@@ -278,80 +247,46 @@ class RewardsService {
     }
   }
 
-  // Cache for reward calculations
   private rewardCalculationCache = new Map<string, RewardsCalculation>();
 
-  /**
-   * Calculate pending rewards for a user
-   */
   calculatePendingRewards(
     userRewards: UserRewards,
     currentNFTCount: number,
     bypassWaitTime: boolean = false
   ): RewardsCalculation {
-    // Validate inputs
     if (!this.validateNFTCount(currentNFTCount)) {
       console.error("Invalid NFT count:", currentNFTCount);
       throw new Error("Invalid NFT count provided");
     }
 
-    // Create cache key - handle case where createdAt might not be a Date object
     const claimDate = userRewards.lastClaimed || userRewards.createdAt;
     const claimDateTime = claimDate instanceof Date ? claimDate.getTime() : new Date().getTime();
 
     const cacheKey = `${userRewards.userId}_${currentNFTCount}_${claimDateTime}_${bypassWaitTime}`;
 
-    // Check cache first
     if (this.rewardCalculationCache.has(cacheKey)) {
       return this.rewardCalculationCache.get(cacheKey)!;
     }
 
     const now = new Date();
-
-    // Ensure numeric fields are properly initialized
-
-    // Calculate weekly rate (200 MKIN per NFT per week)
     const weeklyRate = currentNFTCount * this.WEEKLY_RATE_PER_NFT;
-
-    // Calculate next claim date and weeks elapsed since last claim
     const lastClaimDate = this.convertToValidDate(claimDate, now);
 
-    // Calculate how many full weeks have elapsed
     const timeSinceLastClaim = now.getTime() - lastClaimDate.getTime();
     const weeksElapsed = Math.floor(timeSinceLastClaim / this.MILLISECONDS_PER_WEEK);
 
-    // Calculate next claim date with late withdrawal handling
     let nextClaimDate;
     if (now.getTime() > lastClaimDate.getTime() + (weeksElapsed * this.MILLISECONDS_PER_WEEK)) {
-      // User is withdrawing late, calculate remaining time
-      const timeSinceLastClaim = now.getTime() - lastClaimDate.getTime();
       const remainingTime = this.MILLISECONDS_PER_WEEK - (timeSinceLastClaim % this.MILLISECONDS_PER_WEEK);
       nextClaimDate = new Date(now.getTime() + remainingTime);
     } else {
-      // Normal case - user is withdrawing on time
       nextClaimDate = new Date(
         lastClaimDate.getTime() + (weeksElapsed + 1) * this.MILLISECONDS_PER_WEEK
       );
     }
 
-    // Calculate accumulated reward amount (200 MKIN per week per NFT)
-    // For each full week that has passed, add the weekly reward
     const accumulatedReward = weeklyRate * weeksElapsed;
-
-    // Check if user can claim (must have at least 1 full week and meet minimum amount)
     const canClaim = (bypassWaitTime || weeksElapsed >= 1) && accumulatedReward >= this.MIN_CLAIM_AMOUNT;
-
-    // Debug logging to track calculations
-    console.log("🔧 Rewards calculation debug:", {
-      currentNFTCount,
-      weeklyRate,
-      weeksElapsed,
-      accumulatedReward,
-      canClaim,
-      bypassWaitTime,
-      nextClaimDate: nextClaimDate.toISOString(),
-      now: now.toISOString()
-    });
 
     const result = {
       totalNFTs: currentNFTCount,
@@ -362,14 +297,10 @@ class RewardsService {
       nextClaimDate: canClaim ? null : nextClaimDate,
     };
 
-    // Cache the result
     this.rewardCalculationCache.set(cacheKey, result);
     return result;
   }
 
-  /**
-   * Get user rewards data
-   */
   async getUserRewards(userId: string): Promise<UserRewards | null> {
     const userRewardsRef = doc(db, "userRewards", userId);
     const docSnap = await getDoc(userRewardsRef);
@@ -378,16 +309,13 @@ class RewardsService {
       const data = docSnap.data() as UserRewards;
       const now = new Date();
       
-      // Convert Firestore timestamps to Date objects and ensure numeric fields are initialized
       return {
         ...data,
-        // Ensure numeric fields are properly initialized
         totalNFTs: data.totalNFTs || 0,
         weeklyRate: data.weeklyRate || 0,
         totalEarned: data.totalEarned || 0,
         totalClaimed: data.totalClaimed || 0,
         pendingRewards: data.pendingRewards || 0,
-        // Convert timestamps with validation
         lastCalculated: this.convertToValidDate(data.lastCalculated, now),
         lastClaimed: data.lastClaimed 
           ? this.convertToValidDate(data.lastClaimed, now)
@@ -400,15 +328,11 @@ class RewardsService {
     return null;
   }
 
-  /**
-   * Process a reward claim with security validations
-   */
   async claimRewards(
     userId: string,
     walletAddress: string,
     bypassWaitTime: boolean = false
   ): Promise<ClaimRecord> {
-    // Security validations
     if (!this.validateUserId(userId)) {
       throw new Error("Invalid user ID");
     }
@@ -417,7 +341,6 @@ class RewardsService {
       throw new Error("Invalid wallet address");
     }
 
-    // Rate limiting check
     await this.checkRateLimit(userId);
 
     const userRewards = await this.getUserRewards(userId);
@@ -425,7 +348,6 @@ class RewardsService {
       throw new Error("User rewards not found");
     }
 
-    // Verify wallet address matches user's registered wallet
     if (userRewards.walletAddress !== walletAddress) {
       throw new Error("Wallet address mismatch");
     }
@@ -445,19 +367,13 @@ class RewardsService {
     }
 
     const now = new Date();
-    const claimAmount = Math.floor(calculation.pendingAmount * 100) / 100; // Round to 2 decimal places
+    const claimAmount = Math.floor(calculation.pendingAmount * 100) / 100;
 
-    // Log accumulator details
-    console.log(`💰 Claiming accumulated rewards: ₥${claimAmount} for ${calculation.weeksElapsed} weeks`);
-
-    // Additional security validation
     if (!this.validateAmount(claimAmount)) {
       throw new Error("Invalid claim amount calculated");
     }
 
-    // Use transaction for atomic operations
     const claimRecord = await runTransaction(db, async (transaction) => {
-      // Re-check user rewards in transaction to prevent race conditions
       const userRewardsRef = doc(db, "userRewards", userId);
       const userRewardsDoc = await transaction.get(userRewardsRef);
 
@@ -467,7 +383,6 @@ class RewardsService {
 
       const currentUserRewards = userRewardsDoc.data() as UserRewards;
 
-      // Re-validate claim eligibility
       const currentCalculation = this.calculatePendingRewards(
         currentUserRewards,
         currentUserRewards.totalNFTs,
@@ -478,11 +393,8 @@ class RewardsService {
         throw new Error("Claim no longer available");
       }
 
-      // Create claim record
       const claimRecord: ClaimRecord = {
-        id: `${userId}_${now.getTime()}_${Math.random()
-          .toString(36)
-          .substr(2, 9)}`,
+        id: `${userId}_${now.getTime()}_${Math.random().toString(36).substr(2, 9)}`,
         userId,
         walletAddress,
         amount: claimAmount,
@@ -491,16 +403,14 @@ class RewardsService {
         weeksClaimed: currentCalculation.weeksElapsed,
       };
 
-      // Save claim record
       const claimRef = doc(db, "claimRecords", claimRecord.id);
       transaction.set(claimRef, claimRecord);
 
-      // Update user rewards
       const updatedUserRewards: Partial<UserRewards> = {
         totalClaimed: currentUserRewards.totalClaimed + claimAmount,
         totalEarned: currentUserRewards.totalEarned + claimAmount,
         totalRealmkin: (currentUserRewards.totalRealmkin || 0) + claimAmount,
-        pendingRewards: 0, // Reset pending rewards
+        pendingRewards: 0,
         lastClaimed: now,
         lastCalculated: now,
         updatedAt: now,
@@ -514,9 +424,6 @@ class RewardsService {
     return claimRecord;
   }
 
-  /**
-   * Get user's claim history
-   */
   async getClaimHistory(
     userId: string,
     limitCount: number = 10
@@ -539,9 +446,6 @@ class RewardsService {
     });
   }
 
-  /**
-   * Get claim history by wallet address (useful for off-chain management)
-   */
   async getClaimHistoryByWallet(
     walletAddress: string,
     limitCount: number = 10
@@ -564,9 +468,6 @@ class RewardsService {
     });
   }
 
-  /**
-   * Get total claimed amount by wallet address
-   */
   async getTotalClaimedByWallet(walletAddress: string): Promise<number> {
     const claimsQuery = query(
       collection(db, "claimRecords"),
@@ -580,15 +481,68 @@ class RewardsService {
     }, 0);
   }
 
-  /**
-   * Transfer MKIN from one user to another
-   */
+  async saveTransactionHistory(transaction: Omit<TransactionHistory, "id" | "createdAt">): Promise<void> {
+    const now = new Date();
+    const transactionId = `${transaction.userId}_${now.getTime()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const transactionRef = doc(db, "transactionHistory", transactionId);
+    
+    await setDoc(transactionRef, {
+      ...transaction,
+      id: transactionId,
+      createdAt: now,
+    });
+  }
+
+  async getTransactionHistory(
+    userId: string,
+    limitCount: number = 10
+  ): Promise<TransactionHistory[]> {
+    const transactionsQuery = query(
+      collection(db, "transactionHistory"),
+      where("userId", "==", userId),
+      orderBy("createdAt", "desc"),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(transactionsQuery);
+    const now = new Date();
+    return querySnapshot.docs.map((doc) => {
+      const data = doc.data() as TransactionHistory;
+      return {
+        ...data,
+        createdAt: this.convertToValidDate(data.createdAt, now),
+      };
+    });
+  }
+
+  async getTransactionHistoryByWallet(
+    walletAddress: string,
+    limitCount: number = 10
+  ): Promise<TransactionHistory[]> {
+    const transactionsQuery = query(
+      collection(db, "transactionHistory"),
+      where("walletAddress", "==", walletAddress),
+      orderBy("createdAt", "desc"),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(transactionsQuery);
+    const now = new Date();
+    return querySnapshot.docs.map((doc) => {
+      const data = doc.data() as TransactionHistory;
+      return {
+        ...data,
+        createdAt: this.convertToValidDate(data.createdAt, now),
+      };
+    });
+  }
+
   async transferMKIN(
     senderUserId: string,
     recipientUserId: string,
     amount: number
   ): Promise<void> {
-    // Security validations
     if (!this.validateUserId(senderUserId)) {
       throw new Error("Invalid sender user ID");
     }
@@ -605,9 +559,7 @@ class RewardsService {
       throw new Error("Cannot transfer to yourself");
     }
 
-    // Use transaction for atomic operations
     await runTransaction(db, async (transaction) => {
-      // Get sender rewards
       const senderRef = doc(db, "userRewards", senderUserId);
       const senderDoc = await transaction.get(senderRef);
 
@@ -617,12 +569,10 @@ class RewardsService {
 
       const senderRewards = senderDoc.data() as UserRewards;
 
-      // Check if sender has sufficient balance
       if (senderRewards.totalRealmkin < amount) {
         throw new Error("Insufficient funds for transfer");
       }
 
-      // Get recipient rewards
       const recipientRef = doc(db, "userRewards", recipientUserId);
       const recipientDoc = await transaction.get(recipientRef);
 
@@ -634,23 +584,18 @@ class RewardsService {
 
       const now = new Date();
 
-      // Update sender balance (deduct amount)
       transaction.update(senderRef, {
         totalRealmkin: senderRewards.totalRealmkin - amount,
         updatedAt: now,
       });
 
-      // Update recipient balance (add amount)
       transaction.update(recipientRef, {
         totalRealmkin: (recipientRewards.totalRealmkin || 0) + amount,
         updatedAt: now,
       });
 
-      // Create transfer record
       const transferRecord = {
-        id: `${senderUserId}_${recipientUserId}_${now.getTime()}_${Math.random()
-          .toString(36)
-          .substr(2, 9)}`,
+        id: `${senderUserId}_${recipientUserId}_${now.getTime()}_${Math.random().toString(36).substr(2, 9)}`,
         senderUserId,
         recipientUserId,
         amount,
@@ -662,9 +607,6 @@ class RewardsService {
     });
   }
 
-  /**
-   * Get user ID by wallet address
-   */
   async getUserIdByWallet(walletAddress: string): Promise<string | null> {
     try {
       const walletDoc = await getDoc(
@@ -683,9 +625,6 @@ class RewardsService {
     }
   }
 
-  /**
-   * Format MKIN tokens for display
-   */
   formatMKIN(amount: number): string {
     return (
       "₥" +
@@ -696,16 +635,10 @@ class RewardsService {
     );
   }
 
-  /**
-   * Format currency for display (kept for backward compatibility)
-   */
   formatCurrency(amount: number): string {
     return this.formatMKIN(amount);
   }
 
-  /**
-   * Calculate time until next claim
-   */
   getTimeUntilNextClaim(nextClaimDate: Date): string {
     const now = new Date();
     const timeDiff = nextClaimDate.getTime() - now.getTime();
