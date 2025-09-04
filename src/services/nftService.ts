@@ -87,11 +87,11 @@ class NFTService {
     process.env.NEXT_PUBLIC_REALMKIN_SOLANA_CONTRACT_ADDRESS ||
     "eTQujiFKVvLJXdkAobg9JqULNdDrCt5t4WtDochmVSZ";
 
-  // Magic Eden collection symbol for Solana
-  private readonly REALMKIN_COLLECTION_SYMBOL =
-    process.env.NEXT_PUBLIC_REALMKIN_COLLECTION_SYMBOL || "The Realmkin";
+  // Collection symbols for different APIs
+  private readonly HELIUS_COLLECTION_SYMBOL = "The Realmkin";
+  private readonly MAGIC_EDEN_COLLECTION_SYMBOL = "the_realmkin_kins";
 
-  // Optional: Helius API key for enhanced Solana NFT data
+  // Helius API key for enhanced Solana NFT data
   private readonly HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
 
   // Temporary testing mode - set to false for production
@@ -104,6 +104,7 @@ class NFTService {
 
   // Cache for NFT data
   private nftCache = new Map<string, NFTCollection>();
+
 
   /**
    * Fetch NFTs owned by a Solana wallet using Helius API
@@ -193,22 +194,28 @@ class NFTService {
             Accept: "application/json",
           },
           params: {
-            collection: this.REALMKIN_COLLECTION_SYMBOL,
+            collection_symbol: this.MAGIC_EDEN_COLLECTION_SYMBOL,
             limit: 500,
             offset: 0,
           },
         }
       );
 
+      // Filter for Realmkin collection - Magic Eden API might not filter properly by collection param
+      const realmkinNFTs = response.data.filter((nft: MagicEdenSolanaNFT) => 
+        nft.collection === this.MAGIC_EDEN_COLLECTION_SYMBOL || 
+        nft.symbol === this.MAGIC_EDEN_COLLECTION_SYMBOL
+      );
+
       const nfts = await Promise.all(
-        response.data.map(async (nft: MagicEdenSolanaNFT) => {
+        realmkinNFTs.map(async (nft: MagicEdenSolanaNFT) => {
           return await this.processMagicEdenSolanaNFTData(nft);
         })
       );
 
       const result = {
         nfts: nfts.filter((nft) => nft !== null),
-        totalCount: response.data.length,
+        totalCount: realmkinNFTs.length,
       };
 
       // Cache the result
@@ -223,7 +230,7 @@ class NFTService {
   }
 
   /**
-   * Main method to fetch Solana NFTs - tries multiple sources
+   * Main method to fetch Solana NFTs - tries both Helius and Magic Eden
    */
   async fetchUserNFTs(walletAddress: string): Promise<NFTCollection> {
     try {
@@ -253,15 +260,36 @@ class NFTService {
         
       console.log("🔍 NFT Service: Using address:", addressToUse);
 
-      // Try Helius first (best for Solana)
-      if (this.HELIUS_API_KEY) {
-        console.log("🔍 NFT Service: Using Helius API");
-        return await this.fetchNFTsWithHelius(addressToUse);
-      }
+      // Try both APIs regardless of errors and combine results
+      const results = await Promise.allSettled([
+        this.HELIUS_API_KEY ? this.fetchNFTsWithHelius(addressToUse) : Promise.resolve({ nfts: [], totalCount: 0 }),
+        this.fetchNFTsWithMagicEdenSolana(addressToUse)
+      ]);
 
-      // Fallback to Magic Eden Solana
-      console.log("🔍 NFT Service: Using Magic Eden API");
-      return await this.fetchNFTsWithMagicEdenSolana(addressToUse);
+      // Combine results from both APIs
+      const allNFTs: NFTMetadata[] = [];
+      let totalCount = 0;
+
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          allNFTs.push(...result.value.nfts);
+          totalCount += result.value.totalCount;
+        } else {
+          console.warn("API fetch failed:", result.reason);
+        }
+      });
+
+      // Remove duplicates based on token ID
+      const uniqueNFTs = this.removeDuplicateNFTs(allNFTs);
+
+      const result = {
+        nfts: uniqueNFTs,
+        totalCount: uniqueNFTs.length,
+      };
+
+      // Cache the result
+      this.nftCache.set(walletAddress, result);
+      return result;
     } catch (error) {
       console.error("Error fetching Solana NFTs:", error);
 
@@ -269,6 +297,22 @@ class NFTService {
       return this.getMockNFTs();
     }
   }
+
+  /**
+   * Remove duplicate NFTs based on token ID
+   */
+  private removeDuplicateNFTs(nfts: NFTMetadata[]): NFTMetadata[] {
+    const seen = new Set();
+    return nfts.filter(nft => {
+      const id = nft.id || nft.tokenId;
+      if (seen.has(id)) {
+        return false;
+      }
+      seen.add(id);
+      return true;
+    });
+  }
+
 
   /**
    * Process NFT data from Helius API
