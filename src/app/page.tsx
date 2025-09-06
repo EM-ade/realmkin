@@ -25,6 +25,7 @@ import {
   MagicalLoading
 } from "@/components/MagicalAnimations";
 import UserManagementDashboard from "@/components/UserManagementDashboard";
+import { useAutoClaim } from "@/hooks/useAutoClaim";
 
 export default function Home() {
   const { user, userData, logout, getUserByWallet } = useAuth();
@@ -36,6 +37,9 @@ export default function Home() {
     disconnectWallet,
   } = useWeb3();
 
+  // Initialize auto-claiming
+  const { settings: autoClaimSettings } = useAutoClaim();
+
   // NFT state
   const [nfts, setNfts] = useState<NFTMetadata[]>([]);
   const [nftLoading, setNftLoading] = useState(false);
@@ -45,8 +49,6 @@ export default function Home() {
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   const [rewardsCalculation, setRewardsCalculation] =
     useState<RewardsCalculation | null>(null);
-  const [claimLoading, setClaimLoading] = useState(false);
-  const [claimError, setClaimError] = useState<string | null>(null);
   const [showRewardsDashboard, setShowRewardsDashboard] = useState(false);
   const [bonusNotification, setBonusNotification] = useState<string | null>(
     null
@@ -128,63 +130,6 @@ export default function Home() {
     }
   }, [account, user]);
 
-  // Handle reward claim
-  const handleClaimRewards = useCallback(async () => {
-    if (!user || !account || !rewardsCalculation?.canClaim) return;
-
-    setClaimLoading(true);
-    setClaimError(null);
-
-    try {
-      const claimRecord = await rewardsService.claimRewards(user.uid, account);
-
-      // Refresh rewards data after claim
-      const rewards = await rewardsService.initializeUserRewards(
-        user.uid,
-        account,
-        nfts.length
-      );
-      setUserRewards(rewards);
-
-      const calculation = rewardsService.calculatePendingRewards(
-        rewards,
-        nfts.length
-      );
-      setRewardsCalculation(calculation);
-
-      // Show withdrawal confirmation modal
-      setLastClaimAmount(claimRecord.amount);
-      setLastClaimWallet(account);
-      setShowWithdrawalConfirmation(true);
-
-      // Save to transaction history in Firestore
-      await rewardsService.saveTransactionHistory({
-        userId: user.uid,
-        walletAddress: account,
-        type: "claim",
-        amount: claimRecord.amount,
-        description: `Claimed ${rewardsService.formatMKIN(claimRecord.amount)}`,
-      });
-
-      // Add to local state
-      setTransactionHistory((prev) => [
-        {
-          type: "claim",
-          amount: claimRecord.amount,
-          description: `Claimed ${rewardsService.formatMKIN(claimRecord.amount)}`,
-          date: new Date(),
-        },
-        ...prev.slice(0, 9), // Keep only last 10 transactions
-      ]);
-    } catch (error) {
-      console.error("Error claiming rewards:", error);
-      setClaimError(
-        error instanceof Error ? error.message : "Failed to claim rewards"
-      );
-    } finally {
-      setClaimLoading(false);
-    }
-  }, [user, account, rewardsCalculation, nfts.length]);
 
   // Handle withdrawal
   const handleWithdraw = useCallback(async () => {
@@ -248,115 +193,106 @@ export default function Home() {
   }, [user, account, withdrawAmount, userRewards]);
 
   // Handle transfer
-  const handleTransfer = useCallback(async () => {
-    if (!user || !account || !transferRecipient || !transferAmount) return;
+const handleTransfer = useCallback(async () => {
+  if (!account || !transferRecipient || !transferAmount) return;
 
-    const amount = parseFloat(transferAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setTransferError("Please enter a valid amount");
-      return;
-    }
-
-    // Validate recipient address (basic validation)
-    if (transferRecipient.length < 6) {
-      setTransferError("Please enter a valid recipient address");
-      return;
-    }
-
-    // Check if user has sufficient balance
-    const userBalance = userRewards?.totalRealmkin || 0;
-    if (amount > userBalance) {
-      setTransferError("Insufficient funds for transfer");
-      return;
-    }
-
-    setTransferLoading(true);
-    setTransferError(null);
-
-    try {
-  // Check if recipient is a registered user
-  const recipientUser = await getUserByWallet(transferRecipient);
-  if (!recipientUser) {
-    setTransferError(
-      "Recipient is not a registered user. They must create an account first."
-    );
+  const amount = parseFloat(transferAmount);
+  if (isNaN(amount) || amount <= 0) {
+    setTransferError("Please enter a valid amount");
     return;
   }
 
-  // Get recipient user ID from wallet mapping
-  const recipientUserId = await rewardsService.getUserIdByWallet(
-    transferRecipient
-  );
-      if (!recipientUserId) {
-        setTransferError("Could not find recipient user ID");
-        return;
-      }
+  if (amount > (userRewards?.totalRealmkin || 0)) {
+    setTransferError("Insufficient balance");
+    return;
+  }
 
-      // Execute actual transfer
-      await rewardsService.transferMKIN(user.uid, recipientUserId, amount);
+  setTransferLoading(true);
+  setTransferError(null);
 
-      // Refresh user rewards to get updated balance
-      if (user) {
-        const rewards = await rewardsService.initializeUserRewards(
-          user.uid,
-          account,
-          nfts.length
-        );
-        setUserRewards(rewards);
+  try {
+    // Check if recipient is a registered user
+    const recipientUser = await getUserByWallet(transferRecipient);
+    if (!recipientUser) {
+      setTransferError(
+        "Recipient is not a registered user. They must create an account first."
+      );
+      return;
+    }
 
-        const calculation = rewardsService.calculatePendingRewards(
-          rewards,
-          nfts.length
-        );
-        setRewardsCalculation(calculation);
-      }
+    // Get recipient user ID from wallet mapping
+    const recipientUserId = await rewardsService.getUserIdByWallet(
+      transferRecipient
+    );
+    if (!recipientUserId) {
+      setTransferError("Could not find recipient user ID");
+      return;
+    }
 
-      // Show transfer confirmation
-      setLastTransferAmount(amount);
-      setLastTransferRecipient(transferRecipient);
-      setShowTransferConfirmation(true);
+    // FIXED: Get sender user ID from wallet address instead of user.uid
+    const senderUserId = await rewardsService.getUserIdByWallet(account);
+    if (!senderUserId) {
+      setTransferError("Could not find your user ID. Please try reconnecting your wallet.");
+      return;
+    }
 
-      // Save to transaction history in Firestore
-      await rewardsService.saveTransactionHistory({
-        userId: user.uid,
-        walletAddress: account,
+    // Execute actual transfer using wallet-based user IDs
+    await rewardsService.transferMKIN(senderUserId, recipientUserId, amount);
+
+    // Refresh user rewards to get updated balance
+    if (account) {
+      const rewards = await rewardsService.initializeUserRewards(
+        senderUserId, // Use the wallet-based user ID
+        account,
+        nfts.length
+      );
+      setUserRewards(rewards);
+
+      const calculation = rewardsService.calculatePendingRewards(
+        rewards,
+        nfts.length
+      );
+      setRewardsCalculation(calculation);
+    }
+
+    // Show transfer confirmation
+    setLastTransferAmount(amount);
+    setLastTransferRecipient(transferRecipient);
+    setShowTransferConfirmation(true);
+
+    // Save to transaction history in Firestore
+    await rewardsService.saveTransactionHistory({
+      userId: senderUserId, // Use the wallet-based user ID
+      walletAddress: account,
+      type: "transfer",
+      amount: amount,
+      description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient || '')}`,
+      recipientAddress: transferRecipient,
+    });
+
+    // Add to local state
+    setTransactionHistory((prev) => [
+      {
         type: "transfer",
         amount: amount,
         description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient || '')}`,
-        recipientAddress: transferRecipient,
-      });
+        date: new Date(),
+      },
+      ...prev.slice(0, 9), // Keep only last 10 transactions
+    ]);
 
-      // Add to local state
-      setTransactionHistory((prev) => [
-        {
-          type: "transfer",
-          amount: amount,
-          description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient || '')}`,
-          date: new Date(),
-        },
-        ...prev.slice(0, 9), // Keep only last 10 transactions
-      ]);
-
-      // Clear input fields
-      setTransferRecipient("");
-      setTransferAmount("");
-    } catch (error) {
-      console.error("Error processing transfer:", error);
-      setTransferError(
-        error instanceof Error ? error.message : "Failed to process transfer"
-      );
-    } finally {
-      setTransferLoading(false);
-    }
-  }, [
-    user,
-    account,
-    transferRecipient,
-    transferAmount,
-    userRewards,
-    getUserByWallet,
-    nfts.length,
-  ]);
+    // Clear input fields
+    setTransferRecipient("");
+    setTransferAmount("");
+  } catch (error) {
+    console.error("Error processing transfer:", error);
+    setTransferError(
+      error instanceof Error ? error.message : "Transfer failed"
+    );
+  } finally {
+    setTransferLoading(false);
+  }
+}, [account, transferRecipient, transferAmount, userRewards, getUserByWallet, rewardsService, nfts.length]);
 
   // Fetch transaction history when user changes
   useEffect(() => {
@@ -465,27 +401,18 @@ export default function Home() {
               </span>
             </div>
 
-            <button
-              onClick={handleClaimRewards}
-              disabled={claimLoading || !rewardsCalculation?.canClaim}
-              className="btn-primary w-1/2 mb-3"
-            >
-              {claimLoading
-                ? "CLAIMING..."
-                : rewardsCalculation?.canClaim
-                ? "CLAIM REWARDS"
-                : "NOT READY"}
-            </button>
-            {rewardsCalculation &&
-              !rewardsCalculation.canClaim &&
-              rewardsCalculation.nextClaimDate && (
-                <div className="text-xs text-center w-1/2 text-[#DA9C2F]">
-                  Available in{" "}
-                  {rewardsService.getTimeUntilNextClaim(
-                    rewardsCalculation.nextClaimDate
-                  )}
-                </div>
-              )}
+            <div className="flex flex-col items-center space-y-3 w-full">
+              {rewardsCalculation &&
+                !rewardsCalculation.canClaim &&
+                rewardsCalculation.nextClaimDate && (
+                  <div className="text-xs text-center w-1/2 text-[#DA9C2F]">
+                    Available in{" "}
+                    {rewardsService.getTimeUntilNextClaim(
+                      rewardsCalculation.nextClaimDate
+                    )}
+                  </div>
+                )}
+            </div>
           </div>
         </section>
 
