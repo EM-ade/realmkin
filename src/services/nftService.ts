@@ -186,14 +186,13 @@ class NFTService {
     }
 
     try {
-      // Magic Eden V2 API endpoint for wallet tokens (no API key required)
+      // Call our Next.js API proxy to avoid browser CORS issues
       const response = await axios.get<MagicEdenSolanaNFT[]>(
-        `https://api-mainnet.magiceden.dev/v2/wallets/${walletAddress}/tokens`,
+        `/api/magic-eden`,
         {
-          headers: {
-            Accept: "application/json",
-          },
+          headers: { Accept: "application/json" },
           params: {
+            wallet: walletAddress,
             collection_symbol: this.MAGIC_EDEN_COLLECTION_SYMBOL,
             limit: 500,
             offset: 0,
