@@ -268,12 +268,10 @@ class NFTService {
 
       // Combine results from both APIs
       const allNFTs: NFTMetadata[] = [];
-      let totalCount = 0;
 
       results.forEach((result) => {
         if (result.status === 'fulfilled') {
           allNFTs.push(...result.value.nfts);
-          totalCount += result.value.totalCount;
         } else {
           console.warn("API fetch failed:", result.reason);
         }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rewardsService } from '@/services/rewardsService';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
       console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(docs.length/batchSize)}`);
 
       const batchPromises = batch.map(async (docSnap) => {
-        const userData = docSnap.data();
         const userId = docSnap.id;
 
         try {

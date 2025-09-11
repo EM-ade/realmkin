@@ -18,7 +18,14 @@ export function useAutoClaim() {
   const { user } = useAuth();
   const { account } = useWeb3();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastCheckRef = useRef<Date | null>(null);
+
+  // Get default settings
+  const getDefaultSettings = useCallback((): AutoClaimSettings => ({
+    enabled: true,
+    intervalHours: 6, // Check every 6 hours
+    lastClaimAttempt: null,
+    nextScheduledClaim: null,
+  }), []);
 
   // Load settings from localStorage
   const loadSettings = useCallback((): AutoClaimSettings => {
@@ -39,7 +46,7 @@ export function useAutoClaim() {
     }
 
     return getDefaultSettings();
-  }, []);
+  }, [getDefaultSettings]);
 
   // Save settings to localStorage
   const saveSettings = useCallback((settings: AutoClaimSettings) => {
@@ -51,14 +58,6 @@ export function useAutoClaim() {
       console.error('Error saving auto-claim settings:', error);
     }
   }, []);
-
-  // Get default settings
-  const getDefaultSettings = useCallback((): AutoClaimSettings => ({
-    enabled: true,
-    intervalHours: 6, // Check every 6 hours
-    lastClaimAttempt: null,
-    nextScheduledClaim: null,
-  }), []);
 
   // Check if it's time to attempt auto-claim
   const shouldAttemptClaim = useCallback((settings: AutoClaimSettings): boolean => {

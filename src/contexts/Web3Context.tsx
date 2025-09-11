@@ -162,7 +162,6 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     } catch (e) {
       console.log('Wallet adapter sync error:', e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicKey, connected, connecting]);
 
   // Prevent multiple simultaneous connection attempts
@@ -237,11 +236,13 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   }, []);
 
   // Check if wallet is already connected on page load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     checkConnection();
   }, []);
 
   // Handle page visibility changes (important for mobile)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && isConnected) {
@@ -609,7 +610,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       const maxRetries = 3;
       let retryCount = 0;
       const isMobile = isMobileDevice();
-      const isPhantomMobile = isPhantomMobileBrowser();
+      // const isPhantomMobile = isPhantomMobileBrowser();
 
       while (retryCount < maxRetries) {
         try {

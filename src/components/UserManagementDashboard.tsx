@@ -5,13 +5,7 @@ import { db as firestore } from "@/lib/firebase";
 import {
   collection,
   getDocs,
-  doc,
-  updateDoc,
-  increment,
-  writeBatch,
 } from "firebase/firestore";
-import backfillTotalRealmkin from "@/lib/functions/backfillTotalRealmkin";
-import { useAuth } from "@/contexts/AuthContext";
 import UserDetailsModal from "./UserDetailsModal";
 
 interface User {

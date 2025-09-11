@@ -5,7 +5,7 @@ import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
-import { formatAddress, detectWalletType } from "@/utils/formatAddress";
+import { formatAddress } from "@/utils/formatAddress";
 import SocialLinks from "@/components/SocialLinks";
 import NFTCard from "@/components/NFTCard";
 import RewardsDashboard from "@/components/RewardsDashboard";
@@ -18,27 +18,23 @@ import {
   RewardsCalculation,
 } from "@/services/rewardsService";
 import {
-  MagicalButton,
-  MagicalCard,
   EtherealParticles,
   ConstellationBackground,
-  MagicalLoading
 } from "@/components/MagicalAnimations";
 import UserManagementDashboard from "@/components/UserManagementDashboard";
 import { useAutoClaim } from "@/hooks/useAutoClaim";
 
 export default function Home() {
-  const { user, userData, logout, getUserByWallet } = useAuth();
+  const { user, userData, getUserByWallet } = useAuth();
   const {
     account,
     isConnected,
     isConnecting,
     connectWallet,
-    disconnectWallet,
   } = useWeb3();
 
   // Initialize auto-claiming
-  const { settings: autoClaimSettings } = useAutoClaim();
+  useAutoClaim();
 
   // NFT state
   const [nfts, setNfts] = useState<NFTMetadata[]>([]);
@@ -50,9 +46,6 @@ export default function Home() {
   const [rewardsCalculation, setRewardsCalculation] =
     useState<RewardsCalculation | null>(null);
   const [showRewardsDashboard, setShowRewardsDashboard] = useState(false);
-  const [bonusNotification, setBonusNotification] = useState<string | null>(
-    null
-  );
   const [showWithdrawalConfirmation, setShowWithdrawalConfirmation] =
     useState(false);
   const [lastClaimAmount, setLastClaimAmount] = useState<number>(0);
@@ -86,7 +79,6 @@ export default function Home() {
 
   // Admin state
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -292,7 +284,7 @@ const handleTransfer = useCallback(async () => {
   } finally {
     setTransferLoading(false);
   }
-}, [account, transferRecipient, transferAmount, userRewards, getUserByWallet, rewardsService, nfts.length]);
+}, [account, transferRecipient, transferAmount, userRewards, getUserByWallet, nfts.length]);
 
   // Fetch transaction history when user changes
   useEffect(() => {
@@ -441,10 +433,10 @@ const handleTransfer = useCallback(async () => {
                 )}
                 <button
                   onClick={handleWithdraw}
-                  disabled={true}
-                  className="btn-primary w-full text-sm opacity-50 cursor-not-allowed"
+                  disabled={withdrawLoading}
+                  className={`btn-primary w-full text-sm ${withdrawLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  WITHDRAW (DISABLED)
+                  {withdrawLoading ? "PROCESSING..." : "WITHDRAW"}
                 </button>
               </div>
 
