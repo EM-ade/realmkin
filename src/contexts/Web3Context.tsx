@@ -9,6 +9,8 @@ import {
   useRef,
 } from "react";
 import { isValidSolanaAddress } from "@/utils/formatAddress";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 
 // Enhanced error message function for Solana wallet connections with mobile support
 interface ConnectionErrorResponse {
@@ -131,6 +133,37 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const [provider, setProvider] = useState<null>(null);
   const connectionLockRef = useRef(false);
   const phantomEventListenerRef = useRef<(() => void) | null>(null);
+
+  // Bridge to Solana Wallet Adapter state
+  const { publicKey, connected, connecting, disconnect: adapterDisconnect } = useWallet();
+  const { setVisible: setWalletModalVisible } = useWalletModal();
+
+  // Sync adapter state into this context
+  useEffect(() => {
+    try {
+      setIsConnecting(Boolean(connecting));
+      if (publicKey) {
+        const address = (publicKey as unknown as { toBase58?: () => string; toString: () => string }).toBase58?.() ?? publicKey.toString();
+        if (address && isValidSolanaAddress(address)) {
+          setAccount(address);
+          setIsConnected(true);
+
+          // Cache connection for faster reloads
+          localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
+            type: 'adapter',
+            address,
+            timestamp: Date.now(),
+          }));
+        }
+      } else {
+        setAccount(null);
+        setIsConnected(false);
+      }
+    } catch (e) {
+      console.log('Wallet adapter sync error:', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicKey, connected, connecting]);
 
   // Prevent multiple simultaneous connection attempts
   const acquireConnectionLock = () => {
@@ -454,8 +487,46 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         return;
       }
 
-      // Show wallet selection popup
-      showWalletSelection();
+      // Prefer opening the official adapter modal directly (we are inside WalletModalProvider)
+      let opened = false;
+      try {
+        if (setWalletModalVisible) {
+          console.log('🔔 Opening Solana Wallet Adapter modal via context');
+          setWalletModalVisible(true);
+          opened = true;
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to open adapter modal via context:', e);
+      }
+
+      if (!opened) {
+        try {
+          console.log('🔔 Dispatching event to open adapter modal');
+          window.dispatchEvent(new Event('realmkin:open-wallet-modal'));
+          opened = true;
+        } catch (e) {
+          console.warn('⚠️ Failed to open adapter modal via event:', e);
+        }
+      }
+
+      if (!opened) {
+        console.log('🔁 Falling back to custom wallet selector');
+        showWalletSelection();
+      } else {
+        // Verify modal appeared; if not, fallback quickly for reliability
+        setTimeout(() => {
+          try {
+            const modalPresent = !!document.querySelector('[class*="wallet-adapter"]');
+            if (!modalPresent) {
+              console.log('⚠️ Adapter modal not detected in DOM; showing custom selector as fallback');
+              showWalletSelection();
+            }
+          } catch (e) {
+            console.log('Modal presence check failed; showing fallback selector');
+            showWalletSelection();
+          }
+        }, 400);
+      }
     } finally {
       releaseConnectionLock();
     }
@@ -927,6 +998,13 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     
     // Clear cached wallet connection
     localStorage.removeItem('realmkin_cached_wallet');
+
+    // Also disconnect via adapter when available
+    try {
+      if (adapterDisconnect) adapterDisconnect();
+    } catch (e) {
+      console.log('Adapter disconnect error:', e);
+    }
   };
 
   const refreshWalletState = async () => {

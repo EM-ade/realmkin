@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Web3Provider } from "@/contexts/Web3Context";
 import { NFTProvider } from "@/contexts/NFTContext";
+import SolanaWalletProvider from "@/contexts/SolanaWalletProvider";
 
 // Hertical Sans Regular font for header
 const herticalSans = localFont({
@@ -48,14 +49,17 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="icon" href="/realmkin-logo.png" />
       </head>
       <body
         className={`${herticalSans.variable} ${amnestia.variable} ${impactRegular.variable} ${gothicCG.variable} antialiased`}
       >
         <AuthProvider>
-          <Web3Provider>
-            <NFTProvider>{children}</NFTProvider>
-          </Web3Provider>
+          <SolanaWalletProvider>
+            <Web3Provider>
+              <NFTProvider>{children}</NFTProvider>
+            </Web3Provider>
+          </SolanaWalletProvider>
         </AuthProvider>
       </body>
     </html>

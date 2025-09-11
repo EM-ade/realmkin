@@ -8,6 +8,8 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import AnimatedRoadmap from "@/components/AnimatedRoadmap";
 import AnimatedWhitepaper from "@/components/AnimatedWhitepaper";
 import SocialLinks from "@/components/SocialLinks";
+import React from "react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 export default function LoginPage() {
   // Simplified flow toggle - set to false to re-enable full email auth
@@ -34,6 +36,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login, signup, checkUsernameAvailability, getUserByWallet } = useAuth();
   const { connectWallet, account: walletAddress } = useWeb3();
+  const walletBtnRef = React.useRef<HTMLButtonElement | null>(null);
 
   // Animation trigger
   useEffect(() => {
@@ -151,7 +154,16 @@ export default function LoginPage() {
       setLoading(true);
       setError("");
       console.log("🔗 Initiating wallet connection...");
-      await connectWallet();
+
+      // Prefer using the official WalletMultiButton to open the modal reliably
+      if (walletBtnRef.current) {
+        console.log("🔔 Triggering WalletMultiButton to open modal");
+        walletBtnRef.current.click();
+      } else {
+        console.log("ℹ️ WalletMultiButton ref not ready, using context flow");
+        await connectWallet();
+      }
+
       console.log("✅ Wallet connection completed");
     } catch (error: unknown) {
       console.error("❌ Wallet connection failed:", error);
@@ -373,6 +385,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Hidden wallet adapter button used to open the official modal */}
+      <div style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}>
+        <WalletMultiButton ref={walletBtnRef as unknown as React.RefObject<HTMLButtonElement>} style={{ display: "none" }} />
+      </div>
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-50"></div>
 
