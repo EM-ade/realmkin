@@ -53,8 +53,14 @@ function LinkedInner() {
     async function run() {
       try {
         setLinkState({ phase: "linking" });
+        // Snapshot user to satisfy TS (avoid nullable across await)
+        const user = fbUser;
+        if (!user) {
+          setLinkState({ phase: "error", message: "Please sign in first." });
+          return;
+        }
         // Get Firebase ID token from current user
-        const token: string = await fbUser.getIdToken();
+        const token: string = await user.getIdToken();
 
         const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
           method: "POST",
