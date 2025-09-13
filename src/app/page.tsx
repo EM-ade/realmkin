@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +24,7 @@ import {
 } from "@/components/MagicalAnimations";
 import UserManagementDashboard from "@/components/UserManagementDashboard";
 import { useAutoClaim } from "@/hooks/useAutoClaim";
+import { getAuth } from "firebase/auth";
 
 export default function Home() {
   const { user, userData, getUserByWallet } = useAuth();
@@ -32,6 +34,11 @@ export default function Home() {
     isConnecting,
     connectWallet,
   } = useWeb3();
+
+  // Discord link status
+  const [discordLinked, setDiscordLinked] = useState<boolean>(false);
+  const [discordId, setDiscordId] = useState<string | null>(null);
+  const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
 
   // Initialize auto-claiming
   useAutoClaim();
@@ -318,6 +325,37 @@ const handleTransfer = useCallback(async () => {
     }
   }, [isConnected, account, fetchUserNFTs]);
 
+  // Fetch Discord link status when user session changes
+  useEffect(() => {
+    async function checkLink() {
+      try {
+        const auth = getAuth();
+        if (!auth.currentUser) {
+          setDiscordLinked(false);
+          setDiscordId(null);
+          return;
+        }
+        const token = await auth.currentUser.getIdToken();
+        const res = await fetch(`${gatekeeperBase}/api/link/status`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          setDiscordLinked(false);
+          setDiscordId(null);
+          return;
+        }
+        const data = await res.json();
+        setDiscordLinked(Boolean(data?.linked));
+        setDiscordId(data?.discordId || null);
+      } catch {
+        setDiscordLinked(false);
+        setDiscordId(null);
+      }
+    }
+    checkLink();
+  }, [user?.uid, gatekeeperBase]);
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-[#080806] p-4 relative overflow-hidden">
@@ -357,6 +395,21 @@ const handleTransfer = useCallback(async () => {
                   MKIN
                 </div>
               </div>
+
+              {/* Discord Link Status / Connect Button */}
+              {discordLinked ? (
+                <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#2E7D32] text-emerald-400 font-medium text-sm whitespace-nowrap">
+                  DISCORD LINKED{discordId ? `: ${discordId}` : ""}
+                </div>
+              ) : (
+                <Link
+                  href="/api/discord/login"
+                  prefetch={false}
+                  className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+                >
+                  CONNECT DISCORD
+                </Link>
+              )}
               
               {/* Admin Toggle Button */}
               {userData?.admin && (
