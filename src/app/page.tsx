@@ -40,6 +40,8 @@ export default function Home() {
   const [discordId, setDiscordId] = useState<string | null>(null);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
   const [discordConnecting, setDiscordConnecting] = useState(false);
+  const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
+  const [discordUnlinking, setDiscordUnlinking] = useState(false);
 
   // Initialize auto-claiming
   useAutoClaim();
@@ -332,8 +334,16 @@ const handleTransfer = useCallback(async () => {
       try {
         const auth = getAuth();
         if (!auth.currentUser) {
-          setDiscordLinked(false);
-          setDiscordId(null);
+          // Fall back to local cache
+          try {
+            const cachedLinked = localStorage.getItem("realmkin_discord_linked");
+            const cachedId = localStorage.getItem("realmkin_discord_id");
+            setDiscordLinked(cachedLinked === "true");
+            setDiscordId(cachedId || null);
+          } catch {
+            setDiscordLinked(false);
+            setDiscordId(null);
+          }
           return;
         }
         const token = await auth.currentUser.getIdToken();
@@ -342,19 +352,66 @@ const handleTransfer = useCallback(async () => {
           cache: "no-store",
         });
         if (!res.ok) {
-          setDiscordLinked(false);
-          setDiscordId(null);
+          // 404 or other error: fall back to local cache
+          try {
+            const cachedLinked = localStorage.getItem("realmkin_discord_linked");
+            const cachedId = localStorage.getItem("realmkin_discord_id");
+            setDiscordLinked(cachedLinked === "true");
+            setDiscordId(cachedId || null);
+          } catch {
+            setDiscordLinked(false);
+            setDiscordId(null);
+          }
           return;
         }
         const data = await res.json();
         setDiscordLinked(Boolean(data?.linked));
         setDiscordId(data?.discordId || null);
       } catch {
-        setDiscordLinked(false);
-        setDiscordId(null);
+        // Network issue: fall back to cache
+        try {
+          const cachedLinked = localStorage.getItem("realmkin_discord_linked");
+          const cachedId = localStorage.getItem("realmkin_discord_id");
+          setDiscordLinked(cachedLinked === "true");
+          setDiscordId(cachedId || null);
+        } catch {
+          setDiscordLinked(false);
+          setDiscordId(null);
+        }
       }
     }
     checkLink();
+  }, [user?.uid, gatekeeperBase]);
+
+  // Fetch unified balance from Gatekeeper for consistency with Discord bot
+  useEffect(() => {
+    async function fetchUnifiedBalance() {
+      try {
+        const auth = getAuth();
+        if (!auth.currentUser) {
+          setUnifiedBalance(null);
+          return;
+        }
+        const token = await auth.currentUser.getIdToken();
+        const res = await fetch(`${gatekeeperBase}/api/balance`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          setUnifiedBalance(null);
+          return;
+        }
+        const data = await res.json();
+        if (typeof data?.balance === 'number') {
+          setUnifiedBalance(data.balance);
+        } else {
+          setUnifiedBalance(null);
+        }
+      } catch {
+        setUnifiedBalance(null);
+      }
+    }
+    fetchUnifiedBalance();
   }, [user?.uid, gatekeeperBase]);
 
   return (
@@ -390,17 +447,50 @@ const handleTransfer = useCallback(async () => {
                     height={16}
                     className="w-6 h-6 object-contain"
                   />
-                  {userRewards
-                    ? rewardsService.formatMKIN(userRewards.totalRealmkin)
-                    : "0"}{" "}
+                  {typeof unifiedBalance === 'number'
+                    ? rewardsService.formatMKIN(unifiedBalance)
+                    : (userRewards ? rewardsService.formatMKIN(userRewards.totalRealmkin) : "0")}{" "}
                   MKIN
                 </div>
               </div>
 
               {/* Discord Link Status / Connect Button */}
               {discordLinked ? (
-                <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#2E7D32] text-emerald-400 font-medium text-sm whitespace-nowrap">
-                  DISCORD LINKED{discordId ? `: ${discordId}` : ""}
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#2E7D32] text-emerald-400 font-medium text-sm whitespace-nowrap">
+                    DISCORD LINKED{discordId ? `: ${discordId}` : ""}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (discordUnlinking) return;
+                      try {
+                        setDiscordUnlinking(true);
+                        const auth = getAuth();
+                        if (!auth.currentUser) return;
+                        const token = await auth.currentUser.getIdToken();
+                        const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
+                          method: 'DELETE',
+                          headers: { Authorization: `Bearer ${token}` },
+                        });
+                        if (!res.ok) throw new Error('Failed to disconnect');
+                        // Clear UI state and local cache
+                        setDiscordLinked(false);
+                        setDiscordId(null);
+                        try {
+                          localStorage.removeItem('realmkin_discord_linked');
+                          localStorage.removeItem('realmkin_discord_id');
+                        } catch {}
+                      } catch (e) {
+                        console.error(e);
+                      } finally {
+                        setDiscordUnlinking(false);
+                      }
+                    }}
+                    disabled={discordUnlinking}
+                    className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors whitespace-nowrap"
+                  >
+                    {discordUnlinking ? 'DISCONNECTING…' : 'DISCONNECT'}
+                  </button>
                 </div>
               ) : (
                 <button

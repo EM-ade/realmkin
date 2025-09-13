@@ -74,6 +74,11 @@ function LinkedInner() {
         if (!res.ok) {
           throw new Error(data?.error || "Failed to link Discord");
         }
+        // Persist a local flag for legacy servers without /api/link/status
+        try {
+          localStorage.setItem("realmkin_discord_linked", "true");
+          localStorage.setItem("realmkin_discord_id", discordId as string);
+        } catch {}
         setLinkState({ phase: "linked", discordId: discordId as string });
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "Unknown error";
