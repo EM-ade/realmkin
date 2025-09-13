@@ -39,6 +39,7 @@ export default function Home() {
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const [discordId, setDiscordId] = useState<string | null>(null);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+  const [discordConnecting, setDiscordConnecting] = useState(false);
 
   // Initialize auto-claiming
   useAutoClaim();
@@ -402,13 +403,18 @@ const handleTransfer = useCallback(async () => {
                   DISCORD LINKED{discordId ? `: ${discordId}` : ""}
                 </div>
               ) : (
-                <Link
-                  href="/api/discord/login"
-                  prefetch={false}
-                  className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+                <button
+                  onClick={() => {
+                    if (discordConnecting) return;
+                    setDiscordConnecting(true);
+                    // Full navigation to API route which redirects to Discord
+                    window.location.assign('/api/discord/login');
+                  }}
+                  disabled={discordConnecting}
+                  className={`bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordConnecting ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap`}
                 >
-                  CONNECT DISCORD
-                </Link>
+                  {discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}
+                </button>
               )}
               
               {/* Admin Toggle Button */}
