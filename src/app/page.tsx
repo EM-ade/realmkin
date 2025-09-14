@@ -88,9 +88,9 @@ export default function Home() {
     }>
   >([]);
 
-  // Admin state
-  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  // Admin
   const [showTransition, setShowTransition] = useState(true);
+  const [showHeaderActions, setShowHeaderActions] = useState(false);
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -427,7 +427,7 @@ const handleTransfer = useCallback(async () => {
         <EtherealParticles />
         <ConstellationBackground />
         {/* Header Section */}
-        <header className="flex justify-between items-center mb-6 animate-fade-in">
+        <header className="flex flex-row justify-between items-center gap-3 mb-6 animate-fade-in">
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14  animate-float">
               <Image
@@ -444,121 +444,201 @@ const handleTransfer = useCallback(async () => {
           </div>
 
           {isConnected && account && (
-            <div className="flex items-center gap-3">
-              <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040]">
-                <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
-                  <Image
-                    src="/wallet.jpeg"
-                    alt="Wallet Logo"
-                    width={16}
-                    height={16}
-                    className="w-6 h-6 object-contain"
-                  />
-                  {(() => {
-                    const fb = userRewards ? userRewards.totalRealmkin : null;
-                    const uni = typeof unifiedBalance === 'number' ? unifiedBalance : null;
-                    const display =
-                      fb !== null && uni !== null ? Math.max(fb, uni)
-                      : uni !== null ? uni
-                      : fb !== null ? fb
-                      : 0;
-                    return rewardsService.formatMKIN(display);
-                  })()} {" "}
-                  MKIN
+            <div className="w-full md:w-auto">
+              {/* Wallet row */}
+              <div className="flex items-center gap-2 md:gap-3 w-full justify-end">
+                <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] flex-initial min-w-[160px]">
+                  <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
+                    <Image
+                      src="/wallet.jpeg"
+                      alt="Wallet Logo"
+                      width={16}
+                      height={16}
+                      className="w-6 h-6 object-contain"
+                    />
+                    {(() => {
+                      const fb = userRewards ? userRewards.totalRealmkin : null;
+                      const uni = typeof unifiedBalance === 'number' ? unifiedBalance : null;
+                      const display =
+                        fb !== null && uni !== null ? Math.max(fb, uni)
+                        : uni !== null ? uni
+                        : fb !== null ? fb
+                        : 0;
+                      return rewardsService.formatMKIN(display);
+                    })()} {" "}
+                    MKIN
+                  </div>
+                </div>
+                {/* Mobile-only More toggle */}
+                <button
+                  onClick={() => setShowHeaderActions((v) => !v)}
+                  className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors md:hidden"
+                  aria-expanded={showHeaderActions}
+                  aria-controls="header-actions-panel"
+                >
+                  {showHeaderActions ? 'Hide' : 'More'}
+                </button>
+
+                {/* Desktop inline controls */}
+                <div className="hidden md:flex items-center gap-3">
+                  {/* Discord Link Status / Connect Button */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        if (!discordLinked) {
+                          if (discordConnecting) return;
+                          setDiscordConnecting(true);
+                          window.location.assign('/api/discord/login');
+                          return;
+                        }
+                        // Toggle dropdown for linked state
+                        setShowDiscordMenu((v) => !v);
+                      }}
+                      disabled={discordConnecting}
+                      className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap`}
+                    >
+                      {discordLinked ? (
+                        <>
+                          <span>DISCORD LINKED</span>
+                          <span className="ml-1 text-xs opacity-80">▼</span>
+                        </>
+                      ) : (
+                        <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
+                      )}
+                    </button>
+                    {discordLinked && showDiscordMenu && (
+                      <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
+                        <button
+                          onClick={async () => {
+                            if (discordUnlinking) return;
+                            try {
+                              setDiscordUnlinking(true);
+                              const auth = getAuth();
+                              if (!auth.currentUser) return;
+                              const token = await auth.currentUser.getIdToken();
+                              const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
+                                method: 'DELETE',
+                                headers: { Authorization: `Bearer ${token}` },
+                              });
+                              if (!res.ok) throw new Error('Failed to disconnect');
+                              setDiscordLinked(false);
+                              setShowDiscordMenu(false);
+                              try { localStorage.removeItem('realmkin_discord_linked'); } catch {}
+                            } catch (e) {
+                              console.error(e);
+                            } finally {
+                              setDiscordUnlinking(false);
+                            }
+                          }}
+                          className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
+                        >
+                          {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Admin Link */}
+                  {userData?.admin && (
+                    <Link
+                      href="/admin"
+                      className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors text-center"
+                    >
+                      ADMIN
+                    </Link>
+                  )}
                 </div>
               </div>
 
-              {/* Discord Link Status / Connect Button */}
-              {/* Single toggle button for Connect/Disconnect with dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    if (!discordLinked) {
-                      if (discordConnecting) return;
-                      setDiscordConnecting(true);
-                      window.location.assign('/api/discord/login');
-                      return;
-                    }
-                    // Toggle dropdown for linked state
-                    setShowDiscordMenu((v) => !v);
-                  }}
-                  disabled={discordConnecting}
-                  className={`flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap`}
-                >
-                  {discordLinked ? (
-                    <>
-                      <span>DISCORD LINKED</span>
-                      <span className="ml-1 text-xs opacity-80">▼</span>
-                    </>
-                  ) : (
-                    <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
-                  )}
-                </button>
-                {discordLinked && showDiscordMenu && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
+              {/* Mobile dropdown panel: stacked rows */}
+              {showHeaderActions && (
+                <div id="header-actions-panel" className="mt-2 flex flex-col gap-2 md:hidden">
+                  {/* Discord Link Status / Connect Button */}
+                  <div className="relative w-full">
                     <button
-                      onClick={async () => {
-                        if (discordUnlinking) return;
-                        try {
-                          setDiscordUnlinking(true);
-                          const auth = getAuth();
-                          if (!auth.currentUser) return;
-                          const token = await auth.currentUser.getIdToken();
-                          const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
-                            method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          if (!res.ok) throw new Error('Failed to disconnect');
-                          setDiscordLinked(false);
-                          setShowDiscordMenu(false);
-                          try {
-                            localStorage.removeItem('realmkin_discord_linked');
-                          } catch {}
-                        } catch (e) {
-                          console.error(e);
-                        } finally {
-                          setDiscordUnlinking(false);
+                      onClick={() => {
+                        if (!discordLinked) {
+                          if (discordConnecting) return;
+                          setDiscordConnecting(true);
+                          window.location.assign('/api/discord/login');
+                          return;
                         }
+                        // Toggle dropdown for linked state
+                        setShowDiscordMenu((v) => !v);
                       }}
-                      className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
+                      disabled={discordConnecting}
+                      className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap w-full`}
                     >
-                      {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect'}
+                      {discordLinked ? (
+                        <>
+                          <span>DISCORD LINKED</span>
+                          <span className="ml-1 text-xs opacity-80">▼</span>
+                        </>
+                      ) : (
+                        <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
+                      )}
                     </button>
+                    {discordLinked && showDiscordMenu && (
+                      <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
+                        <button
+                          onClick={async () => {
+                            if (discordUnlinking) return;
+                            try {
+                              setDiscordUnlinking(true);
+                              const auth = getAuth();
+                              if (!auth.currentUser) return;
+                              const token = await auth.currentUser.getIdToken();
+                              const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
+                                method: 'DELETE',
+                                headers: { Authorization: `Bearer ${token}` },
+                              });
+                              if (!res.ok) throw new Error('Failed to disconnect');
+                              setDiscordLinked(false);
+                              setShowDiscordMenu(false);
+                              try {
+                                localStorage.removeItem('realmkin_discord_linked');
+                              } catch {}
+                            } catch (e) {
+                              console.error(e);
+                            } finally {
+                              setDiscordUnlinking(false);
+                            }
+                          }}
+                          className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
+                        >
+                          {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect'}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              
-              {/* Admin Toggle Button */}
-              {userData?.admin && (
-                <button
-                  onClick={() => setShowAdminDashboard(!showAdminDashboard)}
-                  className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
-                >
-                  {showAdminDashboard ? "USER VIEW" : "ADMIN"}
-                </button>
+
+                  {/* Admin Link */}
+                  {userData?.admin && (
+                    <Link
+                      href="/admin"
+                      className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors w-full text-center"
+                    >
+                      ADMIN
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
           )}
         </header>
 
-        {/* Admin Dashboard Section */}
-        {showAdminDashboard && userData?.admin && (
-          <section className="card mb-6 premium-card interactive-element">
-            <h2 className="text-label mb-4">ADMIN DASHBOARD</h2>
-            <UserManagementDashboard />
-          </section>
-        )}
+        {/* Admin Dashboard Section removed in favor of dedicated /admin page */}
 
         {/* Reward Section */}
         <section className="card mb-6 premium-card interactive-element">
           <h2 className="text-label mb-2">REWARD</h2>
           <div className="text-left">
-            <h1 className="text-3xl font-bold text-[#DA9C2F] tracking-wider">
+            {/* <h1 className="text-3xl font-bold text-[#DA9C2F] tracking-wider">
               REALMKIN
             </h1>
             <p className="text-[#C4A962] text-sm">
               Web3 Gaming Ecosystem • Multi-Contract Support
-            </p>
+            </p> */}
             <div className="text-white font-bold text-2xl mb-2">
               Claimable:{" "}
               <span className="">

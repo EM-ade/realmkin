@@ -1,48 +1,86 @@
+"use client";
+
+import { useState } from "react";
 import UserManagementDashboard from "@/components/UserManagementDashboard";
+import ContractManagementPanel from "@/components/ContractManagementPanel";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Link from "next/link";
 
 const AdminPage = () => {
+  const [showContractsPanel, setShowContractsPanel] = useState(false);
+
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <div className="min-h-screen bg-black bg-gradient-to-br from-[#2b1c3b] via-[#2b1c3b] to-[#2b1c3b] bg-pattern p-3 sm:p-4 md:p-6 lg:p-8 xl:px-20 2xl:px-20">
-          <div className="border-6 border-[#d3b136] animate-pulse-glow px-2 sm:px-4 md:px-6 py-0 min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-2rem)] md:min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-4rem)] xl:min-h-[calc(100vh-5rem)] 2xl:min-h-[calc(100vh-6rem)] max-w-7xl mx-auto">
-            <div className="text-white font-sans">
-              <header className="flex flex-col sm:flex-row justify-between items-center px-2 sm:px-4 md:px-6 py-4 space-y-4 sm:space-y-0">
-                <h1
-                  className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-[0.1em] sm:tracking-[0.15em] md:tracking-[0.2em] lg:tracking-[0.25em] xl:tracking-[0.3em] text-gradient"
-                  style={{ fontFamily: "var(--font-hertical-sans)" }}
+        <div className="min-h-screen bg-[#080806] p-3 sm:p-4 md:p-6 lg:p-8 xl:px-16 2xl:px-20 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <header className="flex flex-col sm:flex-row justify-between items-center mb-6">
+              <h1
+                className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-widest gold-gradient-text"
+                style={{ fontFamily: "var(--font-hertical-sans)" }}
+              >
+                ADMIN DASHBOARD
+              </h1>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/"
+                  className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
                 >
-                  ADMIN DASHBOARD
-                </h1>
-                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 md:space-x-3 w-full sm:w-auto">
-                  <Link
-                    href="/"
-                    className="relative group border-2 border-[#d3b136] bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-3 sm:px-4 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/20 w-full sm:w-auto btn-enhanced"
-                    style={{
-                      clipPath:
-                        "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)",
-                    }}
-                  >
-                    <div
-                      className="flex items-center justify-center space-x-2"
-                      style={{ fontFamily: "var(--font-gothic-cg)" }}
-                    >
-                      <span className="text-base sm:text-lg">🏠</span>
-                      <span className="text-xs sm:text-sm font-bold tracking-wide">
-                        HOME
-                      </span>
-                    </div>
-                  </Link>
-                </div>
-              </header>
-              <div className="px-2 sm:px-4 md:px-6 max-w-7xl mx-auto">
-                <UserManagementDashboard />
+                  Home
+                </Link>
+                <button
+                  onClick={() => setShowContractsPanel(true)}
+                  className="bg-[#DA9C2F] text-black px-3 py-2 rounded-lg font-semibold text-sm hover:bg-[#C4A962] transition-colors"
+                >
+                  Manage Contract Bonuses
+                </button>
               </div>
+            </header>
+
+            {/* Grid Sections */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Contracts Overview Card */}
+              <section className="card premium-card interactive-element">
+                <h2 className="text-label mb-2">CONTRACT BONUSES</h2>
+                <p className="text-sm text-[#C4A962] mb-3">
+                  Configure contracts that boost weekly mining and award one-time/new-purchase bonuses.
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-300 space-y-1 mb-4">
+                  <li>Add contract address and collection name</li>
+                  <li>Set per-NFT Weekly Mining increase (MKIN)</li>
+                  <li>Set Welcome Bonus (first-time or new-purchase)</li>
+                  <li>Activate/Deactivate collections anytime</li>
+                </ul>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowContractsPanel(true)}
+                    className="btn-primary text-sm"
+                  >
+                    Open Bonuses Manager
+                  </button>
+                </div>
+              </section>
+
+              {/* User Management Card */}
+              <section className="card premium-card interactive-element">
+                <h2 className="text-label mb-2">USER MANAGEMENT</h2>
+                <p className="text-sm text-[#C4A962] mb-3">
+                  Review user accounts, roles, and balances.
+                </p>
+                <div className="mt-4">
+                  <UserManagementDashboard />
+                </div>
+              </section>
             </div>
           </div>
+
+          {/* Modal: Contract Bonuses Manager */}
+          <ContractManagementPanel
+            isVisible={showContractsPanel}
+            onClose={() => setShowContractsPanel(false)}
+          />
         </div>
       </ProtectedRoute>
     </AuthProvider>

@@ -62,12 +62,11 @@ export interface TransactionHistory {
 }
 
 class RewardsService {
+  // Default base rates (used when a contract has no explicit config)
   private readonly WEEKLY_RATE_PER_NFT = 200;
-  private readonly PREMIUM_WEEKLY_RATE_PER_NFT = 300; // New premium contract rate
-  private readonly PREMIUM_CONTRACT_ADDRESS = "0xbb03b613Ede925f17E3ffc437592C66C7c78E317";
   private readonly MILLISECONDS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
   private readonly MIN_CLAIM_AMOUNT = 1;
-  private readonly NEW_NFT_BONUS = 200;
+  private readonly NEW_NFT_BONUS = 200; // default welcome bonus when no config exists
   private readonly MAX_CLAIM_AMOUNT = 100000;
   private readonly RATE_LIMIT_WINDOW = 60 * 1000;
   private readonly MAX_CLAIMS_PER_WINDOW = 3;
@@ -185,20 +184,85 @@ class RewardsService {
     }
   }
 
-  // Calculate weekly rate based on NFT contract addresses (frontend-only)
-  private calculateWeeklyRate(nfts: Array<{contractAddress: string}>): number {
+  // ---- Contract Config Cache (Firestore) ----
+  private contractConfigCache: {
+    loadedAt: number;
+    map: Map<string, { weekly_rate: number; welcome_bonus: number; is_active: boolean }>;
+  } | null = null;
+
+  private async loadContractConfigs(force = false) {
+    const now = Date.now();
+    if (!force && this.contractConfigCache && now - this.contractConfigCache.loadedAt < 60_000) {
+      return this.contractConfigCache.map;
+    }
+
+    const snap = await getDocs(collection(db, "contractBonusConfigs"));
+    const map = new Map<string, { weekly_rate: number; welcome_bonus: number; is_active: boolean }>();
+    snap.forEach((d) => {
+      const v = d.data() as any;
+      map.set(d.id, {
+        weekly_rate: Number(v.weekly_rate) || 0,
+        welcome_bonus: Number(v.welcome_bonus) || 0,
+        is_active: Boolean(v.is_active ?? true),
+      });
+    });
+    this.contractConfigCache = { loadedAt: now, map };
+    return map;
+  }
+
+  // Calculate weekly rate using Firestore configs; default to base for unknown contracts (Option A)
+  private async calculateWeeklyRate(nfts: Array<{ contractAddress: string }>): Promise<number> {
+    const configs = await this.loadContractConfigs();
     let totalWeeklyRewards = 0;
 
-    nfts.forEach(nft => {
-      // Check if it's the premium contract
-      if (nft.contractAddress === '0xbb03b613Ede925f17E3ffc437592C66C7c78E317') {
-        totalWeeklyRewards += 300; // Premium weekly rate
+    for (const nft of nfts) {
+      const addr = nft.contractAddress;
+      const cfg = configs.get(addr);
+      if (cfg && cfg.is_active) {
+        totalWeeklyRewards += Math.max(0, cfg.weekly_rate);
       } else {
-        totalWeeklyRewards += 200; // Standard weekly rate
+        // Default base rate (Option A), applies also to eTQujiFK... if not configured
+        totalWeeklyRewards += this.WEEKLY_RATE_PER_NFT;
       }
-    });
-
+    }
     return totalWeeklyRewards;
+  }
+
+  // Compute welcome bonus for any newly detected NFTs per contract
+  private async computeAndRecordWelcomeBonuses(
+    userId: string,
+    nfts: Array<{ contractAddress: string }>
+  ): Promise<number> {
+    if (!nfts || nfts.length === 0) return 0;
+    const configs = await this.loadContractConfigs();
+
+    // Count per contract
+    const counts = new Map<string, number>();
+    for (const n of nfts) {
+      counts.set(n.contractAddress, (counts.get(n.contractAddress) || 0) + 1);
+    }
+
+    let totalBonus = 0;
+    for (const [contractAddress, currentCount] of counts) {
+      const grantRef = doc(db, "contractWelcomeGrants", `${userId}_${contractAddress}`);
+      const grantSnap = await getDoc(grantRef);
+      const prevCount = grantSnap.exists() ? Number((grantSnap.data() as any).lastCount || 0) : 0;
+      const delta = Math.max(0, currentCount - prevCount);
+      if (delta === 0) continue;
+
+      const cfg = configs.get(contractAddress);
+      const bonusPer = cfg && cfg.is_active ? Math.max(0, cfg.welcome_bonus) : this.NEW_NFT_BONUS;
+      const grantAmount = delta * bonusPer;
+      totalBonus += grantAmount;
+
+      if (grantSnap.exists()) {
+        await updateDoc(grantRef, { lastCount: currentCount, updatedAt: new Date() });
+      } else {
+        await setDoc(grantRef, { userId, contractAddress, lastCount: currentCount, createdAt: new Date(), updatedAt: new Date() });
+      }
+    }
+
+    return totalBonus;
   }
 
   async initializeUserRewards(
@@ -211,7 +275,7 @@ class RewardsService {
     const existingDoc = await getDoc(userRewardsRef);
 
     const now = new Date();
-    const weeklyRate = nfts.length > 0 ? this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
+    const weeklyRate = nfts.length > 0 ? await this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
 
     if (existingDoc.exists()) {
       const existingData = existingDoc.data() as UserRewards;
@@ -233,9 +297,11 @@ class RewardsService {
       };
 
       const previousNFTCount = processedData.totalNFTs;
-      const newNFTsAcquired = Math.max(0, nftCount - previousNFTCount);
-      const newNFTBonus = newNFTsAcquired * this.NEW_NFT_BONUS;
-      const weeklyRewards = nfts.length > 0 ? this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
+      // Compute welcome bonuses per contract using tracked counts
+      const newNFTBonus = nfts.length > 0
+        ? await this.computeAndRecordWelcomeBonuses(userId, nfts)
+        : Math.max(0, nftCount - previousNFTCount) * this.NEW_NFT_BONUS;
+      const weeklyRewards = nfts.length > 0 ? await this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
 
       const updatedData: Partial<UserRewards> = {
         totalNFTs: nftCount,
@@ -247,8 +313,8 @@ class RewardsService {
         walletAddress,
       };
 
-      if (newNFTsAcquired > 0) {
-        console.log(`🎉 New NFT bonus: ${newNFTsAcquired} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${newNFTBonus}`);
+      if (newNFTBonus > 0) {
+        console.log(`🎉 New NFT bonus awarded: ₥${newNFTBonus}`);
       }
 
       await updateDoc(userRewardsRef, updatedData);
@@ -258,8 +324,10 @@ class RewardsService {
         ...updatedData,
       } as UserRewards;
     } else {
-      const welcomeBonus = nftCount * this.NEW_NFT_BONUS;
-      const weeklyRewards = nfts.length > 0 ? this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
+      const welcomeBonus = nfts.length > 0
+        ? await this.computeAndRecordWelcomeBonuses(userId, nfts)
+        : nftCount * this.NEW_NFT_BONUS;
+      const weeklyRewards = nfts.length > 0 ? await this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
       const totalInitialRewards = weeklyRewards + welcomeBonus;
 
       const newUserRewards: UserRewards = {

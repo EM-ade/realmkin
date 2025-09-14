@@ -1,5 +1,7 @@
 import axios from "axios";
 import { isValidWalletAddress, detectWalletType } from "@/utils/formatAddress";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 export interface NFTAttribute {
   trait_type: string;
@@ -87,7 +89,7 @@ class NFTService {
     process.env.NEXT_PUBLIC_REALMKIN_SOLANA_CONTRACT_ADDRESS ||
     "eTQujiFKVvLJXdkAobg9JqULNdDrCt5t4WtDochmVSZ";
   
-  // New contract address with higher rewards
+  // Deprecated placeholder for future chains (not used in filtering path for now)
   private readonly REALMKIN_PREMIUM_CONTRACT_ADDRESS = "0xbb03b613Ede925f17E3ffc437592C66C7c78E317";
 
   // Collection symbols for different APIs
@@ -107,6 +109,30 @@ class NFTService {
 
   // Cache for NFT data
   private nftCache = new Map<string, NFTCollection>();
+
+  // Cache for active contract addresses (Firestore)
+  private contractsCache: { loadedAt: number; addrs: string[] } | null = null;
+
+  private async loadActiveContractAddresses(): Promise<string[]> {
+    const now = Date.now();
+    if (this.contractsCache && now - this.contractsCache.loadedAt < 60_000) {
+      return this.contractsCache.addrs;
+    }
+    try {
+      const snap = await getDocs(collection(db, 'contractBonusConfigs'));
+      const active: string[] = [];
+      snap.forEach(d => {
+        const v = d.data() as any;
+        if (v && (v.is_active ?? true)) active.push(d.id);
+      });
+      this.contractsCache = { loadedAt: now, addrs: active };
+      return active;
+    } catch (e) {
+      console.warn('Failed to load contractBonusConfigs; falling back to base contract only');
+      this.contractsCache = { loadedAt: now, addrs: [] };
+      return [];
+    }
+  }
 
 
   /**
@@ -147,12 +173,16 @@ class NFTService {
         }
       );
 
-      // Filter for Realmkin collection
+      // Determine allowed contracts: if no configs, only base; if configs exist, base + configs
+      const configured = await this.loadActiveContractAddresses();
+      const allowedContracts = configured.length > 0
+        ? Array.from(new Set([this.REALMKIN_SOLANA_CONTRACT_ADDRESS, ...configured]))
+        : [this.REALMKIN_SOLANA_CONTRACT_ADDRESS];
+
+      // Filter for allowed collections/contracts via Helius grouping
       const realmkinNFTs = response.data.result.items.filter((nft: HeliusNFT) =>
         nft.grouping?.some(
-          (group) =>
-            group.group_key === "collection" &&
-            group.group_value === this.REALMKIN_SOLANA_CONTRACT_ADDRESS
+          (group) => group.group_key === "collection" && allowedContracts.includes(group.group_value)
         )
       );
 
@@ -371,6 +401,9 @@ class NFTService {
       const power = this.calculateNFTPower(attributes);
       const rarity = this.determineRarity(attributes);
 
+      // Try to extract the collection/contract address from grouping
+      const contractAddr = nft.grouping?.find(g => g.group_key === 'collection')?.group_value || this.REALMKIN_SOLANA_CONTRACT_ADDRESS;
+
       return {
         id: nft.id || nft.mint || "",
         name: nft.content?.metadata?.name || `Realmkin #${nft.id}`,
@@ -379,7 +412,7 @@ class NFTService {
         attributes,
         power,
         rarity,
-        contractAddress: this.REALMKIN_SOLANA_CONTRACT_ADDRESS,
+        contractAddress: contractAddr,
         tokenId: nft.id || nft.mint || "",
       };
     } catch (error) {

@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, setDoc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 
 interface ContractConfig {
   contract_address: string;
+  magic_eden_symbol?: string;
   name: string;
   blockchain: string;
   weekly_rate: number;
@@ -26,14 +29,13 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
 
   // Form state
   const [formData, setFormData] = useState({
-    contractAddress: '',
+    contractAddress: '', // required (doc ID)
+    magicEdenSymbol: '', // optional (for Magic Eden filtering)
     name: '',
     blockchain: 'solana',
     weeklyRate: 200,
     welcomeBonus: 200
   });
-
-  const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
 
   useEffect(() => {
     if (isVisible) {
@@ -46,27 +48,23 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
     setError(null);
     
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) {
-        setError('Authentication required');
-        return;
-      }
-
-      const token = await user.getIdToken();
-      const response = await fetch(`${gatekeeperBase}/api/admin/contracts`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      // Read from Firestore: contractBonusConfigs
+      const snap = await getDocs(collection(db, 'contractBonusConfigs'));
+      const list: ContractConfig[] = snap.docs.map(d => {
+        const v = d.data() as any;
+        return {
+          contract_address: d.id,
+          magic_eden_symbol: v.magic_eden_symbol ? String(v.magic_eden_symbol) : undefined,
+          name: v.name || '',
+          blockchain: v.blockchain || 'solana',
+          weekly_rate: Number(v.weekly_rate) || 0,
+          welcome_bonus: Number(v.welcome_bonus) || 0,
+          is_active: Boolean(v.is_active ?? true),
+          created_at: (v.createdAt?.toDate?.() || v.createdAt || new Date()).toISOString(),
+          updated_at: (v.updatedAt?.toDate?.() || v.updatedAt || new Date()).toISOString(),
+        };
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch contracts');
-      }
-
-      const data = await response.json();
-      setContracts(data.contracts || []);
+      setContracts(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load contracts');
     } finally {
@@ -87,44 +85,37 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
         return;
       }
 
-      const token = await user.getIdToken();
-      const url = editingContract 
-        ? `${gatekeeperBase}/api/admin/contracts/${encodeURIComponent(editingContract.contract_address)}`
-        : `${gatekeeperBase}/api/admin/contracts`;
-      
-      const method = editingContract ? 'PUT' : 'POST';
-      const body = editingContract 
-        ? {
-            name: formData.name,
-            blockchain: formData.blockchain,
-            weekly_rate: formData.weeklyRate,
-            welcome_bonus: formData.welcomeBonus
-          }
-        : {
-            contractAddress: formData.contractAddress,
-            name: formData.name,
-            blockchain: formData.blockchain,
-            weeklyRate: formData.weeklyRate,
-            welcomeBonus: formData.welcomeBonus
-          };
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save contract');
+      if (editingContract) {
+        // Update existing
+        const ref = doc(db, 'contractBonusConfigs', editingContract.contract_address);
+        await updateDoc(ref, {
+          magic_eden_symbol: formData.magicEdenSymbol || null,
+          name: formData.name,
+          blockchain: formData.blockchain,
+          weekly_rate: Number(formData.weeklyRate),
+          welcome_bonus: Number(formData.welcomeBonus),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        // Create new (ID = contract address)
+        const id = formData.contractAddress.trim();
+        const ref = doc(db, 'contractBonusConfigs', id);
+        await setDoc(ref, {
+          magic_eden_symbol: formData.magicEdenSymbol || null,
+          name: formData.name,
+          blockchain: formData.blockchain,
+          weekly_rate: Number(formData.weeklyRate),
+          welcome_bonus: Number(formData.welcomeBonus),
+          is_active: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
       }
 
       // Reset form and refresh list
       setFormData({
         contractAddress: '',
+        magicEdenSymbol: '',
         name: '',
         blockchain: 'solana',
         weeklyRate: 200,
@@ -144,6 +135,7 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
     setEditingContract(contract);
     setFormData({
       contractAddress: contract.contract_address,
+      magicEdenSymbol: contract.magic_eden_symbol || '',
       name: contract.name,
       blockchain: contract.blockchain,
       weeklyRate: contract.weekly_rate,
@@ -157,23 +149,8 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
 
     setLoading(true);
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const token = await user.getIdToken();
-      const response = await fetch(`${gatekeeperBase}/api/admin/contracts/${encodeURIComponent(contractAddress)}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to deactivate contract');
-      }
-
+      const ref = doc(db, 'contractBonusConfigs', contractAddress);
+      await updateDoc(ref, { is_active: false, updatedAt: serverTimestamp() });
       await fetchContracts();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to deactivate contract');
@@ -182,9 +159,24 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
     }
   };
 
+  const handleDelete = async (contractAddress: string) => {
+    if (!confirm('This will permanently delete the contract config. Continue?')) return;
+    setLoading(true);
+    try {
+      const ref = doc(db, 'contractBonusConfigs', contractAddress);
+      await deleteDoc(ref);
+      await fetchContracts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete contract');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       contractAddress: '',
+      magicEdenSymbol: '',
       name: '',
       blockchain: 'solana',
       weeklyRate: 200,
@@ -219,7 +211,18 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-white">Active Contracts</h3>
             <button
-              onClick={() => setShowAddForm(true)}
+              onClick={() => {
+                setEditingContract(null);
+                setFormData({
+                  contractAddress: '',
+                  magicEdenSymbol: '',
+                  name: '',
+                  blockchain: 'solana',
+                  weeklyRate: 200,
+                  welcomeBonus: 200,
+                });
+                setShowAddForm(true);
+              }}
               className="bg-[#DA9C2F] text-black px-4 py-2 rounded hover:bg-[#C4A962] transition-colors"
             >
               Add Contract
@@ -246,6 +249,18 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
                       className="w-full bg-[#1a1a1a] border border-[#444] rounded px-3 py-2 text-white disabled:opacity-50"
                       placeholder="0x... or base58 address"
                       required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#C4A962] mb-1">
+                      Magic Eden Symbol (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.magicEdenSymbol}
+                      onChange={(e) => setFormData({ ...formData, magicEdenSymbol: e.target.value })}
+                      className="w-full bg-[#1a1a1a] border border-[#444] rounded px-3 py-2 text-white"
+                      placeholder="e.g., the_realmkin_kins"
                     />
                   </div>
                   <div>
@@ -345,9 +360,10 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-[#C4A962] mb-2 font-mono">
-                        {contract.contract_address}
-                      </div>
+                      <div className="text-sm text-[#C4A962] mb-1 font-mono">Address: {contract.contract_address}</div>
+                      {contract.magic_eden_symbol && (
+                        <div className="text-xs text-gray-400 mb-2 font-mono">ME Symbol: {contract.magic_eden_symbol}</div>
+                      )}
                       <div className="flex space-x-4 text-sm text-gray-300">
                         <span>Weekly: {contract.weekly_rate} MKIN</span>
                         <span>Bonus: {contract.welcome_bonus} MKIN</span>
@@ -368,6 +384,12 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
                           Deactivate
                         </button>
                       )}
+                      <button
+                        onClick={() => handleDelete(contract.contract_address)}
+                        className="text-red-500 hover:text-red-400 text-sm"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>
