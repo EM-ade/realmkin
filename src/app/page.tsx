@@ -89,7 +89,6 @@ export default function Home() {
 
   // Admin
   const [showTransition, setShowTransition] = useState(true);
-  const [showHeaderActions, setShowHeaderActions] = useState(false);
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -470,17 +469,7 @@ const handleTransfer = useCallback(async () => {
                         MKIN
                       </span>
                     </div>
-                    {/* Inline mobile chevron to toggle header actions */}
-                    <button
-                      type="button"
-                      onClick={() => setShowHeaderActions((v) => !v)}
-                      className="md:hidden inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-[#404040]"
-                      aria-expanded={showHeaderActions}
-                      aria-controls="header-actions-panel"
-                      aria-label="Toggle actions"
-                    >
-                      <span className={`transition-transform duration-200 ${showHeaderActions ? 'rotate-180' : ''}`}>▼</span>
-                    </button>
+                    {/* No mobile chevron; actions moved below Rewards on mobile */}
                   </div>
                 </div>
 
@@ -555,79 +544,7 @@ const handleTransfer = useCallback(async () => {
                 </div>
               </div>
 
-              {/* Mobile dropdown panel: stacked rows */}
-              {showHeaderActions && (
-                <div id="header-actions-panel" className="mt-2 flex flex-col gap-2 md:hidden">
-                  {/* Discord Link Status / Connect Button */}
-                  <div className="relative w-full">
-                    <button
-                      onClick={() => {
-                        if (!discordLinked) {
-                          if (discordConnecting) return;
-                          setDiscordConnecting(true);
-                          window.location.assign('/api/discord/login');
-                          return;
-                        }
-                        // Toggle dropdown for linked state
-                        setShowDiscordMenu((v) => !v);
-                      }}
-                      disabled={discordConnecting}
-                      className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap w-full`}
-                    >
-                      {discordLinked ? (
-                        <>
-                          <span>DISCORD LINKED</span>
-                          <span className="ml-1 text-xs opacity-80">▼</span>
-                        </>
-                      ) : (
-                        <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
-                      )}
-                    </button>
-                    {discordLinked && showDiscordMenu && (
-                      <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
-                        <button
-                          onClick={async () => {
-                            if (discordUnlinking) return;
-                            try {
-                              setDiscordUnlinking(true);
-                              const auth = getAuth();
-                              if (!auth.currentUser) return;
-                              const token = await auth.currentUser.getIdToken();
-                              const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
-                                method: 'DELETE',
-                                headers: { Authorization: `Bearer ${token}` },
-                              });
-                              if (!res.ok) throw new Error('Failed to disconnect');
-                              setDiscordLinked(false);
-                              setShowDiscordMenu(false);
-                              try {
-                                localStorage.removeItem('realmkin_discord_linked');
-                              } catch {}
-                            } catch (e) {
-                              console.error(e);
-                            } finally {
-                              setDiscordUnlinking(false);
-                            }
-                          }}
-                          className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
-                        >
-                          {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Admin Link */}
-                  {userData?.admin && (
-                    <Link
-                      href="/admin"
-                      className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors w-full text-center"
-                    >
-                      ADMIN
-                    </Link>
-                  )}
-                </div>
-              )}
+              {/* Mobile dropdown removed; mobile actions moved below Rewards */}
             </div>
           )}
         </header>
@@ -668,6 +585,39 @@ const handleTransfer = useCallback(async () => {
             </div>
           </div>
         </section>
+
+        {/* Mobile Actions Row (below Rewards, above Withdraw) */}
+        <div className="md:hidden mb-4">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => {
+                if (!discordLinked) {
+                  if (discordConnecting) return;
+                  setDiscordConnecting(true);
+                  window.location.assign('/api/discord/login');
+                  return;
+                }
+              }}
+              disabled={discordConnecting}
+              className={`flex items-center justify-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors`}
+            >
+              {discordLinked ? (
+                <span>DISCORD LINKED</span>
+              ) : (
+                <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
+              )}
+            </button>
+
+            {userData?.admin && (
+              <Link
+                href="/admin"
+                className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+              >
+                ADMIN
+              </Link>
+            )}
+          </div>
+        </div>
 
         {/* Combined Actions Section */}
         <section className="mb-6">
