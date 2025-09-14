@@ -443,9 +443,9 @@ const handleTransfer = useCallback(async () => {
           </div>
 
           {isConnected && account && (
-            <div className="w-full md:w-auto">
+            <div className="w-auto flex-shrink-0">
               {/* Wallet row */}
-              <div className="flex items-center gap-2 md:gap-3 w-full justify-end">
+              <div className="flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
                 <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] flex-initial min-w-[160px]">
                   <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
                     <Image
