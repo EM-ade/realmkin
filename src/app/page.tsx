@@ -446,37 +446,43 @@ const handleTransfer = useCallback(async () => {
             <div className="w-auto flex-shrink-0">
               {/* Wallet row */}
               <div className="flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
-                <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] flex-initial min-w-[160px]">
-                  <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
-                    <Image
-                      src="/wallet.jpeg"
-                      alt="Wallet Logo"
-                      width={16}
-                      height={16}
-                      className="w-6 h-6 object-contain"
-                    />
-                    {(() => {
-                      const fb = userRewards ? userRewards.totalRealmkin : null;
-                      const uni = typeof unifiedBalance === 'number' ? unifiedBalance : null;
-                      const display =
-                        fb !== null && uni !== null ? Math.max(fb, uni)
-                        : uni !== null ? uni
-                        : fb !== null ? fb
-                        : 0;
-                      return rewardsService.formatMKIN(display);
-                    })()} {" "}
-                    MKIN
+                <div className="bg-[#0B0B09] pl-3 pr-1 py-2 rounded-lg border border-[#404040] flex-initial min-w-[180px]">
+                  <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Image
+                        src="/wallet.jpeg"
+                        alt="Wallet Logo"
+                        width={16}
+                        height={16}
+                        className="w-6 h-6 object-contain"
+                      />
+                      <span>
+                        {(() => {
+                          const fb = userRewards ? userRewards.totalRealmkin : null;
+                          const uni = typeof unifiedBalance === 'number' ? unifiedBalance : null;
+                          const display =
+                            fb !== null && uni !== null ? Math.max(fb, uni)
+                            : uni !== null ? uni
+                            : fb !== null ? fb
+                            : 0;
+                          return rewardsService.formatMKIN(display);
+                        })()} {" "}
+                        MKIN
+                      </span>
+                    </div>
+                    {/* Inline mobile chevron to toggle header actions */}
+                    <button
+                      type="button"
+                      onClick={() => setShowHeaderActions((v) => !v)}
+                      className="md:hidden inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-[#404040]"
+                      aria-expanded={showHeaderActions}
+                      aria-controls="header-actions-panel"
+                      aria-label="Toggle actions"
+                    >
+                      <span className={`transition-transform duration-200 ${showHeaderActions ? 'rotate-180' : ''}`}>▼</span>
+                    </button>
                   </div>
                 </div>
-                {/* Mobile-only More toggle */}
-                <button
-                  onClick={() => setShowHeaderActions((v) => !v)}
-                  className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors md:hidden"
-                  aria-expanded={showHeaderActions}
-                  aria-controls="header-actions-panel"
-                >
-                  {showHeaderActions ? 'Hide' : 'More'}
-                </button>
 
                 {/* Desktop inline controls */}
                 <div className="hidden md:flex items-center gap-3">
