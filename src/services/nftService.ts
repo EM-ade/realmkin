@@ -82,10 +82,13 @@ export interface NFTCollection {
 }
 
 class NFTService {
-  // Solana Realmkin collection contract address
+  // Solana Realmkin collection contract addresses
   private readonly REALMKIN_SOLANA_CONTRACT_ADDRESS =
     process.env.NEXT_PUBLIC_REALMKIN_SOLANA_CONTRACT_ADDRESS ||
     "eTQujiFKVvLJXdkAobg9JqULNdDrCt5t4WtDochmVSZ";
+  
+  // New contract address with higher rewards
+  private readonly REALMKIN_PREMIUM_CONTRACT_ADDRESS = "0xbb03b613Ede925f17E3ffc437592C66C7c78E317";
 
   // Collection symbols for different APIs
   private readonly HELIUS_COLLECTION_SYMBOL = "The Realmkin";
@@ -224,6 +227,48 @@ class NFTService {
       console.error("Error fetching NFTs with Magic Eden V2:", error);
 
       // Return empty collection as fallback
+      return { nfts: [], totalCount: 0 };
+    }
+  }
+
+  /**
+   * Fetch NFTs from both standard and premium contracts
+   */
+  async fetchAllContractNFTs(walletAddress: string): Promise<NFTCollection> {
+    try {
+      // Fetch from both Solana and Ethereum contracts
+      const [solanaCollection, ethereumCollection] = await Promise.all([
+        this.fetchUserNFTs(walletAddress),
+        this.fetchEthereumNFTs(walletAddress)
+      ]);
+
+      // Combine collections
+      const combinedNFTs = [...solanaCollection.nfts, ...ethereumCollection.nfts];
+      
+      return {
+        nfts: combinedNFTs,
+        totalCount: combinedNFTs.length
+      };
+    } catch (error) {
+      console.error("Error fetching NFTs from all contracts:", error);
+      // Fallback to Solana only
+      return this.fetchUserNFTs(walletAddress);
+    }
+  }
+
+  /**
+   * Fetch NFTs from Ethereum premium contract
+   */
+  async fetchEthereumNFTs(walletAddress: string): Promise<NFTCollection> {
+    try {
+      // For now, return empty collection as Ethereum integration would require additional setup
+      // This is a placeholder for future Ethereum NFT integration
+      console.log("🔍 Checking Ethereum premium contract:", this.REALMKIN_PREMIUM_CONTRACT_ADDRESS);
+      
+      // TODO: Implement Ethereum NFT fetching using Alchemy, Moralis, or similar service
+      return { nfts: [], totalCount: 0 };
+    } catch (error) {
+      console.error("Error fetching Ethereum NFTs:", error);
       return { nfts: [], totalCount: 0 };
     }
   }

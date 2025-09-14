@@ -24,7 +24,7 @@ function LinkedInner() {
   const [linkState, setLinkState] = useState<
     | { phase: "idle" }
     | { phase: "linking" }
-    | { phase: "linked"; discordId: string }
+    | { phase: "linked" }
     | { phase: "error"; message: string }
   >({ phase: "idle" });
 
@@ -77,9 +77,8 @@ function LinkedInner() {
         // Persist a local flag for legacy servers without /api/link/status
         try {
           localStorage.setItem("realmkin_discord_linked", "true");
-          localStorage.setItem("realmkin_discord_id", discordId as string);
         } catch {}
-        setLinkState({ phase: "linked", discordId: discordId as string });
+        setLinkState({ phase: "linked" });
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "Unknown error";
         setLinkState({ phase: "error", message });
@@ -116,8 +115,8 @@ function LinkedInner() {
         {status === "ok" && discordId && (
           <div className="space-y-3">
             <div className="text-sm text-gray-300">
-              <div>Discord: {username ? `${username}${disc ? `#${disc}` : ""}` : discordId}</div>
-              <div>ID: {discordId}</div>
+              <div className="text-emerald-300 font-medium">Discord account connected ✅</div>
+              <div className="text-xs text-gray-400">Your Discord is now linked to your Realmkin account.</div>
             </div>
 
             {!authChecked && (

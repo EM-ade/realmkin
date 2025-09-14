@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { db as firestore } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-} from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import UserDetailsModal from "./UserDetailsModal";
 
 interface User {
@@ -23,14 +20,14 @@ const UserManagementDashboard = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const userRewardsCollection = collection(firestore, "userRewards");
+      const userRewardsCollection = collection(db, "userRewards");
       const userRewardsSnapshot = await getDocs(userRewardsCollection);
       const userRewardsData = userRewardsSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
 
-      const usersCollection = collection(firestore, "users");
+      const usersCollection = collection(db, "users");
       const usersSnapshot = await getDocs(usersCollection);
       type UserDoc = { id: string; username: string; [key: string]: unknown };
       const usersData = usersSnapshot.docs.map((doc) => ({

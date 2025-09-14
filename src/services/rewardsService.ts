@@ -12,6 +12,7 @@ import {
   runTransaction,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getAuth } from "firebase/auth";
 
 // Types
 export interface UserRewards {
@@ -62,12 +63,35 @@ export interface TransactionHistory {
 
 class RewardsService {
   private readonly WEEKLY_RATE_PER_NFT = 200;
+  private readonly PREMIUM_WEEKLY_RATE_PER_NFT = 300; // New premium contract rate
+  private readonly PREMIUM_CONTRACT_ADDRESS = "0xbb03b613Ede925f17E3ffc437592C66C7c78E317";
   private readonly MILLISECONDS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
   private readonly MIN_CLAIM_AMOUNT = 1;
   private readonly NEW_NFT_BONUS = 200;
   private readonly MAX_CLAIM_AMOUNT = 100000;
   private readonly RATE_LIMIT_WINDOW = 60 * 1000;
   private readonly MAX_CLAIMS_PER_WINDOW = 3;
+
+  // Mirror a delta to the unified ledger via Gatekeeper API (client-side only)
+  private async postLedger(delta: number, reason: string, refId: string): Promise<void> {
+    try {
+      const base = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      await fetch(`${base}/api/ledger`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ delta: Math.trunc(delta), reason, refId }),
+      });
+    } catch (e) {
+      console.warn("Failed to post ledger entry:", e);
+    }
+  }
 
   private convertToValidDate(timestamp: unknown, fallbackDate: Date): Date {
     try {
@@ -161,16 +185,33 @@ class RewardsService {
     }
   }
 
+  // Calculate weekly rate based on NFT contract addresses (frontend-only)
+  private calculateWeeklyRate(nfts: Array<{contractAddress: string}>): number {
+    let totalWeeklyRewards = 0;
+
+    nfts.forEach(nft => {
+      // Check if it's the premium contract
+      if (nft.contractAddress === '0xbb03b613Ede925f17E3ffc437592C66C7c78E317') {
+        totalWeeklyRewards += 300; // Premium weekly rate
+      } else {
+        totalWeeklyRewards += 200; // Standard weekly rate
+      }
+    });
+
+    return totalWeeklyRewards;
+  }
+
   async initializeUserRewards(
     userId: string,
     walletAddress: string,
-    nftCount: number
+    nftCount: number,
+    nfts: Array<{contractAddress: string}> = []
   ): Promise<UserRewards> {
     const userRewardsRef = doc(db, "userRewards", userId);
     const existingDoc = await getDoc(userRewardsRef);
 
     const now = new Date();
-    const weeklyRate = nftCount * this.WEEKLY_RATE_PER_NFT;
+    const weeklyRate = nfts.length > 0 ? this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
 
     if (existingDoc.exists()) {
       const existingData = existingDoc.data() as UserRewards;
@@ -194,7 +235,7 @@ class RewardsService {
       const previousNFTCount = processedData.totalNFTs;
       const newNFTsAcquired = Math.max(0, nftCount - previousNFTCount);
       const newNFTBonus = newNFTsAcquired * this.NEW_NFT_BONUS;
-      const weeklyRewards = nftCount * this.WEEKLY_RATE_PER_NFT;
+      const weeklyRewards = nfts.length > 0 ? this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
 
       const updatedData: Partial<UserRewards> = {
         totalNFTs: nftCount,
@@ -218,7 +259,7 @@ class RewardsService {
       } as UserRewards;
     } else {
       const welcomeBonus = nftCount * this.NEW_NFT_BONUS;
-      const weeklyRewards = nftCount * this.WEEKLY_RATE_PER_NFT;
+      const weeklyRewards = nfts.length > 0 ? this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
       const totalInitialRewards = weeklyRewards + welcomeBonus;
 
       const newUserRewards: UserRewards = {
@@ -238,7 +279,7 @@ class RewardsService {
 
       if (nftCount > 0) {
         console.log(`🎁 Welcome bonus: ${nftCount} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${welcomeBonus}`);
-        console.log(`⛏️ Weekly mining rewards: ${nftCount} NFTs × ₥${this.WEEKLY_RATE_PER_NFT} = ₥${weeklyRewards}`);
+        console.log(`⛏️ Weekly mining rewards: ₥${weeklyRewards} (varies by contract)`);
         console.log(`💰 Total initial rewards: ₥${totalInitialRewards}`);
       }
 
@@ -420,6 +461,12 @@ class RewardsService {
 
       return claimRecord;
     });
+
+    // Mirror to unified ledger (credit claimed amount)
+    try {
+      const refId = `claim:${userId}:${now.getTime()}`;
+      await this.postLedger(claimAmount, "claim", refId);
+    } catch {}
 
     return claimRecord;
   }

@@ -25,6 +25,7 @@ import {
 import UserManagementDashboard from "@/components/UserManagementDashboard";
 import { useAutoClaim } from "@/hooks/useAutoClaim";
 import { getAuth } from "firebase/auth";
+import RealmTransition from "@/components/RealmTransition";
 
 export default function Home() {
   const { user, userData, getUserByWallet } = useAuth();
@@ -37,11 +38,11 @@ export default function Home() {
 
   // Discord link status
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
-  const [discordId, setDiscordId] = useState<string | null>(null);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
   const [discordConnecting, setDiscordConnecting] = useState(false);
   const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
+  const [showDiscordMenu, setShowDiscordMenu] = useState(false);
 
   // Initialize auto-claiming
   useAutoClaim();
@@ -89,6 +90,7 @@ export default function Home() {
 
   // Admin state
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showTransition, setShowTransition] = useState(true);
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -97,20 +99,22 @@ export default function Home() {
     setNftError(null);
 
     try {
-      const nftCollection = await nftService.fetchUserNFTs(account);
+      // Fetch from both standard and premium contracts
+      const nftCollection = await nftService.fetchAllContractNFTs(account);
       setNfts(nftCollection.nfts);
 
-      // Initialize/update rewards based on NFT count
+      // Initialize/update rewards based on NFT count and contract types
       if (user) {
         try {
           const rewards = await rewardsService.initializeUserRewards(
             user.uid,
             account,
-            nftCollection.nfts.length
+            nftCollection.nfts.length,
+            nftCollection.nfts
           );
           setUserRewards(rewards);
 
-          // Calculate current pending rewards
+          // Calculate current pending rewards with contract-aware calculation
           const calculation = rewardsService.calculatePendingRewards(
             rewards,
             nftCollection.nfts.length
@@ -132,6 +136,11 @@ export default function Home() {
     }
   }, [account, user]);
 
+  // Page transition: show overlay on initial auth/page load
+  useEffect(() => {
+    const t = setTimeout(() => setShowTransition(false), 900);
+    return () => clearTimeout(t);
+  }, []);
 
   // Handle withdrawal
   const handleWithdraw = useCallback(async () => {
@@ -156,6 +165,23 @@ export default function Home() {
     try {
       // Simulate withdrawal process (replace with actual blockchain transaction)
       await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Mirror to unified ledger (debit)
+      try {
+        const auth = getAuth();
+        const token = await auth.currentUser!.getIdToken();
+        const refId = `withdraw:${user.uid}:${Date.now()}`;
+        await fetch(`${gatekeeperBase}/api/ledger`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ delta: -Math.trunc(amount), reason: 'withdrawal', refId }),
+        });
+      } catch (e) {
+        console.warn('Failed to mirror withdrawal to ledger:', e);
+      }
 
       // Show withdrawal confirmation
       setLastClaimAmount(amount);
@@ -213,49 +239,39 @@ const handleTransfer = useCallback(async () => {
   setTransferError(null);
 
   try {
-    // Check if recipient is a registered user
-    const recipientUser = await getUserByWallet(transferRecipient);
-    if (!recipientUser) {
-      setTransferError(
-        "Recipient is not a registered user. They must create an account first."
-      );
+    // Call Gatekeeper transfer API (atomic debit/credit)
+    const auth = getAuth();
+    if (!auth.currentUser) {
+      setTransferError("You must be signed in to transfer.");
       return;
     }
+    const token = await auth.currentUser.getIdToken();
+    const refId = `transfer:${auth.currentUser.uid}:${transferRecipient}:${Date.now()}`;
+    const res = await fetch(`${gatekeeperBase}/api/transfer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        recipientWalletAddress: transferRecipient,
+        amount: Math.trunc(amount),
+        refId,
+      }),
+    });
 
-    // Get recipient user ID from wallet mapping
-    const recipientUserId = await rewardsService.getUserIdByWallet(
-      transferRecipient
-    );
-    if (!recipientUserId) {
-      setTransferError("Could not find recipient user ID");
-      return;
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j?.error || 'Transfer failed');
     }
 
-    // FIXED: Get sender user ID from wallet address instead of user.uid
-    const senderUserId = await rewardsService.getUserIdByWallet(account);
-    if (!senderUserId) {
-      setTransferError("Could not find your user ID. Please try reconnecting your wallet.");
-      return;
-    }
-
-    // Execute actual transfer using wallet-based user IDs
-    await rewardsService.transferMKIN(senderUserId, recipientUserId, amount);
-
-    // Refresh user rewards to get updated balance
-    if (account) {
-      const rewards = await rewardsService.initializeUserRewards(
-        senderUserId, // Use the wallet-based user ID
-        account,
-        nfts.length
-      );
-      setUserRewards(rewards);
-
-      const calculation = rewardsService.calculatePendingRewards(
-        rewards,
-        nfts.length
-      );
-      setRewardsCalculation(calculation);
-    }
+    // Optionally, refresh unified balance display by fetching again
+    try {
+      const balanceData = await res.json().catch(() => null);
+      if (balanceData && typeof balanceData.balance === 'number') {
+        setUnifiedBalance(balanceData.balance);
+      }
+    } catch {}
 
     // Show transfer confirmation
     setLastTransferAmount(amount);
@@ -264,7 +280,7 @@ const handleTransfer = useCallback(async () => {
 
     // Save to transaction history in Firestore
     await rewardsService.saveTransactionHistory({
-      userId: senderUserId, // Use the wallet-based user ID
+      userId: user!.uid,
       walletAddress: account,
       type: "transfer",
       amount: amount,
@@ -337,12 +353,9 @@ const handleTransfer = useCallback(async () => {
           // Fall back to local cache
           try {
             const cachedLinked = localStorage.getItem("realmkin_discord_linked");
-            const cachedId = localStorage.getItem("realmkin_discord_id");
             setDiscordLinked(cachedLinked === "true");
-            setDiscordId(cachedId || null);
           } catch {
             setDiscordLinked(false);
-            setDiscordId(null);
           }
           return;
         }
@@ -355,28 +368,21 @@ const handleTransfer = useCallback(async () => {
           // 404 or other error: fall back to local cache
           try {
             const cachedLinked = localStorage.getItem("realmkin_discord_linked");
-            const cachedId = localStorage.getItem("realmkin_discord_id");
             setDiscordLinked(cachedLinked === "true");
-            setDiscordId(cachedId || null);
           } catch {
             setDiscordLinked(false);
-            setDiscordId(null);
           }
           return;
         }
         const data = await res.json();
         setDiscordLinked(Boolean(data?.linked));
-        setDiscordId(data?.discordId || null);
       } catch {
         // Network issue: fall back to cache
         try {
           const cachedLinked = localStorage.getItem("realmkin_discord_linked");
-          const cachedId = localStorage.getItem("realmkin_discord_id");
           setDiscordLinked(cachedLinked === "true");
-          setDiscordId(cachedId || null);
         } catch {
           setDiscordLinked(false);
-          setDiscordId(null);
         }
       }
     }
@@ -417,6 +423,7 @@ const handleTransfer = useCallback(async () => {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-[#080806] p-4 relative overflow-hidden">
+        {showTransition && <RealmTransition />}
         <EtherealParticles />
         <ConstellationBackground />
         {/* Header Section */}
@@ -447,65 +454,79 @@ const handleTransfer = useCallback(async () => {
                     height={16}
                     className="w-6 h-6 object-contain"
                   />
-                  {typeof unifiedBalance === 'number'
-                    ? rewardsService.formatMKIN(unifiedBalance)
-                    : (userRewards ? rewardsService.formatMKIN(userRewards.totalRealmkin) : "0")}{" "}
+                  {(() => {
+                    const fb = userRewards ? userRewards.totalRealmkin : null;
+                    const uni = typeof unifiedBalance === 'number' ? unifiedBalance : null;
+                    const display =
+                      fb !== null && uni !== null ? Math.max(fb, uni)
+                      : uni !== null ? uni
+                      : fb !== null ? fb
+                      : 0;
+                    return rewardsService.formatMKIN(display);
+                  })()} {" "}
                   MKIN
                 </div>
               </div>
 
               {/* Discord Link Status / Connect Button */}
-              {discordLinked ? (
-                <div className="flex items-center gap-2">
-                  <div className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#2E7D32] text-emerald-400 font-medium text-sm whitespace-nowrap">
-                    DISCORD LINKED{discordId ? `: ${discordId}` : ""}
-                  </div>
-                  <button
-                    onClick={async () => {
-                      if (discordUnlinking) return;
-                      try {
-                        setDiscordUnlinking(true);
-                        const auth = getAuth();
-                        if (!auth.currentUser) return;
-                        const token = await auth.currentUser.getIdToken();
-                        const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
-                          method: 'DELETE',
-                          headers: { Authorization: `Bearer ${token}` },
-                        });
-                        if (!res.ok) throw new Error('Failed to disconnect');
-                        // Clear UI state and local cache
-                        setDiscordLinked(false);
-                        setDiscordId(null);
-                        try {
-                          localStorage.removeItem('realmkin_discord_linked');
-                          localStorage.removeItem('realmkin_discord_id');
-                        } catch {}
-                      } catch (e) {
-                        console.error(e);
-                      } finally {
-                        setDiscordUnlinking(false);
-                      }
-                    }}
-                    disabled={discordUnlinking}
-                    className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors whitespace-nowrap"
-                  >
-                    {discordUnlinking ? 'DISCONNECTING…' : 'DISCONNECT'}
-                  </button>
-                </div>
-              ) : (
+              {/* Single toggle button for Connect/Disconnect with dropdown */}
+              <div className="relative">
                 <button
                   onClick={() => {
-                    if (discordConnecting) return;
-                    setDiscordConnecting(true);
-                    // Full navigation to API route which redirects to Discord
-                    window.location.assign('/api/discord/login');
+                    if (!discordLinked) {
+                      if (discordConnecting) return;
+                      setDiscordConnecting(true);
+                      window.location.assign('/api/discord/login');
+                      return;
+                    }
+                    // Toggle dropdown for linked state
+                    setShowDiscordMenu((v) => !v);
                   }}
                   disabled={discordConnecting}
-                  className={`bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordConnecting ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap`}
+                  className={`flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap`}
                 >
-                  {discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}
+                  {discordLinked ? (
+                    <>
+                      <span>DISCORD LINKED</span>
+                      <span className="ml-1 text-xs opacity-80">▼</span>
+                    </>
+                  ) : (
+                    <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
+                  )}
                 </button>
-              )}
+                {discordLinked && showDiscordMenu && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
+                    <button
+                      onClick={async () => {
+                        if (discordUnlinking) return;
+                        try {
+                          setDiscordUnlinking(true);
+                          const auth = getAuth();
+                          if (!auth.currentUser) return;
+                          const token = await auth.currentUser.getIdToken();
+                          const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${token}` },
+                          });
+                          if (!res.ok) throw new Error('Failed to disconnect');
+                          setDiscordLinked(false);
+                          setShowDiscordMenu(false);
+                          try {
+                            localStorage.removeItem('realmkin_discord_linked');
+                          } catch {}
+                        } catch (e) {
+                          console.error(e);
+                        } finally {
+                          setDiscordUnlinking(false);
+                        }
+                      }}
+                      className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
+                    >
+                      {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect'}
+                    </button>
+                  </div>
+                )}
+              </div>
               
               {/* Admin Toggle Button */}
               {userData?.admin && (
@@ -532,6 +553,12 @@ const handleTransfer = useCallback(async () => {
         <section className="card mb-6 premium-card interactive-element">
           <h2 className="text-label mb-2">REWARD</h2>
           <div className="text-left">
+            <h1 className="text-3xl font-bold text-[#DA9C2F] tracking-wider">
+              REALMKIN
+            </h1>
+            <p className="text-[#C4A962] text-sm">
+              Web3 Gaming Ecosystem • Multi-Contract Support
+            </p>
             <div className="text-white font-bold text-2xl mb-2">
               Claimable:{" "}
               <span className="">

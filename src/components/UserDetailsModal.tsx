@@ -26,32 +26,58 @@ const UserDetailsModal = ({
 }: UserDetailsModalProps) => {
   const [amount, setAmount] = useState(0);
   const [newUsername, setNewUsername] = useState(user.username);
+  const [isBusy, setIsBusy] = useState(false);
+
+  const getValidAmount = (): number => {
+    const v = Math.trunc(Number(amount));
+    return isNaN(v) ? 0 : Math.max(0, v);
+  };
 
   const handleAddRealmkin = async () => {
-    const userRef = doc(firestore, "userRewards", user.id);
-    await updateDoc(userRef, {
-      totalRealmkin: increment(amount),
-    });
-    onUpdate({ ...user, totalRealmkin: user.totalRealmkin + amount });
+    try {
+      setIsBusy(true);
+      const delta = getValidAmount();
+      if (delta <= 0) return;
+      const userRef = doc(firestore, "userRewards", user.id);
+      await updateDoc(userRef, { totalRealmkin: increment(delta) });
+      onUpdate({ ...user, totalRealmkin: user.totalRealmkin + delta });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to add Realmkin");
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   const handleSubtractRealmkin = async () => {
-    const userRef = doc(firestore, "userRewards", user.id);
-    await updateDoc(userRef, {
-      totalRealmkin: increment(-amount),
-    });
-    onUpdate({
-      ...user,
-      totalRealmkin: Math.max(0, user.totalRealmkin - amount),
-    });
+    try {
+      setIsBusy(true);
+      const delta = getValidAmount();
+      if (delta <= 0) return;
+      const userRef = doc(firestore, "userRewards", user.id);
+      await updateDoc(userRef, { totalRealmkin: increment(-delta) });
+      onUpdate({ ...user, totalRealmkin: Math.max(0, user.totalRealmkin - delta) });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to subtract Realmkin");
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   const handleSetRealmkin = async () => {
-    const userRef = doc(firestore, "userRewards", user.id);
-    await updateDoc(userRef, {
-      totalRealmkin: amount,
-    });
-    onUpdate({ ...user, totalRealmkin: amount });
+    try {
+      setIsBusy(true);
+      const value = getValidAmount();
+      const userRef = doc(firestore, "userRewards", user.id);
+      await updateDoc(userRef, { totalRealmkin: value });
+      onUpdate({ ...user, totalRealmkin: value });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to set Realmkin");
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   const handleUpdateUsername = async () => {
@@ -60,22 +86,27 @@ const UserDetailsModal = ({
       return;
     }
 
-    // Check if the new username already exists
-    const usersCollection = collection(firestore, "users");
-    const usernameQuery = query(usersCollection, where("username", "==", newUsername));
-    const usernameSnapshot = await getDocs(usernameQuery);
+    try {
+      setIsBusy(true);
+      // Check if the new username already exists
+      const usersCollection = collection(firestore, "users");
+      const usernameQuery = query(usersCollection, where("username", "==", newUsername));
+      const usernameSnapshot = await getDocs(usernameQuery);
 
-    if (!usernameSnapshot.empty && newUsername !== user.username) {
-      alert("Username already exists. Please choose a different one.");
-      return;
+      if (!usernameSnapshot.empty && newUsername !== user.username) {
+        alert("Username already exists. Please choose a different one.");
+        return;
+      }
+
+      const userRef = doc(firestore, "users", user.id);
+      await updateDoc(userRef, { username: newUsername });
+      onUpdate({ ...user, username: newUsername });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update username");
+    } finally {
+      setIsBusy(false);
     }
-
-    const userRef = doc(firestore, "users", user.id);
-    await updateDoc(userRef, {
-      username: newUsername,
-    });
-
-    onUpdate({ ...user, username: newUsername });
   };
 
   const handleDeleteUser = async () => {
@@ -84,19 +115,24 @@ const UserDetailsModal = ({
         `Are you sure you want to delete user ${user.username}? This action cannot be undone.`
       )
     ) {
-      // Delete from users collection
-      await deleteDoc(doc(firestore, "users", user.id));
-      // Delete from userRewards collection
-      await deleteDoc(doc(firestore, "userRewards", user.id));
-
-      onDelete(user.id);
-      onClose();
+      try {
+        setIsBusy(true);
+        await deleteDoc(doc(firestore, "users", user.id));
+        await deleteDoc(doc(firestore, "userRewards", user.id));
+        onDelete(user.id);
+        onClose();
+      } catch (e) {
+        console.error(e);
+        alert("Failed to delete user");
+      } finally {
+        setIsBusy(false);
+      }
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-glow">
             Manage {user.username}
@@ -121,10 +157,11 @@ const UserDetailsModal = ({
             onChange={(e) => setNewUsername(e.target.value)}
             className="w-full p-3 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d3b136] mb-2"
             placeholder="New username"
-          />
+            />
           <button
             onClick={handleUpdateUsername}
-            className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/30 mb-4"
+            disabled={isBusy}
+            className={`w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-purple-500/30 mb-4`}
           >
             Update Username
           </button>
@@ -140,19 +177,22 @@ const UserDetailsModal = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <button
             onClick={handleAddRealmkin}
-            className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-green-500/30"
+            disabled={isBusy}
+            className={`bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-green-500/30`}
           >
             Add Realmkin
           </button>
           <button
             onClick={handleSubtractRealmkin}
-            className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/30"
+            disabled={isBusy}
+            className={`bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-red-500/30`}
           >
             Subtract Realmkin
           </button>
           <button
             onClick={handleSetRealmkin}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/30"
+            disabled={isBusy}
+            className={`bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-blue-500/30`}
           >
             Set Realmkin
           </button>
@@ -160,7 +200,8 @@ const UserDetailsModal = ({
         <div className="mt-6">
           <button
             onClick={handleDeleteUser}
-            className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-500/30"
+            disabled={isBusy}
+            className={`w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-red-500/30`}
           >
             Delete User
           </button>
