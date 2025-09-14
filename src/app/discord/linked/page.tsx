@@ -11,8 +11,7 @@ function LinkedInner() {
   const router = useRouter();
   const status = sp.get("status");
   const discordId = sp.get("discordId");
-  const username = sp.get("username");
-  const disc = sp.get("disc");
+  // Note: username and discriminator are not used in UI currently
   const reason = sp.get("reason");
   const detail = sp.get("detail");
 

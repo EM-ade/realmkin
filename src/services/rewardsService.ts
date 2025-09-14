@@ -198,12 +198,17 @@ class RewardsService {
 
     const snap = await getDocs(collection(db, "contractBonusConfigs"));
     const map = new Map<string, { weekly_rate: number; welcome_bonus: number; is_active: boolean }>();
+    type ContractDoc = {
+      weekly_rate?: unknown;
+      welcome_bonus?: unknown;
+      is_active?: unknown;
+    };
     snap.forEach((d) => {
-      const v = d.data() as any;
+      const v = d.data() as ContractDoc;
       map.set(d.id, {
-        weekly_rate: Number(v.weekly_rate) || 0,
-        welcome_bonus: Number(v.welcome_bonus) || 0,
-        is_active: Boolean(v.is_active ?? true),
+        weekly_rate: Number(v.weekly_rate ?? 0) || 0,
+        welcome_bonus: Number(v.welcome_bonus ?? 0) || 0,
+        is_active: typeof v.is_active === 'boolean' ? v.is_active : Boolean(v.is_active ?? true),
       });
     });
     this.contractConfigCache = { loadedAt: now, map };
@@ -246,7 +251,8 @@ class RewardsService {
     for (const [contractAddress, currentCount] of counts) {
       const grantRef = doc(db, "contractWelcomeGrants", `${userId}_${contractAddress}`);
       const grantSnap = await getDoc(grantRef);
-      const prevCount = grantSnap.exists() ? Number((grantSnap.data() as any).lastCount || 0) : 0;
+      type GrantDoc = { lastCount?: unknown };
+      const prevCount = grantSnap.exists() ? Number(((grantSnap.data() as GrantDoc).lastCount ?? 0)) : 0;
       const delta = Math.max(0, currentCount - prevCount);
       if (delta === 0) continue;
 

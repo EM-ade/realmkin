@@ -22,7 +22,6 @@ import {
   EtherealParticles,
   ConstellationBackground,
 } from "@/components/MagicalAnimations";
-import UserManagementDashboard from "@/components/UserManagementDashboard";
 import { useAutoClaim } from "@/hooks/useAutoClaim";
 import { getAuth } from "firebase/auth";
 import RealmTransition from "@/components/RealmTransition";
@@ -218,7 +217,7 @@ export default function Home() {
     } finally {
       setWithdrawLoading(false);
     }
-  }, [user, account, withdrawAmount, userRewards]);
+  }, [user, account, withdrawAmount, userRewards, gatekeeperBase]);
 
   // Handle transfer
 const handleTransfer = useCallback(async () => {
@@ -310,7 +309,7 @@ const handleTransfer = useCallback(async () => {
   } finally {
     setTransferLoading(false);
   }
-}, [account, transferRecipient, transferAmount, userRewards, getUserByWallet, nfts.length]);
+}, [account, transferRecipient, transferAmount, userRewards, getUserByWallet, nfts.length, gatekeeperBase, user]);
 
   // Fetch transaction history when user changes
   useEffect(() => {

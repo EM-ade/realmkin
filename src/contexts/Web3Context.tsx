@@ -22,7 +22,7 @@ interface ConnectionErrorResponse {
 
 const getSolanaConnectionErrorMessage = (error: Error, isMobile: boolean = false): ConnectionErrorResponse => {
   const errorMessage = error?.message || '';
-  
+
   if (errorMessage.includes('User rejected') || errorMessage.includes('User denied')) {
     return {
       title: "⚔️ CONNECTION REJECTED",
@@ -30,7 +30,7 @@ const getSolanaConnectionErrorMessage = (error: Error, isMobile: boolean = false
       showRetry: false
     };
   }
-  
+
   if (errorMessage.includes('Invalid Solana address')) {
     return {
       title: "🔮 INVALID WALLET",
@@ -83,13 +83,6 @@ const getSolanaConnectionErrorMessage = (error: Error, isMobile: boolean = false
       : "Failed to connect to your Solana wallet. Please try again or ensure your wallet is properly installed.",
     showRetry: true
   };
-};
-
-// Detect if running in Phantom mobile browser
-const isPhantomMobileBrowser = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const userAgent = navigator.userAgent.toLowerCase();
-  return userAgent.includes('phantom') && (userAgent.includes('mobile') || userAgent.includes('android') || userAgent.includes('iphone') || userAgent.includes('ipad'));
 };
 
 // Detect if running on mobile device
@@ -235,38 +228,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     };
   }, []);
 
-  // Check if wallet is already connected on page load
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    checkConnection();
-  }, []);
-
-  // Handle page visibility changes (important for mobile)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isConnected) {
-        // Page became visible again, refresh wallet state
-        console.log("🔍 Web3Context: Page became visible, refreshing wallet state");
-        setTimeout(() => {
-          checkConnection();
-        }, 500); // Small delay to ensure wallet is ready
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isConnected]);
-
-  // Listen for account changes
-  useEffect(() => {
-    // Note: Phantom doesn't have the same event system as Ethereum wallets
-    // We rely on the page visibility change handler for mobile state management
-  }, []);
-
-  const checkConnection = async () => {
+  async function checkConnection() {
     if (!acquireConnectionLock()) {
       console.log("🔒 Connection check already in progress");
       return;
@@ -360,7 +322,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     } finally {
       releaseConnectionLock();
     }
-  };
+  }
 
   const checkCachedWalletConnection = async () => {
     const cachedWallet = localStorage.getItem('realmkin_cached_wallet');
@@ -522,7 +484,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               console.log('⚠️ Adapter modal not detected in DOM; showing custom selector as fallback');
               showWalletSelection();
             }
-          } catch (e) {
+          } catch {
             console.log('Modal presence check failed; showing fallback selector');
             showWalletSelection();
           }

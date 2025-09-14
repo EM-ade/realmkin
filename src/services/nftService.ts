@@ -120,14 +120,16 @@ class NFTService {
     }
     try {
       const snap = await getDocs(collection(db, 'contractBonusConfigs'));
+      type ContractDoc = { is_active?: unknown };
       const active: string[] = [];
       snap.forEach(d => {
-        const v = d.data() as any;
-        if (v && (v.is_active ?? true)) active.push(d.id);
+        const v = d.data() as ContractDoc;
+        const isActive = typeof v.is_active === 'boolean' ? v.is_active : true;
+        if (isActive) active.push(d.id);
       });
       this.contractsCache = { loadedAt: now, addrs: active };
       return active;
-    } catch (e) {
+    } catch {
       console.warn('Failed to load contractBonusConfigs; falling back to base contract only');
       this.contractsCache = { loadedAt: now, addrs: [] };
       return [];
@@ -289,7 +291,7 @@ class NFTService {
   /**
    * Fetch NFTs from Ethereum premium contract
    */
-  async fetchEthereumNFTs(walletAddress: string): Promise<NFTCollection> {
+  async fetchEthereumNFTs(_walletAddress: string): Promise<NFTCollection> {
     try {
       // For now, return empty collection as Ethereum integration would require additional setup
       // This is a placeholder for future Ethereum NFT integration

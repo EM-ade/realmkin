@@ -50,18 +50,34 @@ export default function ContractManagementPanel({ isVisible, onClose }: Contract
     try {
       // Read from Firestore: contractBonusConfigs
       const snap = await getDocs(collection(db, 'contractBonusConfigs'));
+      type ContractDoc = {
+        magic_eden_symbol?: unknown;
+        name?: unknown;
+        blockchain?: unknown;
+        weekly_rate?: unknown;
+        welcome_bonus?: unknown;
+        is_active?: unknown;
+        createdAt?: { toDate?: () => Date } | Date | string;
+        updatedAt?: { toDate?: () => Date } | Date | string;
+      };
       const list: ContractConfig[] = snap.docs.map(d => {
-        const v = d.data() as any;
+        const v = d.data() as ContractDoc;
+        const createdRaw = v.createdAt && typeof v.createdAt === 'object' && 'toDate' in v.createdAt
+          ? (v.createdAt as { toDate?: () => Date }).toDate?.() || new Date()
+          : (v.createdAt as Date | string | undefined) || new Date();
+        const updatedRaw = v.updatedAt && typeof v.updatedAt === 'object' && 'toDate' in v.updatedAt
+          ? (v.updatedAt as { toDate?: () => Date }).toDate?.() || new Date()
+          : (v.updatedAt as Date | string | undefined) || new Date();
         return {
           contract_address: d.id,
           magic_eden_symbol: v.magic_eden_symbol ? String(v.magic_eden_symbol) : undefined,
-          name: v.name || '',
-          blockchain: v.blockchain || 'solana',
-          weekly_rate: Number(v.weekly_rate) || 0,
-          welcome_bonus: Number(v.welcome_bonus) || 0,
+          name: typeof v.name === 'string' ? v.name : '',
+          blockchain: typeof v.blockchain === 'string' ? v.blockchain : 'solana',
+          weekly_rate: Number(v.weekly_rate ?? 0) || 0,
+          welcome_bonus: Number(v.welcome_bonus ?? 0) || 0,
           is_active: Boolean(v.is_active ?? true),
-          created_at: (v.createdAt?.toDate?.() || v.createdAt || new Date()).toISOString(),
-          updated_at: (v.updatedAt?.toDate?.() || v.updatedAt || new Date()).toISOString(),
+          created_at: (createdRaw instanceof Date ? createdRaw : new Date(String(createdRaw))).toISOString(),
+          updated_at: (updatedRaw instanceof Date ? updatedRaw : new Date(String(updatedRaw))).toISOString(),
         };
       });
       setContracts(list);
