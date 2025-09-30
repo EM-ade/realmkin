@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -33,6 +33,7 @@ export default function Home() {
     isConnected,
     isConnecting,
     connectWallet,
+    disconnectWallet,
   } = useWeb3();
 
   // Discord link status
@@ -42,14 +43,8 @@ export default function Home() {
   const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
-
-  // Initialize auto-claiming
-  useAutoClaim();
-
-  // NFT state
-  const [nfts, setNfts] = useState<NFTMetadata[]>([]);
-  const [nftLoading, setNftLoading] = useState(false);
-  const [nftError, setNftError] = useState<string | null>(null);
+  const [showMobileActions, setShowMobileActions] = useState(false);
+  const mobileActionsRef = useRef<HTMLDivElement | null>(null);
 
   // Rewards state
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
@@ -60,6 +55,150 @@ export default function Home() {
     useState(false);
   const [lastClaimAmount, setLastClaimAmount] = useState<number>(0);
   const [lastClaimWallet, setLastClaimWallet] = useState<string>("");
+
+  const walletDisplayValue = useMemo(() => {
+    const fb = userRewards ? userRewards.totalRealmkin : null;
+    const uni = typeof unifiedBalance === "number" ? unifiedBalance : null;
+    if (fb !== null && uni !== null) {
+      return Math.max(fb, uni);
+    }
+    if (uni !== null) {
+      return uni;
+    }
+    if (fb !== null) {
+      return fb;
+    }
+    return 0;
+  }, [userRewards, unifiedBalance]);
+
+  const formattedWalletBalance = useMemo(
+    () => `${rewardsService.formatMKIN(walletDisplayValue)} MKIN`,
+    [walletDisplayValue]
+  );
+
+  const mobileMenuItems = useMemo(
+    () => [
+      { label: "Dashboard", href: "/", icon: "/dashboard.png" },
+      { label: "Wallet", href: "#", icon: "/wallet.png" },
+      { label: "Staking", href: "#", icon: "/staking.png" },
+      { label: "Game", href: "#", icon: "/game.png" },
+      { label: "Flex Model", href: "#", icon: "/flex-model.png" },
+      { label: "Merches", href: "#", icon: "/merches.png" },
+    ],
+    []
+  );
+
+  const handleDiscordConnect = useCallback(() => {
+    if (discordLinked || discordConnecting) return;
+    setDiscordConnecting(true);
+    if (typeof window !== "undefined") {
+      window.location.assign("/api/discord/login");
+    }
+  }, [discordLinked, discordConnecting]);
+
+  const handleDiscordDisconnect = useCallback(async (): Promise<boolean> => {
+    if (discordUnlinking) return false;
+    try {
+      setDiscordUnlinking(true);
+      const auth = getAuth();
+      if (!auth.currentUser) {
+        return false;
+      }
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to disconnect');
+      setDiscordLinked(false);
+      setShowDiscordMenu(false);
+      setShowMobileActions(false);
+      try {
+        localStorage.removeItem('realmkin_discord_linked');
+      } catch {}
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    } finally {
+      setDiscordUnlinking(false);
+    }
+  }, [discordUnlinking, gatekeeperBase]);
+
+  useEffect(() => {
+    if (!showMobileActions) return;
+
+    function handlePointer(event: MouseEvent) {
+      if (!mobileActionsRef.current?.contains(event.target as Node)) {
+        setShowMobileActions(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowMobileActions(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showMobileActions]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const originalOverflow = document.body.style.overflow;
+
+    if (showMobileActions) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+
+    document.body.style.overflow = originalOverflow;
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [showMobileActions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setShowMobileActions(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!discordLinked) {
+      setShowDiscordMenu(false);
+    }
+  }, [discordLinked]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      setShowMobileActions(false);
+    }
+  }, [isConnected]);
+
+  // Initialize auto-claiming
+  useAutoClaim();
+
+  // NFT state
+  const [nfts, setNfts] = useState<NFTMetadata[]>([]);
+  const [nftLoading, setNftLoading] = useState(false);
+  const [nftError, setNftError] = useState<string | null>(null);
 
   // Withdrawal state
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
@@ -445,9 +584,158 @@ const handleTransfer = useCallback(async () => {
             <div className="w-auto flex-shrink-0">
               {/* Wallet row */}
               <div className="flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
-                <div className="bg-[#0B0B09] pl-3 pr-1 py-2 rounded-lg border border-[#404040] flex-initial min-w-[180px]">
-                  <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                <div className="flex w-full md:w-auto items-center justify-end gap-2">
+                  {/* Mobile actions dropdown toggle now occupies primary header slot */}
+                  <div className="md:hidden">
+                    <button
+                      onClick={() => setShowMobileActions((v) => !v)}
+                      className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+                      aria-expanded={showMobileActions}
+                      aria-haspopup="true"
+                    >
+
+                      <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>▼</span>
+                    </button>
+                  </div>
+                </div>
+
+                {showMobileActions && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+                      onClick={() => setShowMobileActions(false)}
+                    />
+                    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                      <div
+                        ref={mobileActionsRef}
+                        className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
+                      >
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
+                              <Image
+                                src="/realmkin-logo.png"
+                                alt="Realmkin"
+                                width={36}
+                                height={36}
+                                className="w-9 h-9 object-contain"
+                              />
+                            </div>
+                            <div className="text-left">
+                              <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">Realmkin</div>
+                              
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setShowMobileActions(false)}
+                            className="text-[#DA9C2F] text-xl font-bold"
+                            aria-label="Close menu"
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        <nav className="px-4 py-3 space-y-1.5">
+                          {mobileMenuItems.map((item) => (
+                            <Link
+                              key={item.label}
+                              href={item.href}
+                              onClick={() => setShowMobileActions(false)}
+                              className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
+                            >
+                              <span className="flex h-10 w-10 items-center justify-center">
+                                <Image
+                                  src={item.icon}
+                                  alt={`${item.label} icon`}
+                                  width={20}
+                                  height={20}
+                                  className="w-8 h-8 object-contain"
+                                />
+                              </span>
+                              <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
+                                {item.label}
+                              </span>
+                            </Link>
+                          ))}
+                          {userData?.admin && (
+                            <Link
+                              href="/admin"
+                              onClick={() => setShowMobileActions(false)}
+                              className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
+                            >
+                              <span className="flex h-10 w-10 items-center justify-center">
+                                <Image
+                                  src="/dashboard.png"
+                                  alt="Admin icon"
+                                  width={20}
+                                  height={20}
+                                  className="w-8 h-8 object-contain"
+                                />
+                              </span>
+                              <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
+                                Admin
+                              </span>
+                            </Link>
+                          )}
+                        </nav>
+
+                        <div className="px-5 py-4 border-t border-[#1f1f1f]">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <button
+                              onClick={() => {
+                                if (!discordLinked) {
+                                  handleDiscordConnect();
+                                  return;
+                                }
+                                setShowDiscordMenu(false);
+                                handleDiscordDisconnect();
+                              }}
+                              disabled={discordConnecting || discordUnlinking}
+                              className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${discordLinked ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                            >
+                              <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
+                              <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
+                            </button>
+
+                            <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
+                              <div
+                                className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected ? 'border-[#DA9C2F] bg-[#DA9C2F]' : 'border-[#DA9C2F] bg-[#0B0B09]'}`}
+                                aria-hidden="true"
+                              >
+                                <div
+                                  className={`absolute top-1 h-8 w-8 rounded-full transition-all duration-300 ease-out ${isConnected ? 'right-1 bg-[#DA9C2F] border border-[#0B0B09]' : 'left-1 bg-[#0B0B09] border border-[#DA9C2F]'}`}
+                                />
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setShowMobileActions(false);
+                                  if (isConnected) {
+                                    disconnectWallet();
+                                  } else {
+                                    connectWallet();
+                                  }
+                                }}
+                                disabled={isConnecting}
+                                className={`basis-[70%] flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${isConnected ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                              >
+                                <span>{isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Connect Wallet'}</span>
+                                <span className={`flex items-center gap-2 text-xs ${isConnected ? 'text-black' : 'text-[#DA9C2F]'}`}>
+                                  <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" />
+                                  {isConnecting ? 'Loading…' : isConnected ? 'Synced' : 'Secure'}
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Desktop inline controls */}
+                <div className="hidden md:flex items-center gap-3">
+                  <div className="bg-[#0B0B09] pl-3 pr-1 py-2 rounded-lg border border-[#404040] flex-initial min-w-[180px]">
+                    <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
                       <Image
                         src="/wallet.jpeg"
                         alt="Wallet Logo"
@@ -455,34 +743,16 @@ const handleTransfer = useCallback(async () => {
                         height={16}
                         className="w-6 h-6 object-contain"
                       />
-                      <span>
-                        {(() => {
-                          const fb = userRewards ? userRewards.totalRealmkin : null;
-                          const uni = typeof unifiedBalance === 'number' ? unifiedBalance : null;
-                          const display =
-                            fb !== null && uni !== null ? Math.max(fb, uni)
-                            : uni !== null ? uni
-                            : fb !== null ? fb
-                            : 0;
-                          return rewardsService.formatMKIN(display);
-                        })()} {" "}
-                        MKIN
-                      </span>
+                      <span>{formattedWalletBalance}</span>
                     </div>
-                    {/* No mobile chevron; actions moved below Rewards on mobile */}
                   </div>
-                </div>
 
-                {/* Desktop inline controls */}
-                <div className="hidden md:flex items-center gap-3">
                   {/* Discord Link Status / Connect Button */}
                   <div className="relative">
                     <button
                       onClick={() => {
                         if (!discordLinked) {
-                          if (discordConnecting) return;
-                          setDiscordConnecting(true);
-                          window.location.assign('/api/discord/login');
+                          handleDiscordConnect();
                           return;
                         }
                         // Toggle dropdown for linked state
@@ -504,24 +774,9 @@ const handleTransfer = useCallback(async () => {
                       <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
                         <button
                           onClick={async () => {
-                            if (discordUnlinking) return;
-                            try {
-                              setDiscordUnlinking(true);
-                              const auth = getAuth();
-                              if (!auth.currentUser) return;
-                              const token = await auth.currentUser.getIdToken();
-                              const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
-                                method: 'DELETE',
-                                headers: { Authorization: `Bearer ${token}` },
-                              });
-                              if (!res.ok) throw new Error('Failed to disconnect');
-                              setDiscordLinked(false);
+                            const success = await handleDiscordDisconnect();
+                            if (success) {
                               setShowDiscordMenu(false);
-                              try { localStorage.removeItem('realmkin_discord_linked'); } catch {}
-                            } catch (e) {
-                              console.error(e);
-                            } finally {
-                              setDiscordUnlinking(false);
                             }
                           }}
                           className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
@@ -543,8 +798,6 @@ const handleTransfer = useCallback(async () => {
                   )}
                 </div>
               </div>
-
-              {/* Mobile dropdown removed; mobile actions moved below Rewards */}
             </div>
           )}
         </header>
@@ -586,38 +839,19 @@ const handleTransfer = useCallback(async () => {
           </div>
         </section>
 
-        {/* Mobile Actions Row (below Rewards, above Withdraw) */}
-        <div className="md:hidden mb-4">
-          <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={() => {
-                if (!discordLinked) {
-                  if (discordConnecting) return;
-                  setDiscordConnecting(true);
-                  window.location.assign('/api/discord/login');
-                  return;
-                }
-              }}
-              disabled={discordConnecting}
-              className={`flex items-center justify-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors`}
-            >
-              {discordLinked ? (
-                <span>DISCORD LINKED</span>
-              ) : (
-                <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
-              )}
-            </button>
-
-            {userData?.admin && (
-              <Link
-                href="/admin"
-                className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
-              >
-                ADMIN
-              </Link>
-            )}
-          </div>
-        </div>
+        {/* Wallet Balance Section */}
+        {isConnected && (
+          <section className="card mb-6 inline-flex items-center gap-3 px-4 py-3 rounded-2xl border border-[#404040] bg-[#0B0B09] text-[#DA9C2F] font-semibold animate-fade-in">
+            <Image
+              src="/wallet.jpeg"
+              alt="Wallet"
+              width={20}
+              height={20}
+              className="w-6 h-6 object-contain"
+            />
+            <span>{formattedWalletBalance}</span>
+          </section>
+        )}
 
         {/* Combined Actions Section */}
         <section className="mb-6">
