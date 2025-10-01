@@ -1,42 +1,54 @@
 import React from "react";
 import { FaDiscord } from "react-icons/fa";
+import { FaTelegramPlane } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 
 const SocialLinks = () => {
   return (
-    <div className="flex justify-center items-center space-x-8 mt-4 mb-4">
-      <div className="text-center">
+    <div className="flex flex-row justify-between items-center gap-4 text-black w-full max-w-3xl mx-auto">
+      <div className="flex items-center gap-6 text-sm font-medium">
+        <a
+          href="/TheRealmkinWhitePaper.pdf"
+          download
+          className="transition-colors hover:text-gray-900"
+        >
+          Docs
+        </a>
+        <a
+          href="mailto:support@therealmkin.com"
+          className="transition-colors hover:text-gray-900"
+        >
+          Support
+        </a>
+      </div>
+
+      <div className="flex items-center gap-4 text-xl">
         <a
           href="https://discord.gg/vwwbjFb4vQ"
           target="_blank"
           rel="noopener noreferrer"
-          className="group"
+          className="transition-transform duration-200 hover:scale-110"
+          aria-label="Discord"
         >
-          <div className="relative w-12 h-12">
-            <div className="absolute inset-0 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg shadow-purple-500/30 animate-pulse-glow"></div>
-            <div className="absolute inset-0 flex justify-center items-center">
-              <FaDiscord className="text-[#d3b136] text-2xl group-hover:text-white transition-colors duration-300" />
-            </div>
-          </div>
+          <FaDiscord />
         </a>
-      </div>
-
-      <div className="text-center">
         <a
           href="https://x.com/therealmkin?t=4GSXlbvQ_t3Tkz-VilvuNg&s=09"
           target="_blank"
           rel="noopener noreferrer"
-          className="group"
+          className="transition-transform duration-200 hover:scale-110"
+          aria-label="X (Twitter)"
         >
-          <div className="relative w-12 h-12">
-            <div
-              className="absolute inset-0 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg shadow-purple-500/30 animate-pulse-glow"
-              style={{ animationDelay: "0.5s" }}
-            ></div>
-            <div className="absolute inset-0 flex justify-center items-center">
-              <FaXTwitter className="text-[#d3b136] text-2xl group-hover:text-white transition-colors duration-300" />
-            </div>
-          </div>
+          <FaXTwitter />
+        </a>
+        <a
+          href="https://t.me/therealmkin"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="transition-transform duration-200 hover:scale-110"
+          aria-label="Telegram"
+        >
+          <FaTelegramPlane />
         </a>
       </div>
     </div>

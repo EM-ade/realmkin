@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
     if (loading) return;
 
     if (!user) {
-      router.push('/login');
+      router.push('/');
       return;
     }
 
@@ -28,8 +28,15 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
 
   if (loading || !user || (adminWallets && userData && !adminWallets.includes(userData.walletAddress ?? ''))) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center">
-        <div className="text-white text-2xl">Loading...</div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
+        <video
+          className="max-w-full max-h-full object-contain"
+          src="/loading-screen.mp4"
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+        />
       </div>
     );
   }

@@ -126,7 +126,7 @@ function LinkedInner() {
                 <div className="text-amber-400">Please sign in to complete linking.</div>
                 <button
                   className="w-full rounded bg-[#1F6FEB] hover:bg-[#1A5ECC] py-2 text-sm font-medium"
-                  onClick={() => router.push("/login")}
+                  onClick={() => router.push("/")}
                 >
                   SIGN IN
                 </button>

@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
-import AnimatedRoadmap from "@/components/AnimatedRoadmap";
-import AnimatedWhitepaper from "@/components/AnimatedWhitepaper";
+import { formatAddress } from "@/utils/formatAddress";
+// import AnimatedRoadmap from "@/components/AnimatedRoadmap";
+// import AnimatedWhitepaper from "@/components/AnimatedWhitepaper";
 import SocialLinks from "@/components/SocialLinks";
 import React from "react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { getAuth } from "firebase/auth";
+import { rewardsService, UserRewards } from "@/services/rewardsService";
 
 export default function LoginPage() {
   // Simplified flow toggle - set to false to re-enable full email auth
@@ -25,8 +29,19 @@ export default function LoginPage() {
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [usernameError, setUsernameError] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [showRoadmap, setShowRoadmap] = useState(false);
-  const [showWhitepaper, setShowWhitepaper] = useState(false);
+  
+  // Discord link status
+  const [discordLinked, setDiscordLinked] = useState<boolean>(false);
+  const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+  const [discordConnecting, setDiscordConnecting] = useState(false);
+  const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
+  const [discordUnlinking, setDiscordUnlinking] = useState(false);
+  const [showDiscordMenu, setShowDiscordMenu] = useState(false);
+  const [showMobileActions, setShowMobileActions] = useState(false);
+  const mobileActionsRef = useRef<HTMLDivElement | null>(null);
+  const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
+  // const [showRoadmap, setShowRoadmap] = useState(false);
+  // const [showWhitepaper, setShowWhitepaper] = useState(false);
 
   // Simplified flow states
   const [isNewUser, setIsNewUser] = useState(false);
@@ -34,8 +49,14 @@ export default function LoginPage() {
   const [checkingUser, setCheckingUser] = useState(false);
 
   const router = useRouter();
-  const { login, signup, checkUsernameAvailability, getUserByWallet } = useAuth();
-  const { connectWallet, account: walletAddress } = useWeb3();
+  const { login, signup, checkUsernameAvailability, getUserByWallet, user, userData } = useAuth();
+  const {
+    connectWallet,
+    account: walletAddress,
+    disconnectWallet,
+    isConnected,
+    isConnecting,
+  } = useWeb3();
   const { setVisible: setWalletModalVisible } = useWalletModal();
 
   // Animation trigger
@@ -44,17 +65,118 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Debug: Check for Phantom wallet on page load
+
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      console.log("🔍 Checking for wallets...");
-      console.log(
-        "Phantom available:",
-        !!(window as unknown as { phantom?: { solana?: unknown } }).phantom
-          ?.solana
-      );
+    if (!walletConnected) {
+      setShowMobileActions(false);
+      setShowDiscordMenu(false);
     }
-  }, []);
+  }, [walletConnected]);
+
+  useEffect(() => {
+    if (!showMobileActions) return;
+
+    function handlePointer(event: MouseEvent) {
+      if (!mobileActionsRef.current?.contains(event.target as Node)) {
+        setShowMobileActions(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowMobileActions(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showMobileActions]);
+
+  useEffect(() => {
+    if (!discordLinked) {
+      setShowDiscordMenu(false);
+    }
+  }, [discordLinked]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      setShowMobileActions(false);
+    }
+  }, [isConnected]);
+
+  const mobileMenuItems = useMemo(
+    () => [
+      { label: "Dashboard", href: "/", icon: "/dashboard.png" },
+      { label: "Wallet", href: "#", icon: "/wallet.png" },
+      { label: "Staking", href: "#", icon: "/staking.png" },
+      { label: "Game", href: "#", icon: "/game.png" },
+      { label: "Flex Model", href: "#", icon: "/flex-model.png" },
+      { label: "Merches", href: "#", icon: "/merches.png" },
+    ],
+    []
+  );
+
+  const walletDisplayValue = useMemo(() => {
+    const fb = userRewards ? userRewards.totalRealmkin : null;
+    const uni = typeof unifiedBalance === "number" ? unifiedBalance : null;
+    if (fb !== null && uni !== null) {
+      return Math.max(fb, uni);
+    }
+    if (uni !== null) {
+      return uni;
+    }
+    if (fb !== null) {
+      return fb;
+    }
+    return 0;
+  }, [userRewards, unifiedBalance]);
+
+  const formattedWalletBalance = useMemo(
+    () => `${rewardsService.formatMKIN(walletDisplayValue)} MKIN`,
+    [walletDisplayValue]
+  );
+
+  const handleDiscordConnect = useCallback(() => {
+    if (discordLinked || discordConnecting) return;
+    setDiscordConnecting(true);
+    if (typeof window !== "undefined") {
+      window.location.assign("/api/discord/login");
+    }
+  }, [discordLinked, discordConnecting]);
+
+  const handleDiscordDisconnect = useCallback(async (): Promise<boolean> => {
+    if (discordUnlinking) return false;
+    try {
+      setDiscordUnlinking(true);
+      const auth = getAuth();
+      if (!auth.currentUser) {
+        return false;
+      }
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to disconnect');
+      setDiscordLinked(false);
+      setShowDiscordMenu(false);
+      setShowMobileActions(false);
+      try {
+        localStorage.removeItem('realmkin_discord_linked');
+      } catch {}
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    } finally {
+      setDiscordUnlinking(false);
+    }
+  }, [discordUnlinking, gatekeeperBase]);
 
   // Check if user exists in Firebase by wallet address
   const checkExistingUser = useCallback(
@@ -383,440 +505,389 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-50"></div>
+    <div className="min-h-screen min-h-[100dvh] relative overflow-hidden bg-[#865900]">
+      {/* Background Video */}
+      <video
+        className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
+        src="/loading-screen.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+      />
+      <div className="absolute inset-0 bg-[#865900] opacity-80"></div>
+      <div
+        className="absolute inset-0 mix-blend-screen"
+        style={{
+          background:
+            "radial-gradient(circle at center, rgba(236, 187, 27, 0.85) 0%, rgba(236, 187, 27, 0.65) 35%, rgba(134, 89, 0, 0.5) 70%, rgba(134, 89, 0, 0.9) 100%)",
+        }}
+      ></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-[#865900]/90 via-[#b47a0a]/75 to-[#6a4700]/85 mix-blend-multiply"></div>
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between p-6 lg:p-8">
-        {/* Logo and Title */}
-        <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-full overflow-hidden animate-float">
+      <header className="relative z-10 flex flex-row justify-between items-center gap-3 p-6 lg:p-8 text-black">
+        <div className="flex items-center space-x-3">
+          <div className="w-14 h-14 animate-float">
             <Image
               src="/realmkin-logo.png"
               alt="Realmkin Logo"
-              width={64}
-              height={64}
+              width={48}
+              height={48}
               className="w-full h-full object-cover"
             />
           </div>
-          <h1
-            className="text-[#d3b136] text-2xl lg:text-4xl font-bold tracking-wider"
-            style={{ fontFamily: "var(--font-amnestia)" }}
-          >
+          <h1 className="font-bold text-lg w-1/2 uppercase tracking-wider text-black" style={{ fontFamily: "var(--font-amnestia)" }}>
             THE REALMKIN
           </h1>
         </div>
 
-        {/* Auth Buttons - Hidden in simplified flow */}
-        {!useSimplifiedFlow && (
-          <div className="flex space-x-2">
-            <button
-              onClick={() => {
-                setIsSignup(true);
-                resetForm();
-              }}
-              className={`px-6 py-2 lg:px-8 lg:py-3 border-2 border-[#d3b136] font-bold text-sm lg:text-base transition-all duration-300 ${
-                isSignup
-                  ? "bg-[#d3b136] text-black"
-                  : "text-[#d3b136] hover:bg-[#d3b136] hover:text-black"
-              }`}
-              style={{ fontFamily: "var(--font-amnestia)" }}
-            >
-              SIGN UP
-            </button>
-            <button
-              onClick={() => {
-                setIsSignup(false);
-                resetForm();
-              }}
-              className={`px-6 py-2 lg:px-8 lg:py-3 border-2 border-[#d3b136] font-bold text-sm lg:text-base transition-all duration-300 ${
-                !isSignup
-                  ? "bg-[#d3b136] text-black"
-                  : "text-[#d3b136] hover:bg-[#d3b136] hover:text-black"
-              }`}
-              style={{ fontFamily: "var(--font-amnestia)" }}
-            >
-              LOGIN
-            </button>
-          </div>
-        )}
+        {isConnected && walletAddress && (
+          <div className="w-auto flex-shrink-0">
+            {/* Wallet row */}
+            <div className="flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
+              <div className="flex w-full md:w-auto items-center justify-end gap-2">
+                {/* Mobile actions dropdown toggle now occupies primary header slot */}
+                <div className="md:hidden">
+                  <button
+                    onClick={() => setShowMobileActions((v) => !v)}
+                    className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+                    aria-expanded={showMobileActions}
+                    aria-haspopup="true"
+                  >
 
-        {/* Simplified Flow - Connect Wallet Button */}
-        {useSimplifiedFlow && !walletConnected && (
-          <div>
-            <button
-              onClick={handleWalletConnect}
-              disabled={loading}
-              className="px-6 py-3 bg-[#d3b136] hover:bg-[#b8941f] disabled:bg-[#8a6b15] text-black font-bold rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105"
-              style={{ fontFamily: "var(--font-amnestia)" }}
-            >
-              {loading ? "CONNECTING..." : "CONNECT WALLET"}
-            </button>
-          </div>
-        )}
+                    <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>▼</span>
+                  </button>
+                </div>
+              </div>
 
-        {/* Simplified Flow - Connected Status */}
-        {useSimplifiedFlow && walletConnected && (
-          <div className="text-[#d3b136] font-bold text-sm">
-            <span style={{ fontFamily: "var(--font-amnestia)" }}>
-              WALLET CONNECTED
-            </span>
+              {showMobileActions && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+                    onClick={() => setShowMobileActions(false)}
+                  />
+                  <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                    <div
+                      ref={mobileActionsRef}
+                      className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
+                    >
+                      <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
+                            <Image
+                              src="/realmkin-logo.png"
+                              alt="Realmkin"
+                              width={36}
+                              height={36}
+                              className="w-9 h-9 object-contain"
+                            />
+                          </div>
+                          <div className="text-left">
+                            <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">Realmkin</div>
+                            
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowMobileActions(false)}
+                          className="text-[#DA9C2F] text-xl font-bold"
+                          aria-label="Close menu"
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      <nav className="px-4 py-3 space-y-1.5">
+                        {mobileMenuItems.map((item) => (
+                          <Link
+                            key={item.label}
+                            href={item.href}
+                            onClick={() => setShowMobileActions(false)}
+                            className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
+                          >
+                            <span className="flex h-10 w-10 items-center justify-center">
+                              <Image
+                                src={item.icon}
+                                alt={`${item.label} icon`}
+                                width={20}
+                                height={20}
+                                className="w-8 h-8 object-contain"
+                              />
+                            </span>
+                            <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
+                              {item.label}
+                            </span>
+                          </Link>
+                        ))}
+                        {userData?.admin && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setShowMobileActions(false)}
+                            className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
+                          >
+                            <span className="flex h-10 w-10 items-center justify-center">
+                              <Image
+                                src="/dashboard.png"
+                                alt="Admin icon"
+                                width={20}
+                                height={20}
+                                className="w-8 h-8 object-contain"
+                              />
+                            </span>
+                            <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
+                              Admin
+                            </span>
+                          </Link>
+                        )}
+                      </nav>
+
+                      <div className="px-5 py-4 border-t border-[#1f1f1f]">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <button
+                            onClick={() => {
+                              if (!discordLinked) {
+                                handleDiscordConnect();
+                                return;
+                              }
+                              setShowDiscordMenu(false);
+                              handleDiscordDisconnect();
+                            }}
+                            disabled={discordConnecting || discordUnlinking}
+                            className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${discordLinked ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                          >
+                            <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
+                            <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
+                          </button>
+
+                          <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
+                            <div
+                              className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected ? 'border-[#DA9C2F] bg-[#DA9C2F]' : 'border-[#DA9C2F] bg-[#0B0B09]'}`}
+                              aria-hidden="true"
+                            >
+                              <div
+                                className={`absolute top-1 h-8 w-8 rounded-full transition-all duration-300 ease-out ${isConnected ? 'right-1 bg-[#DA9C2F] border border-[#0B0B09]' : 'left-1 bg-[#0B0B09] border border-[#DA9C2F]'}`}
+                              />
+                            </div>
+                            <button
+                              onClick={() => {
+                                setShowMobileActions(false);
+                                if (isConnected) {
+                                  disconnectWallet();
+                                } else {
+                                  connectWallet();
+                                }
+                              }}
+                              disabled={isConnecting}
+                              className={`basis-[70%] flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${isConnected ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                            >
+                              <span>{isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Connect Wallet'}</span>
+                              <span className={`flex items-center gap-2 text-xs ${isConnected ? 'text-black' : 'text-[#DA9C2F]'}`}>
+                                <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" />
+                                {isConnecting ? 'Loading…' : isConnected ? 'Synced' : 'Secure'}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Desktop inline controls */}
+              <div className="hidden md:flex items-center gap-3">
+                <div className="bg-[#0B0B09] pl-3 pr-1 py-2 rounded-lg border border-[#404040] flex-initial min-w-[180px]">
+                  <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
+                    <Image
+                      src="/wallet.jpeg"
+                      alt="Wallet Logo"
+                      width={16}
+                      height={16}
+                      className="w-6 h-6 object-contain"
+                    />
+                    <span>{formattedWalletBalance}</span>
+                  </div>
+                </div>
+
+                {/* Discord Link Status / Connect Button */}
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      if (!discordLinked) {
+                        handleDiscordConnect();
+                        return;
+                      }
+                      // Toggle dropdown for linked state
+                      setShowDiscordMenu((v) => !v);
+                    }}
+                    disabled={discordConnecting}
+                    className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap`}
+                  >
+                    {discordLinked ? (
+                      <>
+                        <span>DISCORD LINKED</span>
+                        <span className="ml-1 text-xs opacity-80">▼</span>
+                      </>
+                    ) : (
+                      <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
+                    )}
+                  </button>
+                  {discordLinked && showDiscordMenu && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
+                      <button
+                        onClick={async () => {
+                          const success = await handleDiscordDisconnect();
+                          if (success) {
+                            setShowDiscordMenu(false);
+                          }
+                        }}
+                        className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
+                      >
+                        {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Admin Link */}
+                {userData?.admin && (
+                  <Link
+                    href="/admin"
+                    className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors text-center"
+                  >
+                    ADMIN
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 lg:px-8 py-12">
-        {/* Welcome Title */}
-        <div className="text-center mb-6 sm:mb-8 lg:mb-12">
+      <main className={`relative z-10 flex-1 flex flex-col items-center justify-center px-6 lg:px-8 py-12 transition-opacity duration-300 ${showMobileActions ? 'opacity-0' : 'opacity-100'}`}>
+        <div className="text-center text-black mb-10 space-y-3">
           <h2
-            className="text-[#d3b136] text-4xl sm:text-6xl lg:text-8xl xl:text-9xl font-bold tracking-wider mb-4 animate-float"
-            style={{
-              fontFamily: "var(--font-amnestia)",
-              textShadow: "0 0 20px rgba(211, 177, 54, 0.5)",
-            }}
+            className="text-5xl sm:text-5xl lg:text-6xl font-extrabold tracking-[0.1em]"
+            style={{ fontFamily: "var(--font-amnestia)" }}
           >
-            WELCOME
+            WELCOME TO
           </h2>
+          <h3
+            className="text-5xl sm:text-4xl lg:text-5xl font-extrabold tracking-[0.1em]"
+            style={{ fontFamily: "var(--font-amnestia)" }}
+          >
+            THE REALM
+          </h3>
+          <p className="text-xl sm:text-xl font-medium">
+            Own your power. Summon your WardenKin. Forge your legacy.
+          </p>
         </div>
 
         {/* Main Content Container */}
         <div className="w-full max-w-6xl mx-auto animate-fade-in-up px-4 sm:px-0">
-          <div className="border-2 sm:border-4 border-[#d3b136] bg-black bg-opacity-80 backdrop-blur-sm min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] p-4 sm:p-8 lg:p-12 animate-golden-glow">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 h-full">
-              {/* Left Side - Marketing Content & Documentation */}
-              <div className="flex flex-col justify-center space-y-6">
-                <div className="text-center lg:text-left">
-                  {/* Marketing Copy */}
-                  <div className="space-y-6 text-gray-300">
-                    <p
-                      className="text-[#d3b136] text-xl lg:text-2xl font-bold italic"
-                      style={{ fontFamily: "var(--font-amnestia)" }}
-                    >
-                      Welcome to The Realm
-                    </p>
-
-                    <p className="text-lg leading-relaxed font-medium">
-                      Own your power. Summon your WardenKin. Shape the forgotten
-                      into your legacy.
-                    </p>
-
-                    <p className="text-base leading-relaxed">
-                      Battle in The Void — a nonstop PvE arena where your NFT
-                      warriors fight, fuse, and revive to earn XP, Kill Coins,
-                      and ₥KIN. Level up, claim rewards, and dominate the
-                      leaderboard.
-                    </p>
-
-                    <p
-                      className="text-[#d3b136] text-lg lg:text-xl font-bold italic text-center lg:text-left"
-                      style={{ fontFamily: "var(--font-amnestia)" }}
-                    >
-                      Summon. Fight. Conquer
-                    </p>
-
-                    {/* Bonus Info */}
-                    <div className="bg-[#d3b136] bg-opacity-10 border border-[#d3b136] border-opacity-30 p-4 rounded-lg">
-                      <p className="text-white text-sm font-semibold">
-                        🎁 New holders receive ₥200 bonus per NFT upon first
-                        login!
-                      </p>
-                    </div>
-
-                    {/* Documentation Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                      <div className="flex-1 flex flex-col gap-2">
-                        <button
-                          className="bg-transparent border-2 border-[#d3b136] text-[#d3b136] hover:bg-[#d3b136] hover:text-black font-bold py-3 px-6 rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105"
-                          style={{ fontFamily: "var(--font-amnestia)" }}
-                          onClick={() => setShowWhitepaper(true)}
-                        >
-                          📄 WHITEPAPER
-                        </button>
-                        {/* <button
-                          className="bg-transparent border border-[#d3b136] border-opacity-50 text-[#d3b136] text-opacity-75 hover:border-opacity-100 hover:text-opacity-100 font-bold py-2 px-4 rounded-lg transition-all duration-300 text-sm"
-                          style={{ fontFamily: "var(--font-amnestia)" }}
-                          onClick={downloadWhitepaperPDF}
-                        >
-                          ⬇️ DOWNLOAD PDF
-                        </button> */}
-                      </div>
-                      <button
-                        className="flex-1 bg-transparent border-2 border-[#d3b136] text-[#d3b136] hover:bg-[#d3b136] hover:text-black font-bold py-3 px-6 rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105"
-                        style={{ fontFamily: "var(--font-amnestia)" }}
-                        onClick={() => setShowRoadmap(true)}
-                      >
-                        🗺️ ROADMAP
-                      </button>
-                    </div>
-                  </div>
+          <div className="max-w-2xl mx-auto bg-[#1b1205]/95 border border-black/40 rounded-lg shadow-[0_25px_60px_rgba(0,0,0,0.4)] px-6 sm:px-10 py-10 text-center space-y-8">
+            <div className="space-y-4 text-[#f7dca1]">
+              <p className="text-lg leading-relaxed font-semibold">
+                Battle in The Void — a nonstop PvE arena. Train your warriors to Fight, Fuse, and Revive. Earn XP, Kill Coins, and ₥KIN. Level up, claim rewards, and rise on the leaderboard.
+              </p>
+              {walletConnected && !checkingUser ? (
+                <div className="space-y-2">
+                  {/* <h4
+                    className="text-2xl font-bold text-[#f4c752]"
+                    style={{ fontFamily: "var(--font-amnestia)" }}
+                  >
+                    WELCOME BACK
+                  </h4>
+                  <p className="text-sm text-[#f7dca1]">
+                    Welcome back! You can now access The Realm.
+                  </p> */}
                 </div>
-              </div>
-
-              {/* Right Side - Authentication Form */}
-              <div className="flex flex-col justify-center">
-                <div
-                  className={`transition-all duration-700 transform ${
-                    showForm
-                      ? "translate-x-0 opacity-100 animate-slide-in-right"
-                      : "translate-x-8 opacity-0"
-                  }`}
-                >
-                  <div className="bg-black bg-opacity-60 border-2 border-[#d3b136] border-opacity-50 rounded-lg p-6 lg:p-8">
-                    <h4
-                      className="text-[#d3b136] text-xl lg:text-2xl font-bold text-center mb-6"
-                      style={{ fontFamily: "var(--font-amnestia)" }}
-                    >
-                      {useSimplifiedFlow
-                        ? walletConnected
-                          ? checkingUser
-                            ? "CHECKING ACCOUNT..."
-                            : isNewUser
-                            ? "SET USERNAME"
-                            : "WELCOME BACK"
-                          : "CONNECT WALLET"
-                        : isSignup
-                        ? "CREATE ACCOUNT"
-                        : "HOLDER LOGIN"}
-                    </h4>
-
-                    {/* Simplified Flow Form */}
-                    {useSimplifiedFlow ? (
-                      <div className="space-y-4">
-                        {!walletConnected ? (
-                          // Show connect wallet instructions
-                          <div className="text-center">
-                            <p className="text-gray-300 mb-4">
-                              Connect your wallet to access The Realm
-                            </p>
-                            <button
-                              onClick={handleWalletConnect}
-                              disabled={loading}
-                              className="w-full bg-[#d3b136] hover:bg-[#b8941f] disabled:bg-[#8a6b15] text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105 shadow-lg shadow-[#d3b136]/30"
-                              style={{ fontFamily: "var(--font-amnestia)" }}
-                            >
-                              {loading ? "CONNECTING..." : "CONNECT WALLET"}
-                            </button>
-                          </div>
-                        ) : checkingUser ? (
-                          // Show checking state
-                          <div className="text-center">
-                            <div className="animate-spin w-8 h-8 border-2 border-[#d3b136] border-t-transparent rounded-full mx-auto mb-4"></div>
-                            <p className="text-gray-300 mb-4">
-                              Checking your account status...
-                            </p>
-                          </div>
-                        ) : isNewUser ? (
-                          // Show username input for new users
-                          <div>
-                            <div className="mb-4">
-                              <input
-                                type="text"
-                                placeholder="Choose Username"
-                                value={username}
-                                onChange={(e) =>
-                                  handleUsernameChange(e.target.value)
-                                }
-                                required
-                                className={`w-full bg-black border-2 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
-                                  usernameError
-                                    ? "border-red-500 focus:border-red-400"
-                                    : "border-[#d3b136] border-opacity-50 focus:border-[#d3b136]"
-                                }`}
-                              />
-                              {usernameChecking && (
-                                <p className="text-yellow-400 text-sm mt-1">
-                                  Checking availability...
-                                </p>
-                              )}
-                              {usernameError && (
-                                <p className="text-red-400 text-sm mt-1">
-                                  {usernameError}
-                                </p>
-                              )}
-                              {username.length >= 3 &&
-                                !usernameError &&
-                                !usernameChecking && (
-                                  <p className="text-green-400 text-sm mt-1">
-                                    Username available!
-                                  </p>
-                                )}
-                            </div>
-
-                            {error && (
-                              <div className="text-red-400 text-sm text-center bg-red-900 bg-opacity-20 border border-red-500 border-opacity-30 rounded-lg p-3 mb-4">
-                                {error}
-                              </div>
-                            )}
-
-                            <button
-                              onClick={handleSimplifiedSignup}
-                              disabled={
-                                loading ||
-                                usernameChecking ||
-                                !username.trim() ||
-                                !!usernameError
-                              }
-                              className="w-full bg-[#d3b136] hover:bg-[#b8941f] disabled:bg-[#8a6b15] text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105 shadow-lg shadow-[#d3b136]/30"
-                              style={{ fontFamily: "var(--font-amnestia)" }}
-                            >
-                              {loading
-                                ? "CREATING ACCOUNT..."
-                                : "ENTER THE REALM"}
-                            </button>
-                          </div>
-                        ) : (
-                          // Returning user - direct access
-                          <div className="text-center">
-                            <p className="text-gray-300 mb-4">
-                              Welcome back! You can now access The Realm.
-                            </p>
-                            <button
-                              onClick={handleExistingUserLogin}
-                              disabled={loading}
-                              className="w-full bg-[#d3b136] hover:bg-[#b8941f] disabled:bg-[#8a6b15] text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105 shadow-lg shadow-[#d3b136]/30"
-                              style={{ fontFamily: "var(--font-amnestia)" }}
-                            >
-                              {loading ? "LOGGING IN..." : "ENTER THE REALM"}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      // Full Email Authentication Form (commented out but preserved)
-                      <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Username Input (Signup only) */}
-                        {isSignup && (
-                          <div>
-                            <input
-                              type="text"
-                              placeholder="Username"
-                              value={username}
-                              onChange={(e) =>
-                                handleUsernameChange(e.target.value)
-                              }
-                              required
-                              className={`w-full bg-black border-2 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
-                                usernameError
-                                  ? "border-red-500 focus:border-red-400"
-                                  : "border-[#d3b136] border-opacity-50 focus:border-[#d3b136]"
-                              }`}
-                            />
-                            {usernameChecking && (
-                              <p className="text-yellow-400 text-sm mt-1">
-                                Checking availability...
-                              </p>
-                            )}
-                            {usernameError && (
-                              <p className="text-red-400 text-sm mt-1">
-                                {usernameError}
-                              </p>
-                            )}
-                            {username.length >= 3 &&
-                              !usernameError &&
-                              !usernameChecking && (
-                                <p className="text-green-400 text-sm mt-1">
-                                  Username available!
-                                </p>
-                              )}
-                          </div>
-                        )}
-
-                        {/* Email Input */}
-                        <div>
-                          <input
-                            type="email"
-                            placeholder="Email Address"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="w-full bg-black border-2 border-[#d3b136] border-opacity-50 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-[#d3b136] transition-colors"
-                          />
-                        </div>
-
-                        {/* Password Input */}
-                        <div>
-                          <input
-                            type="password"
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="w-full bg-black border-2 border-[#d3b136] border-opacity-50 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-[#d3b136] transition-colors"
-                          />
-                        </div>
-
-                        {/* Confirm Password Input (Signup only) */}
-                        {isSignup && (
-                          <div>
-                            <input
-                              type="password"
-                              placeholder="Confirm Password"
-                              value={confirmPassword}
-                              onChange={(e) =>
-                                setConfirmPassword(e.target.value)
-                              }
-                              required
-                              className="w-full bg-black border-2 border-[#d3b136] border-opacity-50 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-[#d3b136] transition-colors"
-                            />
-                          </div>
-                        )}
-
-                        {/* Error Message */}
-                        {error && (
-                          <div className="text-red-400 text-sm text-center bg-red-900 bg-opacity-20 border border-red-500 border-opacity-30 rounded-lg p-3">
-                            {error}
-                          </div>
-                        )}
-
-                        {/* Submit Button */}
-                        <button
-                          type="submit"
-                          disabled={loading || (isSignup && usernameChecking)}
-                          className="w-full bg-[#d3b136] hover:bg-[#b8941f] disabled:bg-[#8a6b15] text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 btn-enhanced transform hover:scale-105 shadow-lg shadow-[#d3b136]/30"
-                          style={{ fontFamily: "var(--font-amnestia)" }}
-                        >
-                          {loading
-                            ? isSignup
-                              ? "CREATING ACCOUNT..."
-                              : "LOGGING IN..."
-                            : isSignup
-                            ? "CREATE ACCOUNT"
-                            : "LOGIN"}
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                </div>
-              </div>
+              ) : null}
             </div>
+
+            {checkingUser && (
+              <div className="space-y-3 text-[#f4c752]">
+                <div className="animate-spin w-8 h-8 border-2 border-[#f4c752] border-t-transparent rounded-full mx-auto"></div>
+                <p>Checking your account status...</p>
+              </div>
+            )}
+
+            {!checkingUser && isNewUser && walletConnected && (
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Choose Username"
+                  value={username}
+                  onChange={(e) => handleUsernameChange(e.target.value)}
+                  className={`w-full bg-black/70 border-2 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
+                    usernameError
+                      ? "border-red-500 focus:border-red-400"
+                      : "border-[#f4c752]/60 focus:border-[#f4c752]"
+                  }`}
+                />
+                {error && (
+                  <p className="text-red-400 text-sm">{error}</p>
+                )}
+                <button
+                  onClick={handleSimplifiedSignup}
+                  disabled={
+                    loading ||
+                    usernameChecking ||
+                    !username.trim() ||
+                    !!usernameError
+                  }
+                  className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-3 rounded-xl border border-[#DA9C2F] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-70"
+                  style={{ fontFamily: "var(--font-amnestia)" }}
+                >
+                  {loading ? "CREATING ACCOUNT..." : "SUMMON WARDENKIN"}
+                </button>
+              </div>
+            )}
+
+            {!checkingUser && !isNewUser && (
+              <div className="space-y-4">
+                <button
+                  onClick={() => {
+                    if (walletConnected) {
+                      handleExistingUserLogin();
+                    } else {
+                      handleWalletConnect();
+                      setIsNewUser(false);
+                    }
+                  }}
+                  disabled={loading}
+                  className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-4 rounded-xl border border-[#DA9C2F] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-70"
+                  style={{ fontFamily: "var(--font-amnestia)" }}
+                >
+                  {walletConnected ? (loading ? "LOADING..." : "SUMMON WARDENKIN") : loading ? "CONNECTING..." : "CONNECT WALLET"}
+                </button>
+                {/* <button
+                  className="w-full uppercase tracking-widest bg-black/80 text-[#DA9C2F] font-bold py-4 rounded-xl border border-[#DA9C2F] transition-colors duration-200 hover:bg-black"
+                  style={{ fontFamily: "var(--font-amnestia)" }}
+                  disabled
+                >
+                  ENTER THE VOID
+                </button>
+                <button
+                  className="w-full uppercase tracking-widest bg-black/80 text-[#DA9C2F] font-bold py-4 rounded-xl border border-[#DA9C2F] transition-colors duration-200 hover:bg-black"
+                  style={{ fontFamily: "var(--font-amnestia)" }}
+                  disabled
+                >
+                  CLAIM REWARDS
+                </button> */}
+              </div>
+            )}
           </div>
         </div>
       </main>
 
       {/* Footer - Social Links */}
-      <footer className="relative z-10 text-center p-4 sm:p-6 lg:p-8">
-        <h4
-          className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-[#d3b136]"
-          style={{ fontFamily: "var(--font-amnestia)" }}
-        >
-          OUR SOCIALS:
-        </h4>
+      <footer className={`relative z-10 text-center p-6 lg:p-8 transition-opacity duration-300 ${showMobileActions ? 'opacity-0' : 'opacity-100'}`}>
         <SocialLinks />
       </footer>
 
-      {/* Animated Roadmap Modal */}
-      <AnimatedRoadmap
-        isOpen={showRoadmap}
-        onClose={() => setShowRoadmap(false)}
-      />
-
-      {/* Animated Whitepaper Modal */}
-      <AnimatedWhitepaper
-        isOpen={showWhitepaper}
-        onClose={() => setShowWhitepaper(false)}
-      />
+      {/* AnimatedRoadmap and AnimatedWhitepaper temporarily disabled */}
     </div>
   );
 }
