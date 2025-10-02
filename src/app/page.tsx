@@ -8,12 +8,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { formatAddress } from "@/utils/formatAddress";
 // import AnimatedRoadmap from "@/components/AnimatedRoadmap";
-// import AnimatedWhitepaper from "@/components/AnimatedWhitepaper";
 import SocialLinks from "@/components/SocialLinks";
 import React from "react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
+import NFTCarousel from "@/components/NFTCarousel";
 
 export default function Home() {
   // Simplified flow toggle - set to false to re-enable full email auth
@@ -773,7 +773,7 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className={`relative z-10 flex-1 flex flex-col items-center justify-center px-6 lg:px-8 py-12 transition-opacity duration-300 ${showMobileActions ? 'opacity-0' : 'opacity-100'}`}>
+      <main className={`relative z-10 flex-1 flex flex-col items-center justify-center px-6 lg:px-8 py-12 transition-opacity duration-300 ${showMobileActions ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <div className="text-center text-black mb-10 space-y-3">
           <h2
             className="home-heading text-5xl sm:text-5xl lg:text-6xl font-extrabold tracking-[0.1em]"
@@ -794,9 +794,12 @@ export default function Home() {
 
         {/* Main Content Container */}
         <div className="w-full max-w-6xl mx-auto animate-fade-in-up px-4 sm:px-0">
-          <div className="home-card max-w-2xl mx-auto bg-[#1b1205]/95 border border-black/40 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.4)] px-6 sm:px-10 py-10 text-left space-y-8">
+          <div className="home-card max-w-2xl  bg-[#1b1205]/95 border border-black/40 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.4)] px-6 sm:px-10 py-10 text-left space-y-8">
+            {/* NFT Carousel */}
+            <NFTCarousel />
+            
             <div className="space-y-4 text-[#f7dca1]">
-              <p className="text-lg leading-relaxed font-semibold ">
+              <p className="text-lg leading-relaxed font-semibold">
                 Battle in The Void — a nonstop PvE arena. Train your warriors to Fight, Fuse, and Revive. Earn XP, Kill Coins, and ₥KIN. Level up, claim rewards, and rise on the leaderboard.
               </p>
               {walletConnected && !checkingUser ? (
@@ -891,7 +894,7 @@ export default function Home() {
       </main>
 
         {/* Footer - Social Links */}
-        <footer className={`relative z-10 text-center p-6 lg:p-8 transition-opacity duration-300 ${showMobileActions ? 'opacity-0' : 'opacity-100'}`}>
+        <footer className={`relative z-10 text-center p-6 lg:p-8 transition-opacity duration-300 ${showMobileActions ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <SocialLinks />
         </footer>
 
