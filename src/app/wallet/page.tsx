@@ -1042,9 +1042,9 @@ const handleTransfer = useCallback(async () => {
         </section>
 
         {/* Social Links */}
-        <section className="text-center">
-          <h4 className="text-label mb-3">OUR SOCIALS</h4>
-          <SocialLinks />
+        <section className="text-center text-white">
+          <h4 className="mb-3 text-xs uppercase tracking-[0.6em] text-white/70">OUR SOCIALS</h4>
+          <SocialLinks variant="light" className="justify-center" />
         </section>
       </div>
 

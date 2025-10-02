@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import RealmTransition from "@/components/RealmTransition";
 
@@ -8,17 +8,34 @@ export default function RouteTransition({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [show, setShow] = useState(false);
 
-  useEffect(() => {
-    // Trigger on route change
+  useLayoutEffect(() => {
+    const MIN_DURATION = 2000;
+
     setShow(true);
-    const t = setTimeout(() => setShow(false), 900);
-    return () => clearTimeout(t);
+    const t = window.setTimeout(() => setShow(false), MIN_DURATION);
+    return () => window.clearTimeout(t);
   }, [pathname]);
 
   return (
     <>
-      {show && <RealmTransition />}
-      {children}
+      <RealmTransition active={show} />
+      <div
+        className={`route-transition-content${show ? " route-transition-content--hidden" : ""}`}
+        aria-hidden={show}
+      >
+        {children}
+      </div>
+
+      <style jsx>{`
+        .route-transition-content {
+          transition: opacity 150ms ease;
+        }
+
+        .route-transition-content--hidden {
+          opacity: 0;
+          pointer-events: none;
+        }
+      `}</style>
     </>
   );
 }

@@ -1,18 +1,62 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
-export default function RealmTransition() {
+interface RealmTransitionProps {
+  active: boolean;
+}
+
+export default function RealmTransition({ active }: RealmTransitionProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (!active || !videoRef.current) return;
+
+    const video = videoRef.current;
+
+    const playVideo = () => {
+      try {
+        video.currentTime = 0;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            /* Ignore autoplay errors */
+          });
+        }
+      } catch {
+        /* Ignore playback reset errors */
+      }
+    };
+
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      playVideo();
+      return;
+    }
+
+    const handleLoadedData = () => {
+      video.removeEventListener("loadeddata", handleLoadedData);
+      playVideo();
+    };
+
+    video.addEventListener("loadeddata", handleLoadedData);
+
+    return () => {
+      video.removeEventListener("loadeddata", handleLoadedData);
+    };
+  }, [active]);
+
   return (
-    <div className="realm-transition">
+    <div className={`realm-transition${active ? " active" : ""}`}>
       <video
+        ref={videoRef}
         className="realm-transition-video"
-        src="/loading-screen.mp4"
-        autoPlay
         muted
         playsInline
-        preload="auto"
-      />
+        preload="metadata"
+      >
+        <source src="/Loading-Screen.webm" type="video/webm" />
+        <source src="/Loading-Screen.mp4" type="video/mp4" />
+      </video>
 
       <style jsx>{`
         .realm-transition {
@@ -21,10 +65,18 @@ export default function RealmTransition() {
           z-index: 60;
           pointer-events: none;
           background: black;
-          animation: rt-fade-out 900ms ease forwards;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 600ms ease, visibility 0s linear 600ms;
           display: flex;
           align-items: center;
           justify-content: center;
+        }
+
+        .realm-transition.active {
+          opacity: 1;
+          visibility: visible;
+          transition: opacity 150ms ease;
         }
 
         .realm-transition-video {
@@ -32,18 +84,6 @@ export default function RealmTransition() {
           height: 100%;
           object-fit: cover;
           filter: brightness(0.92);
-        }
-
-        @keyframes rt-fade-out {
-          0% {
-            opacity: 1;
-          }
-          90% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-          }
         }
       `}</style>
     </div>

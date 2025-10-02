@@ -39,6 +39,7 @@ export default function LoginPage() {
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const mobileActionsRef = useRef<HTMLDivElement | null>(null);
+  const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   // const [showRoadmap, setShowRoadmap] = useState(false);
   // const [showWhitepaper, setShowWhitepaper] = useState(false);
@@ -63,6 +64,35 @@ export default function LoginPage() {
   useEffect(() => {
     const timer = setTimeout(() => setShowForm(true), 500);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const video = backgroundVideoRef.current;
+    if (!video) return;
+
+    const playVideo = () => {
+      try {
+        const maybePromise = video.play();
+        if (maybePromise !== undefined) {
+          maybePromise.catch(() => {
+            /* Ignore autoplay restrictions */
+          });
+        }
+      } catch {
+        /* Ignore playback errors */
+      }
+    };
+
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      playVideo();
+      return;
+    }
+
+    video.addEventListener("loadeddata", playVideo);
+
+    return () => {
+      video.removeEventListener("loadeddata", playVideo);
+    };
   }, []);
 
 
@@ -508,13 +538,16 @@ export default function LoginPage() {
     <div className="min-h-screen min-h-[100dvh] relative overflow-hidden bg-[#865900]">
       {/* Background Video */}
       <video
+        ref={backgroundVideoRef}
         className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
-        src="/loading-screen.mp4"
-        autoPlay
+        preload="metadata"
         loop
         muted
         playsInline
-      />
+      >
+        <source src="/Loading-Screen.webm" type="video/webm" />
+        <source src="/Loading-Screen.mp4" type="video/mp4" />
+      </video>
       <div className="absolute inset-0 bg-[#865900] opacity-80"></div>
       <div
         className="absolute inset-0 mix-blend-screen"
