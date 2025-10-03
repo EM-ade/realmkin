@@ -37,7 +37,7 @@ const gothicCG = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Realmkin - Holders Login",
+  title: "The Realmkin Official Website",
   description: "Realmkin Web3 NFT Platform",
 };
 
@@ -64,6 +64,39 @@ export default function RootLayout({
       <body
         className={`${herticalSans.variable} ${amnestia.variable} ${impactRegular.variable} ${gothicCG.variable} antialiased`}
       >
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            #__next-loading-screen {
+              position: fixed;
+              inset: 0;
+              background: #000000;
+              z-index: 99999;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .hydrated #__next-loading-screen {
+              display: none;
+            }
+          `
+        }} />
+        <div id="__next-loading-screen">
+          <div style={{
+            width: '60px',
+            height: '60px',
+            border: '3px solid #DA9C2F',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+        </div>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `
+        }} />
         <AuthProvider>
           <SolanaWalletProvider>
             <Web3Provider>

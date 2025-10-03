@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ReactNode, useMemo, useEffect } from "react";
+import { Buffer } from "buffer";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import {
@@ -13,6 +14,15 @@ import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-reac
 
 // Import wallet adapter default styles (scoped to this client provider)
 import "@solana/wallet-adapter-react-ui/styles.css";
+
+// Ensure Buffer is available in the browser for wallet adapters that expect the Node global
+if (typeof globalThis !== "undefined" && !(globalThis as { Buffer?: typeof Buffer }).Buffer) {
+  (globalThis as { Buffer?: typeof Buffer }).Buffer = Buffer;
+}
+
+if (typeof window !== "undefined" && !(window as unknown as { Buffer?: typeof Buffer }).Buffer) {
+  (window as unknown as { Buffer?: typeof Buffer }).Buffer = Buffer;
+}
 
 interface Props {
   children: ReactNode;

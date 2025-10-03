@@ -22,9 +22,9 @@ import {
   EtherealParticles,
   ConstellationBackground,
 } from "@/components/MagicalAnimations";
+import RealmTransition from "@/components/RealmTransition";
 import { useAutoClaim } from "@/hooks/useAutoClaim";
 import { getAuth } from "firebase/auth";
-import RealmTransition from "@/components/RealmTransition";
 
 export default function WalletPage() {
   const { user, userData, getUserByWallet } = useAuth();
@@ -80,10 +80,10 @@ export default function WalletPage() {
     () => [
       { label: "Home", href: "/", icon: "/dashboard.png" },
       { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-      { label: "Staking", href: "#", icon: "/staking.png" },
-      { label: "Game", href: "#", icon: "/game.png" },
-      { label: "My NFT", href: "#", icon: "/flex-model.png" },
-      { label: "Merches", href: "#", icon: "/merches.png" },
+      { label: "Staking", href: "/staking", icon: "/staking.png" },
+      { label: "Game", href: "/game", icon: "/game.png" },
+      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
+      { label: "Merches", href: "/merches", icon: "/merches.png" },
     ],
     []
   );
@@ -560,7 +560,7 @@ const handleTransfer = useCallback(async () => {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-[#080806] p-4 relative overflow-hidden">
-        {showTransition && <RealmTransition />}
+        <RealmTransition active={showTransition} />
         <EtherealParticles />
         <ConstellationBackground />
         {/* Header Section */}
@@ -680,7 +680,7 @@ const handleTransfer = useCallback(async () => {
                         </nav>
 
                         <div className="px-5 py-4 border-t border-[#1f1f1f]">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex flex-col gap-3">
                             <button
                               onClick={() => {
                                 if (!discordLinked) {
@@ -691,19 +691,19 @@ const handleTransfer = useCallback(async () => {
                                 handleDiscordDisconnect();
                               }}
                               disabled={discordConnecting || discordUnlinking}
-                              className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${discordLinked ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                              className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
                             >
                               <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
                               <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
                             </button>
 
-                            <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
+                            <div className="flex items-center justify-between gap-3 w-full">
                               <div
-                                className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected ? 'border-[#DA9C2F] bg-[#DA9C2F]' : 'border-[#DA9C2F] bg-[#0B0B09]'}`}
+                                className="relative h-10 w-16 rounded-full border border-[#DA9C2F] bg-[#DA9C2F] transition-all duration-300 ease-out"
                                 aria-hidden="true"
                               >
                                 <div
-                                  className={`absolute top-1 h-8 w-8 rounded-full transition-all duration-300 ease-out ${isConnected ? 'right-1 bg-[#DA9C2F] border border-[#0B0B09]' : 'left-1 bg-[#0B0B09] border border-[#DA9C2F]'}`}
+                                  className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-[#0B0B09] transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
                                 />
                               </div>
                               <button
@@ -716,10 +716,10 @@ const handleTransfer = useCallback(async () => {
                                   }
                                 }}
                                 disabled={isConnecting}
-                                className={`basis-[70%] flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${isConnected ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                                className="flex-1 flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
                               >
                                 <span>{isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Connect Wallet'}</span>
-                                <span className={`flex items-center gap-2 text-xs ${isConnected ? 'text-black' : 'text-[#DA9C2F]'}`}>
+                                <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
                                   <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" />
                                   {isConnecting ? 'Loading…' : isConnected ? 'Synced' : 'Secure'}
                                 </span>
@@ -1044,7 +1044,7 @@ const handleTransfer = useCallback(async () => {
         {/* Social Links */}
         <section className="text-center text-white">
           <h4 className="mb-3 text-xs uppercase tracking-[0.6em] text-white/70">OUR SOCIALS</h4>
-          <SocialLinks variant="light" className="justify-center" />
+          <SocialLinks variant="light" className="justify-between" />
         </section>
       </div>
 

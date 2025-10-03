@@ -6,9 +6,14 @@ import RealmTransition from "@/components/RealmTransition";
 
 export default function RouteTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(true);
 
   useLayoutEffect(() => {
+    // Mark HTML as hydrated to allow body to show
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.add('hydrated');
+    }
+
     const MIN_DURATION = 2000;
 
     setShow(true);

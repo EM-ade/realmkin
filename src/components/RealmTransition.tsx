@@ -52,7 +52,8 @@ export default function RealmTransition({ active }: RealmTransitionProps) {
         className="realm-transition-video"
         muted
         playsInline
-        preload="metadata"
+        preload="auto"
+        poster="/Loading-Screen-poster.jpg"
       >
         <source src="/Loading-Screen.webm" type="video/webm" />
         <source src="/Loading-Screen.mp4" type="video/mp4" />
@@ -62,9 +63,9 @@ export default function RealmTransition({ active }: RealmTransitionProps) {
         .realm-transition {
           position: fixed;
           inset: 0;
-          z-index: 60;
+          z-index: 9999;
           pointer-events: none;
-          background: black;
+          background: #000000;
           opacity: 0;
           visibility: hidden;
           transition: opacity 600ms ease, visibility 0s linear 600ms;
@@ -76,7 +77,8 @@ export default function RealmTransition({ active }: RealmTransitionProps) {
         .realm-transition.active {
           opacity: 1;
           visibility: visible;
-          transition: opacity 150ms ease;
+          pointer-events: all;
+          transition: opacity 0ms ease;
         }
 
         .realm-transition-video {

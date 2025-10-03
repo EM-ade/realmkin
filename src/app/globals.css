@@ -33,6 +33,16 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
+/* Prevent flash of unstyled content on initial load */
+html:not(.hydrated) body {
+  opacity: 0;
+}
+
+html.hydrated body {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
 /* Modern minimal animations */
 @keyframes fadeIn {
   from {

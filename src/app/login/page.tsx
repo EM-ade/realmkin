@@ -8,12 +8,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { formatAddress } from "@/utils/formatAddress";
 // import AnimatedRoadmap from "@/components/AnimatedRoadmap";
-// import AnimatedWhitepaper from "@/components/AnimatedWhitepaper";
 import SocialLinks from "@/components/SocialLinks";
 import React from "react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
+// import NFTCarousel from "@/components/NFTCarousel";
 
 export default function LoginPage() {
   // Simplified flow toggle - set to false to re-enable full email auth
@@ -141,12 +141,12 @@ export default function LoginPage() {
 
   const mobileMenuItems = useMemo(
     () => [
-      { label: "Dashboard", href: "/", icon: "/dashboard.png" },
-      { label: "Wallet", href: "#", icon: "/wallet.png" },
-      { label: "Staking", href: "#", icon: "/staking.png" },
-      { label: "Game", href: "#", icon: "/game.png" },
-      { label: "Flex Model", href: "#", icon: "/flex-model.png" },
-      { label: "Merches", href: "#", icon: "/merches.png" },
+      { label: "Home", href: "/", icon: "/dashboard.png" },
+      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
+      { label: "Staking", href: "/staking", icon: "/staking.png" },
+      { label: "Game", href: "/game", icon: "/game.png" },
+      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
+      { label: "Merches", href: "/merches", icon: "/merches.png" },
     ],
     []
   );
@@ -309,7 +309,20 @@ export default function LoginPage() {
 
       // Open the official wallet modal via adapter context
       if (setWalletModalVisible) {
-        setWalletModalVisible(true);
+        await new Promise<void>((resolve) => {
+          setWalletModalVisible(true);
+          const timeout = setTimeout(resolve, 2000);
+          const unsubscribe = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+          const interval = setInterval(() => {
+            if (walletConnected) {
+              clearInterval(interval);
+              unsubscribe();
+            }
+          }, 250);
+        });
       } else {
         // Fallback to Web3Context flow (which will show custom selector if needed)
         await connectWallet();
@@ -325,6 +338,13 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (walletConnected && !checkingUser && !isNewUser && !loading) {
+      console.log("🚀 Existing wallet user detected, navigating to home");
+      router.push("/");
+    }
+  }, [walletConnected, checkingUser, isNewUser, loading, router]);
 
   // Handle simplified signup with just username
   const handleSimplifiedSignup = async () => {
@@ -797,130 +817,227 @@ export default function LoginPage() {
         )}
       </header>
 
-      {/* Main Content */}
-      <main className={`relative z-10 flex-1 flex flex-col items-center justify-center px-6 lg:px-8 py-12 transition-opacity duration-300 ${showMobileActions ? 'opacity-0' : 'opacity-100'}`}>
-        <div className="text-center text-black mb-10 space-y-3">
-          <h2
-            className="text-5xl sm:text-5xl lg:text-6xl font-extrabold tracking-[0.1em]"
-            style={{ fontFamily: "var(--font-amnestia)" }}
-          >
-            WELCOME TO
-          </h2>
-          <h3
-            className="text-5xl sm:text-4xl lg:text-5xl font-extrabold tracking-[0.1em]"
-            style={{ fontFamily: "var(--font-amnestia)" }}
-          >
-            THE REALM
-          </h3>
-          <p className="text-xl sm:text-xl font-medium">
-            Own your power. Summon your WardenKin. Forge your legacy.
-          </p>
+      {/* Content Wrapper */}
+      <div className="relative min-h-screen flex flex-col">
+        {/* Aurora Effects */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="home-aurora aurora-one"></div>
+          <div className="home-aurora aurora-two"></div>
+          <div className="home-aurora aurora-three"></div>
         </div>
 
-        {/* Main Content Container */}
-        <div className="w-full max-w-6xl mx-auto animate-fade-in-up px-4 sm:px-0">
-          <div className="max-w-2xl mx-auto bg-[#1b1205]/95 border border-black/40 rounded-lg shadow-[0_25px_60px_rgba(0,0,0,0.4)] px-6 sm:px-10 py-10 text-center space-y-8">
-            <div className="space-y-4 text-[#f7dca1]">
-              <p className="text-lg leading-relaxed font-semibold">
-                Battle in The Void — a nonstop PvE arena. Train your warriors to Fight, Fuse, and Revive. Earn XP, Kill Coins, and ₥KIN. Level up, claim rewards, and rise on the leaderboard.
-              </p>
-              {walletConnected && !checkingUser ? (
-                <div className="space-y-2">
-                  {/* <h4
-                    className="text-2xl font-bold text-[#f4c752]"
+        {/* Main Content */}
+        <main className={`relative z-10 flex-1 flex flex-col items-center justify-center px-6 lg:px-12 xl:px-16 py-12 transition-opacity duration-300 ${showMobileActions ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <div className="text-center text-black mb-12 space-y-3 max-w-3xl">
+            <h2
+              className="home-heading text-5xl sm:text-5xl lg:text-6xl font-extrabold tracking-[0.1em]"
+              style={{ fontFamily: "var(--font-amnestia)" }}
+            >
+              WELCOME TO
+            </h2>
+            <h3
+              className="home-heading-delay text-5xl sm:text-4xl lg:text-5xl font-extrabold tracking-[0.1em]"
+              style={{ fontFamily: "var(--font-amnestia)" }}
+            >
+              THE REALM
+            </h3>
+            <p className="text-xl sm:text-xl font-medium">
+              Own your power. Summon your WardenKin. Forge your legacy.
+            </p>
+          </div>
+
+          {/* Main Content Container */}
+          <div className="w-full max-w-6xl mx-auto animate-fade-in-up px-4 lg:px-0">
+            <div className="home-card grid gap-8 bg-[#1b1205]/95 border border-black/40 rounded-2xl shadow-[0_35px_80px_rgba(0,0,0,0.45)] px-6 lg:px-12 py-12 text-left">
+              <div className="space-y-6 text-[#f7dca1] lg:pl-4">
+                <p className="text-lg lg:text-xl leading-relaxed font-semibold">
+                  Battle in The Void — a nonstop PvE arena. Train your warriors to Fight, Fuse, and Revive. Earn XP, Kill Coins, and ₥KIN. Level up, claim rewards, and rise on the leaderboard.
+                </p>
+                {walletConnected && !checkingUser ? (
+                  <div className="space-y-2">
+                    {/* <h4
+                      className="text-2xl font-bold text-[#f4c752]"
+                      style={{ fontFamily: "var(--font-amnestia)" }}
+                    >
+                      WELCOME BACK
+                    </h4>
+                    <p className="text-sm text-[#f7dca1]">
+                      Welcome back! You can now access The Realm.
+                    </p> */}
+                  </div>
+                ) : null}
+              </div>
+
+              {checkingUser && (
+                <div className="space-y-3 text-[#f4c752]">
+                  <div className="animate-spin w-8 h-8 border-2 border-[#f4c752] border-t-transparent rounded-full mx-auto"></div>
+                  <p>Checking your account status...</p>
+                </div>
+              )}
+
+              {!checkingUser && isNewUser && walletConnected && (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Choose Username"
+                    value={username}
+                    onChange={(e) => handleUsernameChange(e.target.value)}
+                    className={`w-full bg-black/70 border-2 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
+                      usernameError
+                        ? "border-red-500 focus:border-red-400"
+                        : "border-[#f4c752]/60 focus:border-[#f4c752]"
+                    }`}
+                  />
+                  {error && (
+                    <p className="text-red-400 text-sm">{error}</p>
+                  )}
+                  <button
+                    onClick={handleSimplifiedSignup}
+                    disabled={
+                      loading ||
+                      usernameChecking ||
+                      !username.trim() ||
+                      !!usernameError
+                    }
+                    className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-3 rounded-xl border border-[#DA9C2F] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-70"
                     style={{ fontFamily: "var(--font-amnestia)" }}
                   >
-                    WELCOME BACK
-                  </h4>
-                  <p className="text-sm text-[#f7dca1]">
-                    Welcome back! You can now access The Realm.
-                  </p> */}
+                    {loading ? "CREATING ACCOUNT..." : "SUMMON WARDENKIN"}
+                  </button>
                 </div>
-              ) : null}
+              )}
+
+              {!checkingUser && !isNewUser && (
+                <div className="space-y-4">
+                  <button
+                    onClick={() => {
+                      if (walletConnected) {
+                        handleExistingUserLogin();
+                      } else {
+                        handleWalletConnect();
+                        setIsNewUser(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-4 rounded-xl border border-[#DA9C2F] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-70"
+                    style={{ fontFamily: "var(--font-amnestia)" }}
+                  >
+                    {walletConnected ? (loading ? "LOADING..." : "SUMMON WARDENKIN") : loading ? "CONNECTING..." : "CONNECT WALLET"}
+                  </button>
+                </div>
+              )}
             </div>
-
-            {checkingUser && (
-              <div className="space-y-3 text-[#f4c752]">
-                <div className="animate-spin w-8 h-8 border-2 border-[#f4c752] border-t-transparent rounded-full mx-auto"></div>
-                <p>Checking your account status...</p>
-              </div>
-            )}
-
-            {!checkingUser && isNewUser && walletConnected && (
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Choose Username"
-                  value={username}
-                  onChange={(e) => handleUsernameChange(e.target.value)}
-                  className={`w-full bg-black/70 border-2 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
-                    usernameError
-                      ? "border-red-500 focus:border-red-400"
-                      : "border-[#f4c752]/60 focus:border-[#f4c752]"
-                  }`}
-                />
-                {error && (
-                  <p className="text-red-400 text-sm">{error}</p>
-                )}
-                <button
-                  onClick={handleSimplifiedSignup}
-                  disabled={
-                    loading ||
-                    usernameChecking ||
-                    !username.trim() ||
-                    !!usernameError
-                  }
-                  className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-3 rounded-xl border border-[#DA9C2F] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-70"
-                  style={{ fontFamily: "var(--font-amnestia)" }}
-                >
-                  {loading ? "CREATING ACCOUNT..." : "SUMMON WARDENKIN"}
-                </button>
-              </div>
-            )}
-
-            {!checkingUser && !isNewUser && (
-              <div className="space-y-4">
-                <button
-                  onClick={() => {
-                    if (walletConnected) {
-                      handleExistingUserLogin();
-                    } else {
-                      handleWalletConnect();
-                      setIsNewUser(false);
-                    }
-                  }}
-                  disabled={loading}
-                  className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-4 rounded-xl border border-[#DA9C2F] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-70"
-                  style={{ fontFamily: "var(--font-amnestia)" }}
-                >
-                  {walletConnected ? (loading ? "LOADING..." : "SUMMON WARDENKIN") : loading ? "CONNECTING..." : "CONNECT WALLET"}
-                </button>
-                {/* <button
-                  className="w-full uppercase tracking-widest bg-black/80 text-[#DA9C2F] font-bold py-4 rounded-xl border border-[#DA9C2F] transition-colors duration-200 hover:bg-black"
-                  style={{ fontFamily: "var(--font-amnestia)" }}
-                  disabled
-                >
-                  ENTER THE VOID
-                </button>
-                <button
-                  className="w-full uppercase tracking-widest bg-black/80 text-[#DA9C2F] font-bold py-4 rounded-xl border border-[#DA9C2F] transition-colors duration-200 hover:bg-black"
-                  style={{ fontFamily: "var(--font-amnestia)" }}
-                  disabled
-                >
-                  CLAIM REWARDS
-                </button> */}
-              </div>
-            )}
           </div>
-        </div>
-      </main>
+        </main>
 
-      {/* Footer - Social Links */}
-      <footer className={`relative z-10 text-center p-6 lg:p-8 transition-opacity duration-300 ${showMobileActions ? 'opacity-0' : 'opacity-100'}`}>
-        <SocialLinks />
-      </footer>
+        {/* Footer - Social Links */}
+        <footer className={`relative z-10 text-center p-6 lg:p-8 transition-opacity duration-300 ${showMobileActions ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <SocialLinks />
+        </footer>
 
-      {/* AnimatedRoadmap and AnimatedWhitepaper temporarily disabled */}
+        {/* AnimatedRoadmap and AnimatedWhitepaper temporarily disabled */}
+      </div>
+      <style jsx>{`
+        .home-aurora {
+          position: absolute;
+          width: 60vw;
+          height: 60vw;
+          min-width: 420px;
+          min-height: 420px;
+          filter: blur(120px);
+          opacity: 0.3;
+          border-radius: 50%;
+          mix-blend-mode: screen;
+          animation: auroraMove 16s ease-in-out infinite;
+        }
+
+        .aurora-one {
+          background: radial-gradient(circle, rgba(255,212,121,0.55) 0%, rgba(134,89,0,0) 70%);
+          top: -15%;
+          left: -10%;
+        }
+
+        .aurora-two {
+          background: radial-gradient(circle, rgba(255,242,191,0.5) 0%, rgba(134,89,0,0) 70%);
+          bottom: -20%;
+          right: -15%;
+          animation-delay: 4s;
+        }
+
+        .aurora-three {
+          background: radial-gradient(circle, rgba(255,175,64,0.45) 0%, rgba(134,89,0,0) 70%);
+          top: 30%;
+          right: -25%;
+          animation-delay: 8s;
+        }
+
+        @keyframes auroraMove {
+          0%, 100% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          50% {
+            transform: translate3d(-5%, 6%, 0) scale(1.15);
+          }
+        }
+
+        .home-heading {
+          animation: headingReveal 1s ease-out forwards;
+          opacity: 0;
+        }
+
+        .home-heading-delay {
+          animation: headingReveal 1s ease-out forwards;
+          animation-delay: 0.25s;
+          opacity: 0;
+        }
+
+        @keyframes headingReveal {
+          0% {
+            opacity: 0;
+            transform: translateY(12px);
+            text-shadow: none;
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+            text-shadow: 0 0 24px rgba(255, 207, 92, 0.45);
+          }
+        }
+
+        .home-card {
+          position: relative;
+          animation: cardGlow 6s ease-in-out infinite;
+        }
+
+        .home-card::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: linear-gradient(135deg, rgba(255, 221, 128, 0.2), rgba(255, 165, 0, 0.05));
+          opacity: 0;
+          pointer-events: none;
+          animation: cardAura 6s ease-in-out infinite;
+        }
+
+        @keyframes cardGlow {
+          0%, 100% {
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+          }
+          50% {
+            box-shadow: 0 35px 80px rgba(255, 196, 77, 0.35);
+          }
+        }
+
+        @keyframes cardAura {
+          0%, 100% {
+            opacity: 0.08;
+          }
+          50% {
+            opacity: 0.22;
+          }
+        }
+      `}</style>
     </div>
   );
 }

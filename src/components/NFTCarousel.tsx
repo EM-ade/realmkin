@@ -2,22 +2,63 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useRealmkinNFTs, type CarouselItem } from "@/hooks/useRealmkinNFTs";
 
-export default function NFTCarousel() {
-  const { items: carouselItems } = useRealmkinNFTs();
+type StaticCarouselItem = {
+  id: string;
+  name: string;
+  image: string;
+};
+
+const STATIC_ITEMS: StaticCarouselItem[] = [
+  {
+    id: "realmkin-1",
+    name: "WardenKin Vanguard",
+    image: "/realmkin-1.jpeg",
+  },
+  {
+    id: "realmkin-2",
+    name: "Solaris Sentinel",
+    image: "/realmkin-2.jpeg",
+  },
+  {
+    id: "realmkin-3",
+    name: "Auric Enforcer",
+    image: "/realmkin-3.jpeg",
+  },
+  {
+    id: "realmkin-4",
+    name: "Voidwalker Primus",
+    image: "/realmkin-4.jpeg",
+  },
+  {
+    id: "realmkin-5",
+    name: "Eclipsed Warden",
+    image: "/realmkin-5.jpeg",
+  },
+  {
+    id: "realmkin-6",
+    name: "Arcane Vanguard",
+    image: "/realmkin-6.jpeg",
+  },
+];
+
+type NFTCarouselProps = {
+  contain?: boolean;
+};
+
+export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const carouselIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!carouselItems.length) return;
+    if (!STATIC_ITEMS.length) return;
 
     if (carouselIntervalRef.current) {
       clearInterval(carouselIntervalRef.current);
     }
 
     carouselIntervalRef.current = setInterval(() => {
-      setCarouselIndex((prev) => (prev + 1) % carouselItems.length);
+      setCarouselIndex((prev) => (prev + 1) % STATIC_ITEMS.length);
     }, 4500);
 
     return () => {
@@ -25,7 +66,7 @@ export default function NFTCarousel() {
         clearInterval(carouselIntervalRef.current);
       }
     };
-  }, [carouselItems.length]);
+  }, []);
 
   const handleMouseEnter = () => {
     if (carouselIntervalRef.current) {
@@ -35,25 +76,25 @@ export default function NFTCarousel() {
   };
 
   const handleMouseLeave = () => {
-    if (!carouselIntervalRef.current && carouselItems.length) {
+    if (!carouselIntervalRef.current && STATIC_ITEMS.length) {
       carouselIntervalRef.current = setInterval(() => {
-        setCarouselIndex((prev) => (prev + 1) % carouselItems.length);
+        setCarouselIndex((prev) => (prev + 1) % STATIC_ITEMS.length);
       }, 4500);
     }
   };
 
-  if (!carouselItems.length) {
+  if (!STATIC_ITEMS.length) {
     return null;
   }
 
   return (
-    <div className="carousel-container -mx-6 sm:-mx-10 -mt-10 mb-6">
+    <div className="carousel-container">
       <div className="carousel-shell-inner">
-        {carouselItems.map((item, idx) => {
+        {STATIC_ITEMS.map((item, idx) => {
           const isActive = idx === carouselIndex;
           return (
             <div
-              key={item.mint}
+              key={item.id}
               className={`carousel-slide ${isActive ? "active" : ""}`}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
@@ -61,7 +102,7 @@ export default function NFTCarousel() {
               <div className="carousel-frame">
                 <Image
                   src={item.image}
-                  alt={item.name ?? "Realmkin NFT"}
+                  alt={`Realmkin preview ${idx + 1}`}
                   width={640}
                   height={640}
                   className="carousel-image"
@@ -70,27 +111,20 @@ export default function NFTCarousel() {
                 <div className="carousel-overlay"></div>
               </div>
               <div className="carousel-caption">
-                <div className="carousel-title" style={{ fontFamily: "var(--font-amnestia)" }}>
-                  {item.name}
+                <div className="carousel-status" style={{ fontFamily: "var(--font-amnestia)" }}>
+                  COMING SOON
                 </div>
-                {/* <div className="carousel-meta">
-                  {item.price ? (
-                    <span className="carousel-price">{item.price.toLocaleString()} ◎</span>
-                  ) : (
-                    <span className="carousel-price">Price on request</span>
-                  )}
-                </div> */}
               </div>
             </div>
           );
         })}
 
         <div className="carousel-dots">
-          {carouselItems.map((item, idx) => (
+          {STATIC_ITEMS.map((item, idx) => (
             <button
-              key={`${item.mint}-dot`}
+              key={`${item.id}-dot`}
               className={`carousel-dot ${idx === carouselIndex ? "active" : ""}`}
-              aria-label={`View ${item.name}`}
+              aria-label={`View preview ${idx + 1}`}
               onClick={() => setCarouselIndex(idx)}
             />
           ))}
@@ -99,29 +133,27 @@ export default function NFTCarousel() {
 
       <style jsx>{`
         .carousel-container {
-          width: calc(100% + 3rem);
-          margin-bottom: 1.5rem;
+          width: 100%;
+          margin: 0 auto 1.5rem;
+          padding: 0 1rem;
+          max-width: 720px;
         }
 
-        @media (min-width: 640px) {
+        @media (min-width: 768px) {
           .carousel-container {
-            width: calc(100% + 5rem);
+            padding: 0 1.5rem;
           }
         }
 
         .carousel-shell-inner {
           position: relative;
           width: 100%;
-          height: 400px;
+          aspect-ratio: 1 / 1;
+          height: auto;
+          max-height: clamp(320px, 60vh, 640px);
           border-radius: 22px 22px 0 0;
           overflow: hidden;
           background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(46, 30, 10, 0.3));
-        }
-
-        @media (min-width: 768px) {
-          .carousel-shell-inner {
-            height: 600px;
-          }
         }
 
         .carousel-slide {
@@ -154,13 +186,14 @@ export default function NFTCarousel() {
           inset: 0;
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: ${contain ? "contain" : "cover"};
+          background: radial-gradient(circle at center, rgba(255, 227, 150, 0.2), rgba(5, 3, 2, 0.95));
           filter: saturate(1.05) brightness(1.02);
           transition: transform 6s ease;
         }
 
         .carousel-slide.active .carousel-image {
-          transform: scale(1.08);
+          transform: scale(1.02);
         }
 
         .carousel-overlay {
@@ -172,37 +205,21 @@ export default function NFTCarousel() {
         .carousel-caption {
           position: relative;
           z-index: 2;
-          padding: 24px;
+          padding: 24px 24px 36px;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
-          gap: 12px;
-          color: #f7dca1;
-        }
-
-        .carousel-title {
-          font-size: clamp(1.5rem, 2.2vw, 2.4rem);
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          text-shadow: 0 0 22px rgba(255, 195, 96, 0.7);
-        }
-
-        .carousel-meta {
-          font-size: 0.95rem;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          opacity: 0.88;
-        }
-
-        .carousel-price {
-          display: inline-flex;
           align-items: center;
+          justify-content: flex-end;
           gap: 8px;
-          background: rgba(255, 214, 124, 0.14);
-          border: 1px solid rgba(255, 214, 124, 0.32);
-          padding: 0.35rem 0.75rem;
-          border-radius: 999px;
-          letter-spacing: 0.14em;
+          color: #f7dca1;
+          text-align: center;
+        }
+
+        .carousel-status {
+          font-size: clamp(1.6rem, 2.4vw, 2.6rem);
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          text-shadow: 0 0 24px rgba(255, 195, 96, 0.75);
         }
 
         .carousel-dots {
