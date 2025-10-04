@@ -259,7 +259,7 @@ export default function Home() {
                     aria-haspopup="true"
                   >
 
-                    <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>▼</span>
+                    <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
                   </button>
                 </div>
               </div>
@@ -367,7 +367,7 @@ export default function Home() {
                               aria-hidden="true"
                             >
                               <div
-                                className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-[#0B0B09] transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
+                                className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
                               />
                             </div>
                             <button
@@ -383,7 +383,7 @@ export default function Home() {
                               className="flex-1 flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
                             >
                               <span>{isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Connect Wallet'}</span>
-                              <span className={`flex items-center gap-2 text-xs ${isConnected ? 'text-black' : 'text-[#DA9C2F]'}`}>
+                              <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
                                 <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" />
                                 {isConnecting ? 'Loading…' : isConnected ? 'Synced' : 'Secure'}
                               </span>

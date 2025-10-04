@@ -139,6 +139,18 @@ export default function LoginPage() {
     }
   }, [isConnected]);
 
+  // Prevent body scroll when username modal is open
+  useEffect(() => {
+    if (!checkingUser && isNewUser && walletConnected) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [checkingUser, isNewUser, walletConnected]);
+
   const mobileMenuItems = useMemo(
     () => [
       { label: "Home", href: "/", icon: "/dashboard.png" },
@@ -609,7 +621,7 @@ export default function LoginPage() {
                     aria-haspopup="true"
                   >
 
-                    <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>▼</span>
+                    <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
                   </button>
                 </div>
               </div>
@@ -718,7 +730,7 @@ export default function LoginPage() {
                               aria-hidden="true"
                             >
                               <div
-                                className={`absolute top-1 h-8 w-8 rounded-full transition-all duration-300 ease-out ${isConnected ? 'right-1 bg-[#DA9C2F] border border-[#0B0B09]' : 'left-1 bg-[#0B0B09] border border-[#DA9C2F]'}`}
+                                className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
                               />
                             </div>
                             <button
@@ -731,10 +743,10 @@ export default function LoginPage() {
                                 }
                               }}
                               disabled={isConnecting}
-                              className={`basis-[70%] flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${isConnected ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                              className="basis-[70%] flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
                             >
                               <span>{isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Connect Wallet'}</span>
-                              <span className={`flex items-center gap-2 text-xs ${isConnected ? 'text-black' : 'text-[#DA9C2F]'}`}>
+                              <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
                                 <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" />
                                 {isConnecting ? 'Loading…' : isConnected ? 'Synced' : 'Secure'}
                               </span>
@@ -875,37 +887,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {!checkingUser && isNewUser && walletConnected && (
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Choose Username"
-                    value={username}
-                    onChange={(e) => handleUsernameChange(e.target.value)}
-                    className={`w-full bg-black/70 border-2 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
-                      usernameError
-                        ? "border-red-500 focus:border-red-400"
-                        : "border-[#f4c752]/60 focus:border-[#f4c752]"
-                    }`}
-                  />
-                  {error && (
-                    <p className="text-red-400 text-sm">{error}</p>
-                  )}
-                  <button
-                    onClick={handleSimplifiedSignup}
-                    disabled={
-                      loading ||
-                      usernameChecking ||
-                      !username.trim() ||
-                      !!usernameError
-                    }
-                    className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-3 rounded-xl border border-[#DA9C2F] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-70"
-                    style={{ fontFamily: "var(--font-amnestia)" }}
-                  >
-                    {loading ? "CREATING ACCOUNT..." : "SUMMON WARDENKIN"}
-                  </button>
-                </div>
-              )}
 
               {!checkingUser && !isNewUser && (
                 <div className="space-y-4">
@@ -934,6 +915,107 @@ export default function LoginPage() {
         <footer className={`relative z-10 text-center p-6 lg:p-8 transition-opacity duration-300 ${showMobileActions ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <SocialLinks />
         </footer>
+
+        {/* Username Modal for New Users */}
+        {!checkingUser && isNewUser && walletConnected && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/80 backdrop-blur-md animate-fade-in">
+            <div className="w-full max-w-md rounded-3xl bg-[#1b1205]/95 border-2 border-[#DA9C2F] shadow-2xl overflow-hidden animate-fade-in-up">
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-[#DA9C2F]/30 bg-gradient-to-r from-[#DA9C2F]/10 to-transparent">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[#DA9C2F]/20 flex items-center justify-center">
+                    <Image
+                      src="/realmkin-logo.png"
+                      alt="Realmkin"
+                      width={36}
+                      height={36}
+                      className="w-9 h-9 object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-[#DA9C2F] uppercase tracking-wider" style={{ fontFamily: "var(--font-amnestia)" }}>
+                      Welcome, Wardenkin
+                    </h2>
+                    <p className="text-sm text-[#f7dca1]">Choose your identity</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#DA9C2F] uppercase tracking-wide">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => handleUsernameChange(e.target.value)}
+                    className={`w-full bg-black/70 border-2 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
+                      usernameError
+                        ? "border-red-500 focus:border-red-400"
+                        : "border-[#DA9C2F]/60 focus:border-[#DA9C2F]"
+                    }`}
+                    autoFocus
+                  />
+                  {usernameError && (
+                    <p className="text-red-400 text-sm flex items-center gap-1">
+                      <span>⚠</span> {usernameError}
+                    </p>
+                  )}
+                  {usernameChecking && (
+                    <p className="text-[#DA9C2F] text-sm flex items-center gap-2">
+                      <span className="inline-block w-3 h-3 border-2 border-[#DA9C2F] border-t-transparent rounded-full animate-spin"></span>
+                      Checking availability...
+                    </p>
+                  )}
+                  {!usernameError && !usernameChecking && username.trim() && (
+                    <p className="text-green-400 text-sm flex items-center gap-1">
+                      <span>✓</span> Username available
+                    </p>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
+                    <p className="text-red-400 text-sm">{error}</p>
+                  </div>
+                )}
+
+                <div className="bg-[#DA9C2F]/10 border border-[#DA9C2F]/30 rounded-lg px-4 py-3">
+                  <p className="text-xs text-[#f7dca1]">
+                    <strong className="text-[#DA9C2F]">Note:</strong> Your username will be visible to other players in The Realm. Choose wisely!
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-5 border-t border-[#DA9C2F]/30 bg-gradient-to-r from-transparent to-[#DA9C2F]/10">
+                <button
+                  onClick={handleSimplifiedSignup}
+                  disabled={
+                    loading ||
+                    usernameChecking ||
+                    !username.trim() ||
+                    !!usernameError
+                  }
+                  className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-3 rounded-xl border border-[#DA9C2F] transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-[#DA9C2F]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  style={{ fontFamily: "var(--font-amnestia)" }}
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                      CREATING ACCOUNT...
+                    </span>
+                  ) : (
+                    "SUMMON WARDENKIN"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* AnimatedRoadmap and AnimatedWhitepaper temporarily disabled */}
       </div>

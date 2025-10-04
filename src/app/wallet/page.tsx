@@ -594,7 +594,7 @@ const handleTransfer = useCallback(async () => {
                       aria-haspopup="true"
                     >
 
-                      <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>▼</span>
+                      <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
                     </button>
                   </div>
                 </div>
@@ -703,7 +703,7 @@ const handleTransfer = useCallback(async () => {
                                 aria-hidden="true"
                               >
                                 <div
-                                  className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-[#0B0B09] transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
+                                  className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
                                 />
                               </div>
                               <button
@@ -959,17 +959,17 @@ const handleTransfer = useCallback(async () => {
         </section>
 
         {/* NFT Section */}
-        <section className="mb-6">
-          <div className="flex justify-between items-center mb-4">
+        <section className="mb-20">
+          {/* <div className="flex justify-between items-center mb-4">
             <h2 className="text-label">MY WARDEN KINS</h2>
             <span className="text-white font-medium text-sm">
               {isConnected && account
                 ? `${nfts.length} ${nfts.length === 1 ? "KIN" : "KINS"}`
                 : "CONNECT WALLET"}
             </span>
-          </div>
+          </div> */}
 
-          {isConnected && account ? (
+          {/* {isConnected && account ? (
             <div className="card premium-card interactive-element">
               {nftLoading ? (
                 <div className="flex items-center justify-center py-8">
@@ -1038,7 +1038,7 @@ const handleTransfer = useCallback(async () => {
                 {isConnecting ? "CONNECTING..." : "CONNECT WALLET"}
               </button>
             </div>
-          )}
+          )} */}
         </section>
 
         {/* Social Links */}
