@@ -11,6 +11,11 @@ interface NFTViewer3DProps {
   autoRotate?: boolean;
 }
 
+// Extended NFT metadata with optional 3D model URL
+interface ExtendedNFTMetadata extends NFTMetadata {
+  modelUrl?: string;
+}
+
 // 3D Card component that displays NFT image as texture
 function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -126,12 +131,13 @@ function Scene({ nft, autoRotate }: { nft: NFTMetadata | null; autoRotate: boole
   }
 
   // Check if NFT has 3D model URL (you can add this field to NFTMetadata)
-  const has3DModel = false; // (nft as any).modelUrl;
+  const extendedNFT = nft as ExtendedNFTMetadata;
+  const has3DModel = extendedNFT.modelUrl && typeof extendedNFT.modelUrl === 'string';
 
   return (
     <>
       {has3DModel ? (
-        <Model3D url={(nft as any).modelUrl} />
+        <Model3D url={extendedNFT.modelUrl!} />
       ) : (
         <NFTCard3D imageUrl={nft.image} rarity={nft.rarity} />
       )}
