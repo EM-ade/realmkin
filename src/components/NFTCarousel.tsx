@@ -103,8 +103,8 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
                 <Image
                   src={item.image}
                   alt={`Realmkin preview ${idx + 1}`}
-                  width={640}
-                  height={640}
+                  width={300}
+                  height={300}
                   className="carousel-image"
                   priority={idx === 0}
                 />
@@ -132,121 +132,102 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
       </div>
 
       <style jsx>{`
-        .carousel-container {
-          width: 100%;
-          margin: 0 auto 1.5rem;
-          padding: 0 1rem;
-          max-width: 720px;
-        }
+        /* NFT Carousel Styles */
+.carousel-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
 
-        @media (min-width: 768px) {
-          .carousel-container {
-            padding: 0 1.5rem;
-          }
-        }
+.carousel-shell-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
 
-        .carousel-shell-inner {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 1 / 1;
-          height: auto;
-          max-height: clamp(320px, 60vh, 640px);
-          border-radius: 22px 22px 0 0;
-          overflow: hidden;
-          background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(46, 30, 10, 0.3));
-        }
+.carousel-slide {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
 
-        .carousel-slide {
-          position: absolute;
-          inset: 0;
-          border-radius: 22px 22px 0 0;
-          overflow: hidden;
-          opacity: 0;
-          transform: translateY(12px) scale(0.96);
-          transition: opacity 600ms ease, transform 600ms ease;
-          pointer-events: none;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-        }
+.carousel-slide.active {
+  opacity: 1;
+  z-index: 2;
+}
 
-        .carousel-slide.active {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-          pointer-events: auto;
-        }
+.carousel-frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
 
-        .carousel-frame {
-          position: absolute;
-          inset: 0;
-        }
+.carousel-image {
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto !important;
+  height: auto !important;
+}
 
-        .carousel-image {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: ${contain ? "contain" : "cover"};
-          background: radial-gradient(circle at center, rgba(255, 227, 150, 0.2), rgba(5, 3, 2, 0.95));
-          filter: saturate(1.05) brightness(1.02);
-          transition: transform 6s ease;
-        }
+.carousel-caption {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  pointer-events: none;
+  width: 100%;
+  text-align: center;
+}
 
-        .carousel-slide.active .carousel-image {
-          transform: scale(1.02);
-        }
+.carousel-status {
+  display: inline-block;
+  padding: 8px 24px;
+  background: rgba(218, 156, 47, 0.9);
+  color: #000;
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(218, 156, 47, 0.3);
+}
 
-        .carousel-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.6) 100%);
-        }
+.carousel-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 40;
+}
 
-        .carousel-caption {
-          position: relative;
-          z-index: 2;
-          padding: 24px 24px 36px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 8px;
-          color: #f7dca1;
-          text-align: center;
-        }
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
 
-        .carousel-status {
-          font-size: clamp(1.6rem, 2.4vw, 2.6rem);
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          text-shadow: 0 0 24px rgba(255, 195, 96, 0.75);
-        }
-
-        .carousel-dots {
-          position: absolute;
-          left: 50%;
-          bottom: 16px;
-          transform: translateX(-50%);
-          display: inline-flex;
-          gap: 8px;
-          z-index: 10;
-        }
-
-        .carousel-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          background: rgba(255, 214, 124, 0.3);
-          border: none;
-          transition: background 200ms ease, transform 200ms ease;
-          cursor: pointer;
-        }
-
-        .carousel-dot.active {
-          background: rgba(255, 214, 124, 0.9);
-          transform: scale(1.3);
-          box-shadow: 0 0 12px rgba(255, 214, 124, 0.7);
-        }
+.carousel-dot.active {
+  background: #DA9C2F;
+  width: 24px;
+  border-radius: 4px;
+}
       `}</style>
     </div>
   );
