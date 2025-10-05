@@ -11,7 +11,7 @@ import { formatAddress } from "@/utils/formatAddress";
 import NFTCard from "@/components/NFTCard";
 import DesktopNavigation from "@/components/DesktopNavigation";
 import { useNFT } from "@/contexts/NFTContext";
-import { NFTMetadata } from "@/services/nftService";
+import { NFTMetadata, nftService } from "@/services/nftService";
 import { getAuth } from "firebase/auth";
 import {
   rewardsService,
@@ -21,6 +21,10 @@ import {
 import RealmTransition from "@/components/RealmTransition";
 import { useAutoClaim } from "@/hooks/useAutoClaim";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import SocialLinks from "@/components/SocialLinks";
+import RewardsDashboard from "@/components/RewardsDashboard";
+import WithdrawalConfirmationModal from "@/components/WithdrawalConfirmationModal";
+import TransferConfirmationModal from "@/components/TransferConfirmationModal";
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(

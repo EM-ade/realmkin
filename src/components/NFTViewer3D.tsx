@@ -20,14 +20,8 @@ interface ExtendedNFTMetadata extends NFTMetadata {
 function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) {
   const groupRef = useRef<THREE.Group>(null);
   
-  // Load texture with error handling
-  let texture;
-  try {
-    texture = useTexture(imageUrl);
-  } catch (error) {
-    console.error('Error loading texture:', error);
-    texture = null;
-  }
+  // Load texture - Suspense will handle loading/errors
+  const texture = useTexture(imageUrl);
 
   // Set texture properties for better quality
   useEffect(() => {
@@ -70,16 +64,12 @@ function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) 
       {/* Main card with NFT image */}
       <mesh position={[0, 0, 0]}>
         <planeGeometry args={[2.5, 2.5]} />
-        {texture ? (
-          <meshStandardMaterial
-            map={texture}
-            metalness={0.2}
-            roughness={0.6}
-            side={THREE.DoubleSide}
-          />
-        ) : (
-          <meshStandardMaterial color="#2d2d2d" />
-        )}
+        <meshStandardMaterial
+          map={texture}
+          metalness={0.2}
+          roughness={0.6}
+          side={THREE.DoubleSide}
+        />
       </mesh>
 
       {/* Gold/Rarity colored frame - Made very thin */}
@@ -109,19 +99,8 @@ function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) 
 function Model3D({ url, autoRotate }: { url: string; autoRotate: boolean }) {
   const meshRef = useRef<THREE.Group>(null);
   
-  // Load GLTF with error handling
-  let gltf;
-  try {
-    gltf = useGLTF(url);
-  } catch (error) {
-    console.error('Error loading 3D model:', error);
-    return (
-      <mesh>
-        <boxGeometry args={[2, 2, 2]} />
-        <meshStandardMaterial color="#DA9C2F" wireframe />
-      </mesh>
-    );
-  }
+  // Load GLTF - Suspense will handle loading/errors
+  const gltf = useGLTF(url);
 
   useFrame(() => {
     if (meshRef.current && autoRotate) {
