@@ -257,14 +257,14 @@ function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
         {/* Controls - Disable rotation for 2D images */}
         <OrbitControls
           enableZoom={true}
-          enablePan={true}
+          enablePan={!isMobile || has3DModel} // Disable pan on mobile for 2D images
           enableRotate={has3DModel} // Only allow rotation for 3D models
           autoRotate={has3DModel && autoRotate} // Only auto-rotate 3D models
           autoRotateSpeed={1}
           panSpeed={has3DModel ? 1 : 2.5} // Faster panning for 2D images
           screenSpacePanning={!has3DModel} // Screen-space panning for 2D (easier scrolling)
           touches={{
-            ONE: has3DModel ? THREE.TOUCH.ROTATE : THREE.TOUCH.PAN,
+            ONE: has3DModel ? THREE.TOUCH.ROTATE : (isMobile ? THREE.TOUCH.DOLLY : THREE.TOUCH.PAN),
             TWO: THREE.TOUCH.DOLLY_PAN
           }}
           minDistance={4}
