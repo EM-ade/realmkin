@@ -47,7 +47,7 @@ const SAMPLE_NFTS: NFTMetadata[] = [
     id: "test-nft-2",
     name: "WardenKin Mage #5678",
     description: "An epic mage wielding ice magic",
-    image: "/realmkin-1.webp",
+    image: "/realmkin-2.webp",
     contractAddress: "test",
     tokenId: "5678",
     rarity: "EPIC",
@@ -62,7 +62,7 @@ const SAMPLE_NFTS: NFTMetadata[] = [
     id: "test-nft-3",
     name: "WardenKin Rogue #9012",
     description: "A rare rogue master of shadows",
-    image: "/realmkin-1.webp",
+    image: "/realmkin-3.webp",
     contractAddress: "test",
     tokenId: "9012",
     rarity: "RARE",
@@ -102,12 +102,12 @@ export default function MyNFTPage() {
 
   const mobileMenuItems = useMemo(
     () => [
-      { label: "Home", href: "/", icon: "/dashboard.webp" },
-      { label: "Wallet", href: "/wallet", icon: "/wallet.webp" },
-      { label: "Staking", href: "/staking", icon: "/staking.webp" },
-      { label: "Game", href: "/game", icon: "/game.webp" },
-      { label: "My NFT", href: "/my-nft", icon: "/flex-model.webp" },
-      { label: "Merches", href: "/merches", icon: "/merches.webp" },
+      { label: "Home", href: "/", icon: "/dashboard.png" },
+      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
+      { label: "Staking", href: "/staking", icon: "/staking.png" },
+      { label: "Game", href: "/game", icon: "/game.png" },
+      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
+      { label: "Merches", href: "/merches", icon: "/merches.png" },
     ],
     []
   );
@@ -352,7 +352,7 @@ export default function MyNFTPage() {
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14 animate-float">
               <Image
-                src="/realmkin-logo.webp"
+                src="/realmkin-logo.png"
                 alt="Realmkin Logo"
                 width={48}
                 height={48}
@@ -398,7 +398,7 @@ export default function MyNFTPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
                       <Image
-                        src="/realmkin-logo.webp"
+                        src="/realmkin-logo.png"
                         alt="Realmkin"
                         width={36}
                         height={36}

@@ -203,10 +203,10 @@ function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
   
   // Preload model when NFT changes (for dynamic models)
   useEffect(() => {
-    if (has3DModel && extendedNFT.modelUrl) {
+    if (has3DModel && extendedNFT?.modelUrl) {
       useGLTF.preload(extendedNFT.modelUrl);
     }
-  }, [has3DModel, extendedNFT.modelUrl]);
+  }, [has3DModel, extendedNFT?.modelUrl]);
   
   return (
     <div className="w-full h-full relative">
