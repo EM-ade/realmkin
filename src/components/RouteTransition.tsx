@@ -21,7 +21,7 @@ export default function RouteTransition({ children }: { children: React.ReactNod
       return;
     }
 
-    const MIN_DURATION = 3000; // Reduced from 2000ms
+    const MIN_DURATION = 600; // Fast but smooth transition
 
     setShow(true);
     const t = window.setTimeout(() => {

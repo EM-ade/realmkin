@@ -1,8 +1,8 @@
 "use client";
 
-import React, { Suspense, useRef, useState, useEffect } from "react";
+import React, { Suspense, useRef, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera, Environment, useGLTF, useTexture } from "@react-three/drei";
+import { OrbitControls, PerspectiveCamera, Environment, useGLTF, useTexture, useProgress, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { NFTMetadata } from "@/services/nftService";
 
@@ -19,7 +19,15 @@ interface ExtendedNFTMetadata extends NFTMetadata {
 // 3D Card component that displays NFT image as texture
 function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) {
   const groupRef = useRef<THREE.Group>(null);
-  const texture = useTexture(imageUrl);
+  
+  // Load texture with error handling
+  let texture;
+  try {
+    texture = useTexture(imageUrl);
+  } catch (error) {
+    console.error('Error loading texture:', error);
+    texture = null;
+  }
 
   // Set texture properties for better quality
   useEffect(() => {
@@ -27,6 +35,7 @@ function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) 
       texture.minFilter = THREE.LinearFilter;
       texture.magFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
+      texture.needsUpdate = true;
     }
   }, [texture]);
 
@@ -54,7 +63,6 @@ function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) 
         return "#DA9C2F";
     }
   };
-
   const frameColor = getRarityColor(rarity);
 
   return (
@@ -62,12 +70,16 @@ function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) 
       {/* Main card with NFT image */}
       <mesh position={[0, 0, 0]}>
         <planeGeometry args={[2.5, 2.5]} />
-        <meshStandardMaterial
-          map={texture}
-          metalness={0.2}
-          roughness={0.6}
-          side={THREE.DoubleSide}
-        />
+        {texture ? (
+          <meshStandardMaterial
+            map={texture}
+            metalness={0.2}
+            roughness={0.6}
+            side={THREE.DoubleSide}
+          />
+        ) : (
+          <meshStandardMaterial color="#2d2d2d" />
+        )}
       </mesh>
 
       {/* Gold/Rarity colored frame - Made very thin */}
@@ -95,8 +107,21 @@ function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) 
 
 // 3D Model loader (for NFTs with actual 3D models)
 function Model3D({ url, autoRotate }: { url: string; autoRotate: boolean }) {
-  const gltf = useGLTF(url);
   const meshRef = useRef<THREE.Group>(null);
+  
+  // Load GLTF with error handling
+  let gltf;
+  try {
+    gltf = useGLTF(url);
+  } catch (error) {
+    console.error('Error loading 3D model:', error);
+    return (
+      <mesh>
+        <boxGeometry args={[2, 2, 2]} />
+        <meshStandardMaterial color="#DA9C2F" wireframe />
+      </mesh>
+    );
+  }
 
   useFrame(() => {
     if (meshRef.current && autoRotate) {
@@ -137,13 +162,31 @@ function Scene({ nft, autoRotate }: { nft: NFTMetadata | null; autoRotate: boole
   );
 }
 
-// Loading fallback
+// Loading fallback with animation and progress
 function LoadingFallback() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const { progress } = useProgress();
+  
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
+      meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+    }
+  });
+  
   return (
-    <mesh>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#DA9C2F" wireframe />
-    </mesh>
+    <>
+      <mesh ref={meshRef}>
+        <boxGeometry args={[1.5, 1.5, 1.5]} />
+        <meshStandardMaterial color="#DA9C2F" wireframe />
+      </mesh>
+      {/* Progress text */}
+      <Html center>
+        <div className="text-[#DA9C2F] text-sm font-bold">
+          Loading... {Math.round(progress)}%
+        </div>
+      </Html>
+    </>
   );
 }
 
@@ -151,6 +194,12 @@ export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps
   // Check if NFT has 3D model
   const extendedNFT = nft as ExtendedNFTMetadata;
   const has3DModel = !!(extendedNFT?.modelUrl && typeof extendedNFT.modelUrl === 'string');
+  
+  // Preload test models on mount
+  useEffect(() => {
+    // Preload the test NFT model for faster loading
+    useGLTF.preload('/models/test-nft.glb');
+  }, []);
   
   return (
     <div className="w-full h-full relative">
@@ -179,8 +228,8 @@ export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps
         />
         <pointLight position={[0, 0, 5]} intensity={0.5} color="#DA9C2F" />
 
-        {/* Scene content */}
-        <Suspense fallback={<LoadingFallback />}>
+        {/* Scene content - Key forces remount on NFT change */}
+        <Suspense key={nft?.id || 'empty'} fallback={<LoadingFallback />}>
           <Scene nft={nft} autoRotate={autoRotate} />
         </Suspense>
 
@@ -194,6 +243,8 @@ export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps
           enableRotate={has3DModel} // Only allow rotation for 3D models
           autoRotate={has3DModel && autoRotate} // Only auto-rotate 3D models
           autoRotateSpeed={1}
+          panSpeed={has3DModel ? 1 : 2} // Faster panning for 2D images
+          screenSpacePanning={!has3DModel} // Screen-space panning for 2D (easier scrolling)
           minDistance={4}
           maxDistance={15}
           maxPolarAngle={Math.PI / 1.5}

@@ -620,7 +620,7 @@ export default function MyNFTPage() {
             {/* 3D Viewer */}
             <div className="lg:col-span-3">
               <div className="bg-[#1b1205]/95 border border-[#f4c752]/25 rounded-2xl p-0 h-[500px] lg:h-[calc(100vh-280px)] relative overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:border-[#f4c752]/40 transition-all">
-                <NFTViewer3D nft={selectedNFT} autoRotate={autoRotate} />
+                <NFTViewer3D key={selectedNFT?.id} nft={selectedNFT} autoRotate={autoRotate} />
 
                 {/* Control Panel */}
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-[#1b1205]/95 backdrop-blur-md border border-[#f4c752]/30 rounded-xl px-5 py-3 shadow-lg">
