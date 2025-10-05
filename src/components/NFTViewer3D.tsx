@@ -263,10 +263,6 @@ function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
           autoRotateSpeed={1}
           panSpeed={has3DModel ? 1 : 2.5} // Faster panning for 2D images
           screenSpacePanning={!has3DModel} // Screen-space panning for 2D (easier scrolling)
-          touches={{
-            ONE: has3DModel ? THREE.TOUCH.ROTATE : (isMobile ? THREE.TOUCH.DOLLY : THREE.TOUCH.PAN),
-            TWO: THREE.TOUCH.DOLLY_PAN
-          }}
           minDistance={4}
           maxDistance={15}
           maxPolarAngle={Math.PI / 1.5}
