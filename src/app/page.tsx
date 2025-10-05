@@ -48,6 +48,9 @@ export default function Home() {
 
   useEffect(() => {
     const video = backgroundVideoRef.current;
+    if (video) {
+      video.playbackRate = 0.75; // play at 75% speed (faster but still slow)
+    }
     if (!video) return;
 
     const playVideo = () => {
@@ -203,11 +206,12 @@ export default function Home() {
       <video
         ref={backgroundVideoRef}
         className="absolute inset-0 w-full h-full object-cover"
-        preload="none"
-        poster="/Loading-Screen-poster.jpg"
+        autoPlay
         loop
         muted
         playsInline
+        preload="auto"
+        poster="/Loading-Screen-poster.jpg"
         style={{ objectFit: "cover" }}
       >
         <source src="/Loading-Screen.webm" type="video/webm" />
@@ -357,10 +361,10 @@ export default function Home() {
                           handleDiscordDisconnect();
                         }}
                         disabled={discordConnecting || discordUnlinking}
-                        className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
+                        className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-black px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#1a1a1a] disabled:opacity-70"
                       >
                         <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
-                        <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
+                        <span className="text-xs text-[#DA9C2F] opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
                       </button>
 
                       <div className="flex items-center justify-between gap-3 w-full">

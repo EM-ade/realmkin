@@ -69,6 +69,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     const video = backgroundVideoRef.current;
+    if (video) {
+      video.playbackRate = 0.75; // slightly faster slow motion
+    }
     if (!video) return;
 
     const playVideo = () => {
@@ -573,11 +576,12 @@ export default function LoginPage() {
       <video
         ref={backgroundVideoRef}
         className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
-        preload="none"
-        poster="/Loading-Screen-poster.jpg"
+        autoPlay
         loop
         muted
         playsInline
+        preload="auto"
+        poster="/Loading-Screen-poster.jpg"
       >
         <source src="/Loading-Screen.webm" type="video/webm" />
         <source src="/Loading-Screen.mp4" type="video/mp4" />
@@ -719,10 +723,10 @@ export default function LoginPage() {
                         handleDiscordDisconnect();
                       }}
                       disabled={discordConnecting || discordUnlinking}
-                      className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${discordLinked ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                      className="flex-1 flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-black px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#1a1a1a] disabled:opacity-70"
                     >
                       <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
-                      <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
+                      <span className="text-xs text-[#DA9C2F] opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
                     </button>
 
                     <div className="flex items-center justify-end gap-3 w-full sm:w-auto">

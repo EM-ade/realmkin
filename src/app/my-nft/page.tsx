@@ -17,6 +17,56 @@ import {
 import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
 
+// Sample NFT data for testing
+const SAMPLE_NFTS: NFTMetadata[] = [
+  {
+    id: "test-nft-1",
+    name: "WardenKin Warrior #1234",
+    description: "A legendary warrior from The Void",
+    image: "/realmkin-1.jpeg",
+    contractAddress: "test",
+    tokenId: "1234",
+    rarity: "LEGENDARY",
+    power: 950,
+    modelUrl: "/models/test-nft.glb", // 3D Model - Place your GLB file here
+    attributes: [
+      { trait_type: "Class", value: "Warrior" },
+      { trait_type: "Element", value: "Fire" },
+      { trait_type: "Rarity", value: "Legendary" }
+    ]
+  },
+  {
+    id: "test-nft-2",
+    name: "WardenKin Mage #5678",
+    description: "An epic mage wielding ice magic",
+    image: "/realmkin-1.jpeg",
+    contractAddress: "test",
+    tokenId: "5678",
+    rarity: "EPIC",
+    power: 720,
+    attributes: [
+      { trait_type: "Class", value: "Mage" },
+      { trait_type: "Element", value: "Ice" },
+      { trait_type: "Rarity", value: "Epic" }
+    ]
+  },
+  {
+    id: "test-nft-3",
+    name: "WardenKin Rogue #9012",
+    description: "A rare rogue master of shadows",
+    image: "/realmkin-1.jpeg",
+    contractAddress: "test",
+    tokenId: "9012",
+    rarity: "RARE",
+    power: 580,
+    attributes: [
+      { trait_type: "Class", value: "Rogue" },
+      { trait_type: "Element", value: "Shadow" },
+      { trait_type: "Rarity", value: "Rare" }
+    ]
+  }
+];
+
 export default function MyNFTPage() {
   const { user, userData } = useAuth();
   const { account, isConnected, connectWallet, disconnectWallet, isConnecting } = useWeb3();
@@ -26,6 +76,9 @@ export default function MyNFTPage() {
   const [selectedNFT, setSelectedNFT] = useState<NFTMetadata | null>(null);
   const [autoRotate, setAutoRotate] = useState(true);
   const [showGallery, setShowGallery] = useState(true);
+  
+  // Test mode state
+  const [testMode, setTestMode] = useState(false);
 
   // Discord and mobile menu states
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
@@ -49,6 +102,11 @@ export default function MyNFTPage() {
     ],
     []
   );
+  
+  // Merge test NFTs with real NFTs when test mode is enabled
+  const displayNFTs = useMemo(() => {
+    return testMode ? [...SAMPLE_NFTS, ...nfts] : nfts;
+  }, [testMode, nfts]);
 
   const walletDisplayValue = useMemo(() => {
     const fb = userRewards ? userRewards.totalRealmkin : null;
@@ -273,7 +331,10 @@ export default function MyNFTPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#080806] relative overflow-hidden">
+      <div className="min-h-screen bg-[#050302] relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(244,199,82,0.15),rgba(5,3,2,0.95))]" aria-hidden="true" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050302]/30 via-transparent to-[#050302]" aria-hidden="true" />
         <EtherealParticles />
         <ConstellationBackground />
 
@@ -404,10 +465,10 @@ export default function MyNFTPage() {
                           handleDiscordDisconnect();
                         }}
                         disabled={discordConnecting || discordUnlinking}
-                        className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${discordLinked ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                        className="flex-1 flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-black px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#1a1a1a] disabled:opacity-70"
                       >
                         <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
-                        <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
+                        <span className="text-xs text-[#DA9C2F] opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
                       </button>
 
                       <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
@@ -447,14 +508,15 @@ export default function MyNFTPage() {
         )}
 
         {/* Main Content */}
-        <main className="relative z-10 px-4 md:px-6 pb-6">
+        <main className="relative z-10 px-4 md:px-6 lg:px-10 pb-12 max-w-7xl mx-auto mt-10">
           {/* Page Title */}
-          <div className="mb-6 animate-fade-in">
-            <h2 className="text-3xl md:text-4xl font-bold gold-gradient-text uppercase tracking-wider mb-2">
+          <div className="mb-8 animate-fade-in text-center lg:text-left">
+            <h2 className="text-4xl md:text-5xl font-bold uppercase tracking-[0.1em] mb-3" style={{ fontFamily: "var(--font-amnestia)", color: "#f4c752", textShadow: "0 0 24px rgba(244, 199, 82, 0.3)" }}>
               My NFT Collection
             </h2>
-            <p className="text-gray-400 text-sm">
-              View your NFTs in stunning 3D • {nfts.length} {nfts.length === 1 ? 'NFT' : 'NFTs'} owned
+            <p className="text-[#f7dca1]/80 text-base md:text-lg">
+              View your NFTs in stunning 3D • <span className="text-[#f4c752] font-semibold">{displayNFTs.length}</span> {displayNFTs.length === 1 ? 'NFT' : 'NFTs'} owned
+              {testMode && <span className="ml-2 text-xs bg-[#f4c752] text-black px-2 py-1 rounded-full font-bold">TEST MODE</span>}
             </p>
           </div>
 
@@ -462,18 +524,31 @@ export default function MyNFTPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* NFT Gallery Sidebar */}
             <div className={`lg:col-span-1 ${showGallery ? 'block' : 'hidden lg:block'}`}>
-              <div className="card premium-card h-[300px] lg:h-[calc(100vh-280px)] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-label">YOUR NFTS</h3>
-                  <button
-                    onClick={refreshNFTs}
-                    className="text-[#DA9C2F] hover:text-[#ffbf00] transition-colors"
-                    title="Refresh NFTs"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  </button>
+              <div className="bg-[#1b1205]/95 border border-[#f4c752]/25 rounded-2xl p-6 h-[300px] lg:h-[calc(100vh-280px)] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:border-[#f4c752]/40 transition-all">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-[#f4c752]">Your NFTs</h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setTestMode(!testMode)}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                        testMode
+                          ? 'bg-[#f4c752] text-black shadow-md'
+                          : 'bg-[#2a1f0a] text-[#f4c752] border border-[#f4c752]/30 hover:bg-[#3a2f1a]'
+                      }`}
+                      title="Toggle test NFTs"
+                    >
+                      {testMode ? '🧪 Test ON' : '🧪 Test'}
+                    </button>
+                    <button
+                      onClick={refreshNFTs}
+                      className="text-[#f4c752] hover:text-[#ffe9b5] transition-all hover:scale-110"
+                      title="Refresh NFTs"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
                 {nftsLoading ? (
@@ -489,45 +564,47 @@ export default function MyNFTPage() {
                     </div>
                   </div>
                 ) : nftsError ? (
-                  <div className="text-center text-red-400 py-8">
-                    <p>{nftsError}</p>
+                  <div className="text-center text-red-400 py-12">
+                    <div className="text-4xl mb-3">⚠️</div>
+                    <p className="text-sm">{nftsError}</p>
                   </div>
-                ) : nfts.length === 0 ? (
-                  <div className="text-center text-gray-400 py-8">
-                    <p className="mb-2">No NFTs found</p>
+                ) : displayNFTs.length === 0 ? (
+                  <div className="text-center text-[#f7dca1]/60 py-12">
+                    <div className="text-5xl mb-4">🎭</div>
+                    <p className="text-base font-semibold mb-2 text-[#f4c752]">No NFTs found</p>
                     <p className="text-sm">Connect your wallet to view your collection</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
-                    {nfts.map((nft, index) => (
+                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+                    {displayNFTs.map((nft, index) => (
                       <button
                         key={`${nft.id}-${index}`}
                         onClick={() => setSelectedNFT(nft)}
-                        className={`relative rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
+                        className={`group relative rounded-xl overflow-hidden border-2 transition-all duration-300 ${
                           selectedNFT?.id === nft.id
-                            ? 'border-[#DA9C2F] shadow-lg shadow-[#DA9C2F]/30'
-                            : 'border-[#404040] hover:border-[#DA9C2F]/50'
+                            ? 'border-[#f4c752] shadow-lg shadow-[#f4c752]/30 scale-[1.02]'
+                            : 'border-[#f4c752]/20 hover:border-[#f4c752]/60 hover:scale-[1.02] hover:shadow-md hover:shadow-[#f4c752]/20'
                         }`}
                       >
-                        <div className="aspect-square relative bg-[#2d2d2d]">
+                        <div className="aspect-square relative bg-gradient-to-br from-[#2a1f0a] to-[#1a1205]">
                           {nft.image ? (
                             <Image
                               src={nft.image}
                               alt={nft.name}
                               fill
-                              className="object-cover"
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
                               sizes="(max-width: 768px) 50vw, 200px"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-4xl">
+                            <div className="w-full h-full flex items-center justify-center text-4xl opacity-50">
                               🎭
                             </div>
                           )}
                         </div>
-                        <div className="p-2 bg-[#0B0B09]">
-                          <p className="text-xs text-white truncate">{nft.name}</p>
+                        <div className="p-3 bg-gradient-to-b from-[#1b1205] to-[#0f0902]">
+                          <p className="text-xs font-semibold text-[#f4c752] truncate mb-1">{nft.name}</p>
                           <p
-                            className="text-xs font-semibold"
+                            className="text-[10px] font-bold uppercase tracking-wider"
                             style={{ color: getRarityColor(nft.rarity || '') }}
                           >
                             {nft.rarity || 'COMMON'}
@@ -542,17 +619,17 @@ export default function MyNFTPage() {
 
             {/* 3D Viewer */}
             <div className="lg:col-span-3">
-              <div className="card premium-card p-0 h-[500px] lg:h-[calc(100vh-280px)] relative overflow-hidden">
+              <div className="bg-[#1b1205]/95 border border-[#f4c752]/25 rounded-2xl p-0 h-[500px] lg:h-[calc(100vh-280px)] relative overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:border-[#f4c752]/40 transition-all">
                 <NFTViewer3D nft={selectedNFT} autoRotate={autoRotate} />
 
                 {/* Control Panel */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-[#0B0B09]/90 backdrop-blur-sm border border-[#404040] rounded-lg px-4 py-2">
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-[#1b1205]/95 backdrop-blur-md border border-[#f4c752]/30 rounded-xl px-5 py-3 shadow-lg">
                   <button
                     onClick={() => setAutoRotate(!autoRotate)}
-                    className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                       autoRotate
-                        ? 'bg-[#DA9C2F] text-black'
-                        : 'bg-[#2d2d2d] text-[#DA9C2F] hover:bg-[#3d3d3d]'
+                        ? 'bg-[#f4c752] text-black shadow-md shadow-[#f4c752]/30'
+                        : 'bg-[#2a1f0a] text-[#f4c752] border border-[#f4c752]/30 hover:bg-[#3a2f1a] hover:border-[#f4c752]/50'
                     }`}
                     title={autoRotate ? 'Stop rotation' : 'Auto rotate'}
                   >
@@ -561,29 +638,29 @@ export default function MyNFTPage() {
 
                   <button
                     onClick={() => setShowGallery(!showGallery)}
-                    className="lg:hidden px-3 py-1 rounded text-xs font-medium bg-[#2d2d2d] text-[#DA9C2F] hover:bg-[#3d3d3d] transition-colors"
+                    className="lg:hidden px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#2a1f0a] text-[#f4c752] border border-[#f4c752]/30 hover:bg-[#3a2f1a] hover:border-[#f4c752]/50 transition-all duration-300"
                   >
                     {showGallery ? 'Hide Gallery' : 'Show Gallery'}
                   </button>
 
-                  <div className="hidden md:block text-xs text-gray-400 ml-2">
-                    Drag to rotate • Scroll to zoom
+                  <div className="hidden md:block text-xs text-[#f7dca1]/70 ml-2 font-medium">
+                    {selectedNFT?.modelUrl ? 'Drag to rotate • Scroll to zoom' : 'Scroll to zoom • Pan to move'}
                   </div>
                 </div>
 
                 {/* NFT Info Overlay */}
                 {selectedNFT && (
-                  <div className="absolute top-4 left-4 bg-[#0B0B09]/90 backdrop-blur-sm border border-[#404040] rounded-lg px-4 py-3 max-w-xs">
-                    <h3 className="text-white font-semibold mb-1">{selectedNFT.name}</h3>
+                  <div className="absolute top-4 left-4 bg-[#1b1205]/95 backdrop-blur-md border border-[#f4c752]/30 rounded-xl px-5 py-4 max-w-xs shadow-lg">
+                    <h3 className="text-[#f4c752] font-bold text-lg mb-2">{selectedNFT.name}</h3>
                     <p
-                      className="text-sm font-medium mb-2"
+                      className="text-sm font-bold uppercase tracking-wider mb-3"
                       style={{ color: getRarityColor(selectedNFT.rarity || '') }}
                     >
                       {selectedNFT.rarity || 'COMMON'}
                     </p>
                     {selectedNFT.power && (
-                      <p className="text-xs text-gray-400">
-                        Power: <span className="text-[#DA9C2F] font-medium">{selectedNFT.power}</span>
+                      <p className="text-sm text-[#f7dca1]/80">
+                        Power: <span className="text-[#f4c752] font-bold">{selectedNFT.power}</span>
                       </p>
                     )}
                   </div>

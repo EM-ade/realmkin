@@ -18,6 +18,7 @@ export interface NFTMetadata {
   tokenId: string;
   rarity?: string;
   power?: number;
+  modelUrl?: string; // Optional 3D model URL (GLB/GLTF)
 }
 
 // Helius API Response types

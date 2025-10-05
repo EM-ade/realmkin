@@ -692,10 +692,10 @@ const handleTransfer = useCallback(async () => {
                           handleDiscordDisconnect();
                         }}
                         disabled={discordConnecting || discordUnlinking}
-                        className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
+                        className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-black px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#1a1a1a] disabled:opacity-70"
                       >
                         <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
-                        <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
+                        <span className="text-xs text-[#DA9C2F] opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
                       </button>
 
                       <div className="flex items-center justify-between gap-3 w-full">

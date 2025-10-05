@@ -168,7 +168,7 @@ export default function DesktopNavigation() {
   }, [discordLinked]);
 
   return (
-    <nav className="hidden lg:block w-full border-b border-[#404040]/30 bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40">
+    <nav className="hidden lg:block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Left: Logo */}
@@ -201,7 +201,7 @@ export default function DesktopNavigation() {
                       : "text-[#DA9C2F] hover:bg-[#DA9C2F]/10"
                   }`}
                 >
-                  <Image src={item.icon} alt={item.label} width={16} height={16} className="w-4 h-4" />
+                  <Image src={item.icon} alt={item.label} width={20} height={20} className="w-5 h-5" />
                   <span>{item.label}</span>
                 </Link>
               );

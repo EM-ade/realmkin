@@ -1,8 +1,8 @@
 "use client";
 
 import React, { Suspense, useRef, useState, useEffect } from "react";
-import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera, Environment } from "@react-three/drei";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, PerspectiveCamera, Environment, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { NFTMetadata } from "@/services/nftService";
 
@@ -18,29 +18,25 @@ interface ExtendedNFTMetadata extends NFTMetadata {
 
 // 3D Card component that displays NFT image as texture
 function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const [texture, setTexture] = useState<THREE.Texture | null>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const texture = useTexture(imageUrl);
 
+  // Set texture properties for better quality
   useEffect(() => {
-    const loader = new THREE.TextureLoader();
-    loader.load(
-      imageUrl,
-      (loadedTexture) => {
-        loadedTexture.minFilter = THREE.LinearFilter;
-        setTexture(loadedTexture);
-      },
-      undefined,
-      (error) => {
-        console.error("Error loading texture:", error);
-      }
-    );
-  }, [imageUrl]);
+    if (texture) {
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
+    }
+  }, [texture]);
 
-  // Gentle floating animation
+  // Gentle floating animation only (no rotation for 2D images)
   useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += 0.002;
-      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+    if (groupRef.current) {
+      // Only float up and down, no rotation to avoid showing edges
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+      // Keep facing camera (billboard effect)
+      groupRef.current.rotation.y = 0;
     }
   });
 
@@ -62,36 +58,35 @@ function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) 
   const frameColor = getRarityColor(rarity);
 
   return (
-    <group>
+    <group ref={groupRef}>
       {/* Main card with NFT image */}
-      <mesh ref={meshRef} position={[0, 0, 0]}>
-        <boxGeometry args={[2.5, 3.5, 0.1]} />
-        {texture ? (
-          <meshStandardMaterial
-            map={texture}
-            metalness={0.3}
-            roughness={0.4}
-          />
-        ) : (
-          <meshStandardMaterial color="#2d2d2d" />
-        )}
+      <mesh position={[0, 0, 0]}>
+        <planeGeometry args={[2.5, 2.5]} />
+        <meshStandardMaterial
+          map={texture}
+          metalness={0.2}
+          roughness={0.6}
+          side={THREE.DoubleSide}
+        />
       </mesh>
 
-      {/* Gold/Rarity colored frame */}
-      <mesh position={[0, 0, -0.06]}>
-        <boxGeometry args={[2.7, 3.7, 0.05]} />
+      {/* Gold/Rarity colored frame - Made very thin */}
+      <mesh position={[0, 0, -0.001]}>
+        <planeGeometry args={[2.65, 2.65]} />
         <meshStandardMaterial
           color={frameColor}
           metalness={0.8}
           roughness={0.2}
           emissive={frameColor}
-          emissiveIntensity={0.3}
+          emissiveIntensity={0.2}
+          transparent
+          opacity={0.9}
         />
       </mesh>
 
-      {/* Back panel */}
-      <mesh position={[0, 0, -0.12]}>
-        <boxGeometry args={[2.8, 3.8, 0.02]} />
+      {/* Back panel - Very close to avoid edge visibility */}
+      <mesh position={[0, 0, -0.002]}>
+        <planeGeometry args={[2.7, 2.7]} />
         <meshStandardMaterial color="#0B0B09" metalness={0.5} roughness={0.5} />
       </mesh>
     </group>
@@ -99,22 +94,19 @@ function NFTCard3D({ imageUrl, rarity }: { imageUrl: string; rarity?: string }) 
 }
 
 // 3D Model loader (for NFTs with actual 3D models)
-function Model3D({ url }: { url: string }) {
+function Model3D({ url, autoRotate }: { url: string; autoRotate: boolean }) {
+  const gltf = useGLTF(url);
   const meshRef = useRef<THREE.Group>(null);
 
   useFrame(() => {
-    if (meshRef.current) {
+    if (meshRef.current && autoRotate) {
       meshRef.current.rotation.y += 0.005;
     }
   });
 
-  // This is a placeholder - you'd use GLTFLoader for actual 3D models
   return (
     <group ref={meshRef}>
-      <mesh>
-        <boxGeometry args={[2, 2, 2]} />
-        <meshStandardMaterial color="#DA9C2F" metalness={0.5} roughness={0.3} />
-      </mesh>
+      <primitive object={gltf.scene} scale={2} />
     </group>
   );
 }
@@ -137,7 +129,7 @@ function Scene({ nft, autoRotate }: { nft: NFTMetadata | null; autoRotate: boole
   return (
     <>
       {has3DModel ? (
-        <Model3D url={extendedNFT.modelUrl!} />
+        <Model3D url={extendedNFT.modelUrl!} autoRotate={autoRotate} />
       ) : (
         <NFTCard3D imageUrl={nft.image} rarity={nft.rarity} />
       )}
@@ -156,6 +148,10 @@ function LoadingFallback() {
 }
 
 export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
+  // Check if NFT has 3D model
+  const extendedNFT = nft as ExtendedNFTMetadata;
+  const has3DModel = extendedNFT?.modelUrl && typeof extendedNFT.modelUrl === 'string';
+  
   return (
     <div className="w-full h-full relative">
       <Canvas
@@ -191,12 +187,12 @@ export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps
         {/* Environment for reflections */}
         <Environment preset="night" />
 
-        {/* Controls */}
+        {/* Controls - Disable rotation for 2D images */}
         <OrbitControls
           enableZoom={true}
           enablePan={true}
-          enableRotate={true}
-          autoRotate={autoRotate}
+          enableRotate={has3DModel} // Only allow rotation for 3D models
+          autoRotate={has3DModel && autoRotate} // Only auto-rotate 3D models
           autoRotateSpeed={1}
           minDistance={4}
           maxDistance={15}
