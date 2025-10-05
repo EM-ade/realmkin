@@ -9,36 +9,36 @@ type StaticCarouselItem = {
   image: string;
 };
 
-const STATIC_ITEMS: StaticCarouselItem[] = [
+const SAMPLE_NFTS: StaticCarouselItem[] = [
   {
     id: "realmkin-1",
     name: "WardenKin Vanguard",
-    image: "/realmkin-1.jpeg",
+    image: "/realmkin-1.webp",
   },
   {
     id: "realmkin-2",
     name: "Solaris Sentinel",
-    image: "/realmkin-2.jpeg",
+    image: "/realmkin-2.webp",
   },
   {
     id: "realmkin-3",
     name: "Auric Enforcer",
-    image: "/realmkin-3.jpeg",
+    image: "/realmkin-3.webp",
   },
   {
     id: "realmkin-4",
     name: "Voidwalker Primus",
-    image: "/realmkin-4.jpeg",
+    image: "/realmkin-4.webp",
   },
   {
     id: "realmkin-5",
     name: "Eclipsed Warden",
-    image: "/realmkin-5.jpeg",
+    image: "/realmkin-5.webp",
   },
   {
     id: "realmkin-6",
     name: "Arcane Vanguard",
-    image: "/realmkin-6.jpeg",
+    image: "/realmkin-6.webp",
   },
 ];
 
@@ -51,14 +51,14 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
   const carouselIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!STATIC_ITEMS.length) return;
+    if (!SAMPLE_NFTS.length) return;
 
     if (carouselIntervalRef.current) {
       clearInterval(carouselIntervalRef.current);
     }
 
     carouselIntervalRef.current = setInterval(() => {
-      setCarouselIndex((prev) => (prev + 1) % STATIC_ITEMS.length);
+      setCarouselIndex((prev) => (prev + 1) % SAMPLE_NFTS.length);
     }, 4500);
 
     return () => {
@@ -76,21 +76,21 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
   };
 
   const handleMouseLeave = () => {
-    if (!carouselIntervalRef.current && STATIC_ITEMS.length) {
+    if (!carouselIntervalRef.current && SAMPLE_NFTS.length) {
       carouselIntervalRef.current = setInterval(() => {
-        setCarouselIndex((prev) => (prev + 1) % STATIC_ITEMS.length);
+        setCarouselIndex((prev) => (prev + 1) % SAMPLE_NFTS.length);
       }, 4500);
     }
   };
 
-  if (!STATIC_ITEMS.length) {
+  if (!SAMPLE_NFTS.length) {
     return null;
   }
 
   return (
     <div className="carousel-container">
       <div className="carousel-shell-inner">
-        {STATIC_ITEMS.map((item, idx) => {
+        {SAMPLE_NFTS.map((item, idx) => {
           const isActive = idx === carouselIndex;
           return (
             <div
@@ -120,7 +120,7 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
         })}
 
         <div className="carousel-dots">
-          {STATIC_ITEMS.map((item, idx) => (
+          {SAMPLE_NFTS.map((item, idx) => (
             <button
               key={`${item.id}-dot`}
               className={`carousel-dot ${idx === carouselIndex ? "active" : ""}`}

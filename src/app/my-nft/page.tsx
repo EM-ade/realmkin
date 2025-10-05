@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
@@ -10,12 +11,18 @@ import { useNFT } from "@/contexts/NFTContext";
 import NFTViewer3D from "@/components/NFTViewer3D";
 import DesktopNavigation from "@/components/DesktopNavigation";
 import { NFTMetadata } from "@/services/nftService";
-import {
-  EtherealParticles,
-  ConstellationBackground,
-} from "@/components/MagicalAnimations";
 import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
+
+// Lazy load background effects for better performance
+const EtherealParticles = dynamic(
+  () => import("@/components/MagicalAnimations").then(mod => mod.EtherealParticles),
+  { ssr: false }
+);
+const ConstellationBackground = dynamic(
+  () => import("@/components/MagicalAnimations").then(mod => mod.ConstellationBackground),
+  { ssr: false }
+);
 
 // Sample NFT data for testing
 const SAMPLE_NFTS: NFTMetadata[] = [
@@ -23,7 +30,7 @@ const SAMPLE_NFTS: NFTMetadata[] = [
     id: "test-nft-1",
     name: "WardenKin Warrior #1234",
     description: "A legendary warrior from The Void",
-    image: "/realmkin-1.jpeg",
+    image: "/realmkin-1.webp",
     contractAddress: "test",
     tokenId: "1234",
     rarity: "LEGENDARY",
@@ -39,7 +46,7 @@ const SAMPLE_NFTS: NFTMetadata[] = [
     id: "test-nft-2",
     name: "WardenKin Mage #5678",
     description: "An epic mage wielding ice magic",
-    image: "/realmkin-1.jpeg",
+    image: "/realmkin-1.webp",
     contractAddress: "test",
     tokenId: "5678",
     rarity: "EPIC",
@@ -54,7 +61,7 @@ const SAMPLE_NFTS: NFTMetadata[] = [
     id: "test-nft-3",
     name: "WardenKin Rogue #9012",
     description: "A rare rogue master of shadows",
-    image: "/realmkin-1.jpeg",
+    image: "/realmkin-1.webp",
     contractAddress: "test",
     tokenId: "9012",
     rarity: "RARE",
@@ -93,12 +100,12 @@ export default function MyNFTPage() {
 
   const mobileMenuItems = useMemo(
     () => [
-      { label: "Home", href: "/", icon: "/dashboard.png" },
-      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-      { label: "Staking", href: "/staking", icon: "/staking.png" },
-      { label: "Game", href: "/game", icon: "/game.png" },
-      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
-      { label: "Merches", href: "/merches", icon: "/merches.png" },
+      { label: "Home", href: "/", icon: "/dashboard.webp" },
+      { label: "Wallet", href: "/wallet", icon: "/wallet.webp" },
+      { label: "Staking", href: "/staking", icon: "/staking.webp" },
+      { label: "Game", href: "/game", icon: "/game.webp" },
+      { label: "My NFT", href: "/my-nft", icon: "/flex-model.webp" },
+      { label: "Merches", href: "/merches", icon: "/merches.webp" },
     ],
     []
   );
@@ -343,11 +350,12 @@ export default function MyNFTPage() {
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14 animate-float">
               <Image
-                src="/realmkin-logo.png"
+                src="/realmkin-logo.webp"
                 alt="Realmkin Logo"
                 width={48}
                 height={48}
                 className="w-full h-full object-cover"
+                priority
               />
             </div>
             <h1 className="font-bold text-lg uppercase tracking-wider gold-gradient-text">
@@ -388,7 +396,7 @@ export default function MyNFTPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
                       <Image
-                        src="/realmkin-logo.png"
+                        src="/realmkin-logo.webp"
                         alt="Realmkin"
                         width={36}
                         height={36}

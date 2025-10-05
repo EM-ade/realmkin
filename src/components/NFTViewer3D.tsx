@@ -190,7 +190,7 @@ function LoadingFallback() {
   );
 }
 
-export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
+function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
   // Check if NFT has 3D model
   const extendedNFT = nft as ExtendedNFTMetadata;
   const has3DModel = !!(extendedNFT?.modelUrl && typeof extendedNFT.modelUrl === 'string');
@@ -199,7 +199,20 @@ export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps
   useEffect(() => {
     // Preload the test NFT model for faster loading
     useGLTF.preload('/models/test-nft.glb');
+    
+    // Cleanup function
+    return () => {
+      // Clear any cached models when component unmounts
+      useGLTF.clear('/models/test-nft.glb');
+    };
   }, []);
+  
+  // Preload model when NFT changes (for dynamic models)
+  useEffect(() => {
+    if (has3DModel && extendedNFT.modelUrl) {
+      useGLTF.preload(extendedNFT.modelUrl);
+    }
+  }, [has3DModel, extendedNFT.modelUrl]);
   
   return (
     <div className="w-full h-full relative">
@@ -264,3 +277,10 @@ export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps
     </div>
   );
 }
+
+// Memoize component to prevent unnecessary re-renders
+export default React.memo(NFTViewer3D, (prevProps, nextProps) => {
+  // Only re-render if nft ID or autoRotate changes
+  return prevProps.nft?.id === nextProps.nft?.id && 
+         prevProps.autoRotate === nextProps.autoRotate;
+});

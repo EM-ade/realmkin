@@ -10,12 +10,12 @@ import { rewardsService, UserRewards } from "@/services/rewardsService";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const NAV_ITEMS = [
-  { label: "Home", href: "/", icon: "/dashboard.png" },
-  { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-  { label: "My NFTs", href: "/my-nft", icon: "/flex-model.png" },
-  { label: "Staking", href: "/staking", icon: "/staking.png" },
-  { label: "Game", href: "/game", icon: "/game.png" },
-  { label: "Merches", href: "/merches", icon: "/merches.png" },
+  { label: "Home", href: "/", icon: "/dashboard.webp" },
+  { label: "Wallet", href: "/wallet", icon: "/wallet.webp" },
+  { label: "My NFTs", href: "/my-nft", icon: "/flex-model.webp" },
+  { label: "Staking", href: "/staking", icon: "/staking.webp" },
+  { label: "Game", href: "/game", icon: "/game.webp" },
+  { label: "Merches", href: "/merches", icon: "/merches.webp" },
 ];
 
 export default function DesktopNavigation() {
@@ -175,7 +175,7 @@ export default function DesktopNavigation() {
           <Link href="/" className="flex items-center space-x-3">
             <div className="w-10 h-10">
               <Image
-                src="/realmkin-logo.png"
+                src="/realmkin-logo.webp"
                 alt="Realmkin Logo"
                 width={40}
                 height={40}
