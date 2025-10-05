@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useNFT } from "@/contexts/NFTContext";
 import NFTViewer3D from "@/components/NFTViewer3D";
+import DesktopNavigation from "@/components/DesktopNavigation";
 import { NFTMetadata } from "@/services/nftService";
 import {
   EtherealParticles,
@@ -276,8 +277,8 @@ export default function MyNFTPage() {
         <EtherealParticles />
         <ConstellationBackground />
 
-        {/* Header Section */}
-        <header className="flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20">
+        {/* Mobile Header */}
+        <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20">
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14 animate-float">
               <Image
@@ -293,223 +294,157 @@ export default function MyNFTPage() {
             </h1>
           </div>
 
-          {isConnected && account && (
-            <div className="w-auto flex-shrink-0">
-              <div className="flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
-                <div className="flex w-full md:w-auto items-center justify-end gap-2">
-                  {/* Mobile menu toggle */}
-                  <div className="md:hidden">
-                    <button
-                      onClick={() => setShowMobileActions((v) => !v)}
-                      className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
-                      aria-expanded={showMobileActions}
-                      aria-haspopup="true"
-                    >
-                      <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
-                    </button>
+          {/* Mobile menu button - always visible */}
+          <div className="w-auto flex-shrink-0">
+            <button
+              onClick={() => setShowMobileActions((v) => !v)}
+              className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+              aria-expanded={showMobileActions}
+              aria-haspopup="true"
+            >
+              <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Desktop Navigation */}
+        <DesktopNavigation />
+
+        {/* Mobile Menu Modal */}
+        {showMobileActions && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+              onClick={() => setShowMobileActions(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+              <div
+                ref={mobileActionsRef}
+                className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
+              >
+
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
+                      <Image
+                        src="/realmkin-logo.png"
+                        alt="Realmkin"
+                        width={36}
+                        height={36}
+                        className="w-9 h-9 object-contain"
+                      />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">Realmkin</div>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setShowMobileActions(false)}
+                    className="text-[#DA9C2F] text-xl font-bold"
+                    aria-label="Close menu"
+                  >
+                    ×
+                  </button>
                 </div>
 
-                {showMobileActions && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+                <nav className="px-4 py-3 space-y-1.5">
+                  {mobileMenuItems.map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
                       onClick={() => setShowMobileActions(false)}
-                    />
-                    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-                      <div
-                        ref={mobileActionsRef}
-                        className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
-                      >
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
-                              <Image
-                                src="/realmkin-logo.png"
-                                alt="Realmkin"
-                                width={36}
-                                height={36}
-                                className="w-9 h-9 object-contain"
-                              />
-                            </div>
-                            <div className="text-left">
-                              <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">Realmkin</div>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => setShowMobileActions(false)}
-                            className="text-[#DA9C2F] text-xl font-bold"
-                            aria-label="Close menu"
-                          >
-                            ×
-                          </button>
-                        </div>
-
-                        <nav className="px-4 py-3 space-y-1.5">
-                          {mobileMenuItems.map((item) => (
-                            <Link
-                              key={item.label}
-                              href={item.href}
-                              onClick={() => setShowMobileActions(false)}
-                              className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
-                            >
-                              <span className="flex h-10 w-10 items-center justify-center">
-                                <Image
-                                  src={item.icon}
-                                  alt={`${item.label} icon`}
-                                  width={20}
-                                  height={20}
-                                  className="w-8 h-8 object-contain"
-                                />
-                              </span>
-                              <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
-                                {item.label}
-                              </span>
-                            </Link>
-                          ))}
-                          {userData?.admin && (
-                            <Link
-                              href="/admin"
-                              onClick={() => setShowMobileActions(false)}
-                              className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
-                            >
-                              <span className="flex h-10 w-10 items-center justify-center">
-                                <Image
-                                  src="/dashboard.png"
-                                  alt="Admin icon"
-                                  width={20}
-                                  height={20}
-                                  className="w-8 h-8 object-contain"
-                                />
-                              </span>
-                              <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
-                                Admin
-                              </span>
-                            </Link>
-                          )}
-                        </nav>
-
-                        <div className="px-5 py-4 border-t border-[#1f1f1f]">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <button
-                              onClick={() => {
-                                if (!discordLinked) {
-                                  handleDiscordConnect();
-                                  return;
-                                }
-                                setShowDiscordMenu(false);
-                                handleDiscordDisconnect();
-                              }}
-                              disabled={discordConnecting || discordUnlinking}
-                              className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${discordLinked ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
-                            >
-                              <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
-                              <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
-                            </button>
-
-                            <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
-                              <div
-                                className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected ? 'border-[#DA9C2F] bg-[#DA9C2F]' : 'border-[#DA9C2F] bg-[#0B0B09]'}`}
-                                aria-hidden="true"
-                              >
-                                <div
-                                  className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
-                                />
-                              </div>
-                              <button
-                                onClick={() => {
-                                  setShowMobileActions(false);
-                                  if (isConnected) {
-                                    disconnectWallet();
-                                  } else {
-                                    connectWallet();
-                                  }
-                                }}
-                                disabled={isConnecting}
-                                className="basis-[70%] flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
-                              >
-                                <span>{isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Connect Wallet'}</span>
-                                <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
-                                  <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" />
-                                  {isConnecting ? 'Loading…' : isConnected ? 'Synced' : 'Secure'}
-                                </span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Desktop inline controls */}
-                <div className="hidden md:flex items-center gap-3">
-                  <div className="bg-[#0B0B09] pl-3 pr-1 py-2 rounded-lg border border-[#404040] flex-initial min-w-[180px]">
-                    <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
-                      <Image
-                        src="/wallet.jpeg"
-                        alt="Wallet Logo"
-                        width={16}
-                        height={16}
-                        className="w-6 h-6 object-contain"
-                      />
-                      <span>{formattedWalletBalance}</span>
-                    </div>
-                  </div>
-
-                  {/* Discord Link Status / Connect Button */}
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        if (!discordLinked) {
-                          handleDiscordConnect();
-                          return;
-                        }
-                        setShowDiscordMenu((v) => !v);
-                      }}
-                      disabled={discordConnecting}
-                      className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap`}
+                      className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
                     >
-                      {discordLinked ? (
-                        <>
-                          <span>DISCORD LINKED</span>
-                          <span className="ml-1 text-xs opacity-80">▼</span>
-                        </>
-                      ) : (
-                        <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
-                      )}
-                    </button>
-                    {discordLinked && showDiscordMenu && (
-                      <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
-                        <button
-                          onClick={async () => {
-                            const success = await handleDiscordDisconnect();
-                            if (success) {
-                              setShowDiscordMenu(false);
-                            }
-                          }}
-                          className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
-                        >
-                          {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Admin Link */}
+                      <span className="flex h-10 w-10 items-center justify-center">
+                        <Image
+                          src={item.icon}
+                          alt={`${item.label} icon`}
+                          width={20}
+                          height={20}
+                          className="w-8 h-8 object-contain"
+                        />
+                      </span>
+                      <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
+                        {item.label}
+                      </span>
+                    </Link>
+                  ))}
                   {userData?.admin && (
                     <Link
                       href="/admin"
-                      className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors text-center"
+                      onClick={() => setShowMobileActions(false)}
+                      className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
                     >
-                      ADMIN
+                      <span className="flex h-10 w-10 items-center justify-center">
+                        <Image
+                          src="/dashboard.png"
+                          alt="Admin icon"
+                          width={20}
+                          height={20}
+                          className="w-8 h-8 object-contain"
+                        />
+                      </span>
+                      <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
+                        Admin
+                      </span>
                     </Link>
                   )}
-                </div>
+                </nav>
+
+                {isConnected && account && (
+                  <div className="px-5 py-4 border-t border-[#1f1f1f]">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        onClick={() => {
+                          if (!discordLinked) {
+                            handleDiscordConnect();
+                            return;
+                          }
+                          setShowDiscordMenu(false);
+                          handleDiscordDisconnect();
+                        }}
+                        disabled={discordConnecting || discordUnlinking}
+                        className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${discordLinked ? 'bg-[#DA9C2F] text-black border-[#DA9C2F] hover:bg-[#f0b94a]' : 'bg-[#0B0B09] text-[#DA9C2F] border-[#DA9C2F] hover:bg-[#1a1a1a]'}`}
+                      >
+                        <span>{discordLinked ? 'Disconnect Discord' : discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
+                        <span className="text-xs opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
+                      </button>
+
+                      <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
+                        <div
+                          className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected ? 'border-[#DA9C2F] bg-[#DA9C2F]' : 'border-[#DA9C2F] bg-[#0B0B09]'}`}
+                          aria-hidden="true"
+                        >
+                          <div
+                            className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            setShowMobileActions(false);
+                            if (isConnected) {
+                              disconnectWallet();
+                            } else {
+                              connectWallet();
+                            }
+                          }}
+                          disabled={isConnecting}
+                          className="basis-[70%] flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
+                        >
+                          <span>{isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Connect Wallet'}</span>
+                          <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
+                            <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" />
+                            {isConnecting ? 'Loading…' : isConnected ? 'Synced' : 'Secure'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </header>
+          </>
+        )}
 
         {/* Main Content */}
         <main className="relative z-10 px-4 md:px-6 pb-6">

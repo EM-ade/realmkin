@@ -52,7 +52,7 @@ export default function RealmTransition({ active }: RealmTransitionProps) {
         className="realm-transition-video"
         muted
         playsInline
-        preload="auto"
+        preload="none"
         poster="/Loading-Screen-poster.jpg"
       >
         <source src="/Loading-Screen.webm" type="video/webm" />

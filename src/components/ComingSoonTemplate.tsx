@@ -8,6 +8,7 @@ import { FaXTwitter } from "react-icons/fa6";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { formatAddress } from "@/utils/formatAddress";
+import DesktopNavigation from "@/components/DesktopNavigation";
 
 const NAV_LINKS = [
   { key: "home", label: "Home", href: "/" },
@@ -102,135 +103,100 @@ export default function ComingSoonTemplate({ current }: ComingSoonTemplateProps)
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(244,199,82,0.2),rgba(5,3,2,0.95))]" aria-hidden="true" />
       <div className="absolute inset-0 bg-gradient-to-b from-[#050302]/30 via-transparent to-[#050302]" aria-hidden="true" />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 pb-20 pt-10 lg:px-10">
-        <header className="flex flex-col gap-4">
-          <div className="flex flex-row items-center justify-between gap-3">
-            {/* <Link href="/" className="flex items-center space-x-3">
-              <div className="w-14 h-14 animate-float">
-                <Image
-                  src="/realmkin-logo.png"
-                  alt="Realmkin Logo"
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <h1 className="font-bold text-lg w-1/2 uppercase tracking-wider gold-gradient-text">
-                THE REALMKIN
-              </h1>
-            </Link> */}
-
-            <div className="hidden items-center gap-3 md:flex">
-              {isConnected && formattedAddress && (
-                <span className="rounded-xl border border-[#f4c752]/25 bg-black/30 px-3 py-1 text-xs uppercase tracking-[0.26em] text-[#f7dca1]/70">
-                  {formattedAddress}
-                </span>
-              )}
-              <button
-                onClick={handleConnectClick}
-                disabled={isConnecting}
-                className="rounded-full border border-[#f4c752] bg-[#f4c752] px-5 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-black transition hover:scale-[1.03] disabled:opacity-70"
-              >
-                {isConnected ? "Disconnect" : isConnecting ? "Connecting…" : "Connect Wallet"}
-              </button>
+      {/* Mobile Header */}
+      <header className="lg:hidden relative z-10 mx-auto w-full max-w-6xl px-6 pt-10 lg:px-10">
+        <div className="flex flex-row items-center justify-between gap-3">
+          <Link href="/" className="flex items-center space-x-3">
+            <div className="w-14 h-14 animate-float">
+              <Image
+                src="/realmkin-logo.png"
+                alt="Realmkin Logo"
+                width={48}
+                height={48}
+                className="w-full h-full object-cover"
+              />
             </div>
+            <h1 className="font-bold text-lg uppercase tracking-wider gold-gradient-text">
+              THE REALMKIN
+            </h1>
+          </Link>
 
-            <div className="md:hidden">
-              <button
-                onClick={() => setShowMobileActions((value) => !value)}
-                className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
-                aria-expanded={showMobileActions}
-                aria-haspopup="true"
-              >
-                <span className={`text-xs transition-transform ${showMobileActions ? "rotate-180" : ""}`}>...</span>
-              </button>
-            </div>
-          </div>
+          {/* Mobile menu button - always visible */}
+          <button
+            onClick={() => setShowMobileActions((value) => !value)}
+            className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+            aria-expanded={showMobileActions}
+            aria-haspopup="true"
+          >
+            <span className={`text-xs transition-transform ${showMobileActions ? "rotate-180" : ""}`}>⋯</span>
+          </button>
+        </div>
+      </header>
 
-          <nav className="flex flex-wrap items-center gap-5 text-xs uppercase tracking-[0.28em] text-[#f7dca1]/70">
-            {/* {navItems.map((item) => {
-              const classes = [
-                "transition-colors",
-                item.current ? "text-[#f4c752]" : "",
-                item.disabled ? "cursor-default opacity-40" : "hover:text-[#f4c752]",
-              ]
-                .filter(Boolean)
-                .join(" ");
+      {/* Desktop Navigation */}
+      <DesktopNavigation />
 
-              return (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  className={classes}
-                  aria-current={item.current ? "page" : undefined}
-                  aria-disabled={item.disabled || undefined}
-                >
-                  {item.label}
-                </Link>
-              );
-            })} */}
-          </nav>
-        </header>
-
-        {isConnected && account && showMobileActions && (
-          <>
+      {/* Mobile Menu Modal */}
+      {showMobileActions && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+            onClick={() => setShowMobileActions(false)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <div
-              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
-              onClick={() => setShowMobileActions(false)}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-              <div
-                ref={mobileActionsRef}
-                className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
-              >
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
-                      <Image
-                        src="/realmkin-logo.png"
-                        alt="Realmkin"
-                        width={36}
-                        height={36}
-                        className="w-9 h-9 object-contain"
-                      />
-                    </div>
-                    <div className="text-left">
-                      <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">Realmkin</div>
-                    </div>
+              ref={mobileActionsRef}
+              className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
+                    <Image
+                      src="/realmkin-logo.png"
+                      alt="Realmkin"
+                      width={36}
+                      height={36}
+                      className="w-9 h-9 object-contain"
+                    />
                   </div>
-                  <button
-                    onClick={() => setShowMobileActions(false)}
-                    className="text-[#DA9C2F] text-xl font-bold"
-                    aria-label="Close menu"
-                  >
-                    ×
-                  </button>
+                  <div className="text-left">
+                    <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">Realmkin</div>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setShowMobileActions(false)}
+                  className="text-[#DA9C2F] text-xl font-bold"
+                  aria-label="Close menu"
+                >
+                  ×
+                </button>
+              </div>
 
-                <nav className="px-4 py-3 space-y-1.5">
-                  {MOBILE_MENU_ITEMS.map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setShowMobileActions(false)}
-                      className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
-                    >
-                      <span className="flex h-10 w-10 items-center justify-center">
-                        <Image
-                          src={item.icon}
-                          alt={`${item.label} icon`}
-                          width={20}
-                          height={20}
-                          className="w-8 h-8 object-contain"
-                        />
-                      </span>
-                      <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
-                        {item.label}
-                      </span>
-                    </Link>
-                  ))}
-                </nav>
+              <nav className="px-4 py-3 space-y-1.5">
+                {MOBILE_MENU_ITEMS.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setShowMobileActions(false)}
+                    className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center">
+                      <Image
+                        src={item.icon}
+                        alt={`${item.label} icon`}
+                        width={20}
+                        height={20}
+                        className="w-8 h-8 object-contain"
+                      />
+                    </span>
+                    <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
+                      {item.label}
+                    </span>
+                  </Link>
+                ))}
+              </nav>
 
+              {isConnected && account && (
                 <div className="px-5 py-4 border-t border-[#1f1f1f]">
                   <div className="flex items-center justify-end gap-3 w-full">
                     <div
@@ -269,10 +235,13 @@ export default function ComingSoonTemplate({ current }: ComingSoonTemplateProps)
                     </button>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          </>
-        )}
+          </div>
+        </>
+      )}
+
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 pb-20 pt-10 lg:px-10">
 
         <main className="flex flex-1 flex-col items-center justify-center gap-10 mt-20 text-center">
           <div className="relative flex w-full max-w-2xl flex-col items-center gap-8 rounded-3xl border border-[#f4c752]/25 bg-[#0c0903]/95 px-10 py-16 shadow-[0_40px_90px_rgba(0,0,0,0.55)]">
