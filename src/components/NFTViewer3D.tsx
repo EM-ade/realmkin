@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useRef, useEffect } from "react";
+import React, { Suspense, useRef, useEffect, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera, Environment, useGLTF, useTexture, useProgress, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -195,6 +195,21 @@ function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
   const extendedNFT = nft as ExtendedNFTMetadata;
   const has3DModel = !!(extendedNFT?.modelUrl && typeof extendedNFT.modelUrl === 'string');
   
+  // Detect mobile for performance optimizations
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+        window.innerWidth < 768
+      );
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
   // Preload test models on mount
   useEffect(() => {
     // Preload the test NFT model for faster loading
@@ -217,29 +232,40 @@ function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
   return (
     <div className="w-full h-full relative">
       <Canvas
-        shadows
+        shadows={!isMobile}
+        dpr={isMobile ? 1 : Math.min(window.devicePixelRatio, 2)}
+        performance={{ min: 0.5 }}
+        gl={{
+          antialias: !isMobile,
+          powerPreference: isMobile ? 'low-power' : 'high-performance',
+          alpha: false
+        }}
         className="bg-gradient-to-br from-[#080806] via-[#0B0B09] to-[#080806]"
       >
         <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
         
-        {/* Lighting setup */}
-        <ambientLight intensity={0.3} />
-        <spotLight
-          position={[10, 10, 10]}
-          angle={0.3}
-          penumbra={1}
-          intensity={1}
-          castShadow
-          color="#DA9C2F"
-        />
-        <spotLight
-          position={[-10, -10, -10]}
-          angle={0.3}
-          penumbra={1}
-          intensity={0.5}
-          color="#ffffff"
-        />
-        <pointLight position={[0, 0, 5]} intensity={0.5} color="#DA9C2F" />
+        {/* Lighting setup - Simplified on mobile */}
+        <ambientLight intensity={isMobile ? 0.5 : 0.3} />
+        {!isMobile && (
+          <>
+            <spotLight
+              position={[10, 10, 10]}
+              angle={0.3}
+              penumbra={1}
+              intensity={1}
+              castShadow
+              color="#DA9C2F"
+            />
+            <spotLight
+              position={[-10, -10, -10]}
+              angle={0.3}
+              penumbra={1}
+              intensity={0.5}
+              color="#ffffff"
+            />
+          </>
+        )}
+        <pointLight position={[0, 0, 5]} intensity={isMobile ? 0.8 : 0.5} color="#DA9C2F" />
 
         {/* Scene content - Key forces remount on NFT change */}
         <Suspense key={nft?.id || 'empty'} fallback={<LoadingFallback />}>
@@ -256,8 +282,12 @@ function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
           enableRotate={has3DModel} // Only allow rotation for 3D models
           autoRotate={has3DModel && autoRotate} // Only auto-rotate 3D models
           autoRotateSpeed={1}
-          panSpeed={has3DModel ? 1 : 2} // Faster panning for 2D images
+          panSpeed={has3DModel ? 1 : 2.5} // Faster panning for 2D images
           screenSpacePanning={!has3DModel} // Screen-space panning for 2D (easier scrolling)
+          touches={{
+            ONE: has3DModel ? THREE.TOUCH.ROTATE : THREE.TOUCH.PAN,
+            TWO: THREE.TOUCH.DOLLY_PAN
+          }}
           minDistance={4}
           maxDistance={15}
           maxPolarAngle={Math.PI / 1.5}

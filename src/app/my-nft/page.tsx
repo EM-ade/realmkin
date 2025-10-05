@@ -13,6 +13,7 @@ import DesktopNavigation from "@/components/DesktopNavigation";
 import { NFTMetadata } from "@/services/nftService";
 import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(
@@ -78,6 +79,7 @@ export default function MyNFTPage() {
   const { user, userData } = useAuth();
   const { account, isConnected, connectWallet, disconnectWallet, isConnecting } = useWeb3();
   const { nfts, isLoading: nftsLoading, error: nftsError, refreshNFTs } = useNFT();
+  const isMobile = useIsMobile();
 
   // Selected NFT for 3D viewer
   const [selectedNFT, setSelectedNFT] = useState<NFTMetadata | null>(null);
@@ -342,8 +344,8 @@ export default function MyNFTPage() {
         {/* Background Effects */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(244,199,82,0.15),rgba(5,3,2,0.95))]" aria-hidden="true" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#050302]/30 via-transparent to-[#050302]" aria-hidden="true" />
-        <EtherealParticles />
-        <ConstellationBackground />
+        {!isMobile && <EtherealParticles />}
+        {!isMobile && <ConstellationBackground />}
 
         {/* Mobile Header */}
         <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20">

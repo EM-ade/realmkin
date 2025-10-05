@@ -20,6 +20,7 @@ import {
 } from "@/services/rewardsService";
 import RealmTransition from "@/components/RealmTransition";
 import { useAutoClaim } from "@/hooks/useAutoClaim";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(
@@ -40,6 +41,7 @@ export default function WalletPage() {
     connectWallet,
     disconnectWallet,
   } = useWeb3();
+  const isMobile = useIsMobile();
 
   // Discord link status
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
@@ -566,8 +568,8 @@ const handleTransfer = useCallback(async () => {
     <ProtectedRoute>
       <div className="min-h-screen bg-[#080806] relative overflow-hidden">
         <RealmTransition active={showTransition} />
-        <EtherealParticles />
-        <ConstellationBackground />
+        {!isMobile && <EtherealParticles />}
+        {!isMobile && <ConstellationBackground />}
         
         {/* Mobile Header */}
         <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 mb-6 animate-fade-in">
