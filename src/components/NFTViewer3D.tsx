@@ -150,7 +150,7 @@ function LoadingFallback() {
 export default function NFTViewer3D({ nft, autoRotate = true }: NFTViewer3DProps) {
   // Check if NFT has 3D model
   const extendedNFT = nft as ExtendedNFTMetadata;
-  const has3DModel = extendedNFT?.modelUrl && typeof extendedNFT.modelUrl === 'string';
+  const has3DModel = !!(extendedNFT?.modelUrl && typeof extendedNFT.modelUrl === 'string');
   
   return (
     <div className="w-full h-full relative">
