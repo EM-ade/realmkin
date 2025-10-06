@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useWeb3 } from '@/contexts/Web3Context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -11,22 +12,24 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, adminWallets }: ProtectedRouteProps) {
   const { user, userData, loading } = useAuth();
+  const { isConnected } = useWeb3();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
-    if (!user) {
-      router.push('/');
+    // Allow access if either user is authenticated OR wallet is connected
+    if (!user && !isConnected) {
+      router.push('/login');
       return;
     }
 
     if (adminWallets && userData && !adminWallets.includes(userData.walletAddress ?? '')) {
       router.push('/');
     }
-  }, [user, userData, loading, router, adminWallets]);
+  }, [user, userData, loading, isConnected, router, adminWallets]);
 
-  if (loading || !user || (adminWallets && userData && !adminWallets.includes(userData.walletAddress ?? ''))) {
+  if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
         <video
@@ -39,6 +42,15 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
         />
       </div>
     );
+  }
+
+  // Allow access if either authenticated or wallet connected
+  if (!user && !isConnected) {
+    return null;
+  }
+
+  if (adminWallets && userData && !adminWallets.includes(userData.walletAddress ?? '')) {
+    return null;
   }
 
   return <>{children}</>;

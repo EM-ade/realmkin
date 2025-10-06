@@ -55,7 +55,6 @@ export default function WalletPage() {
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
-  const mobileActionsRef = useRef<HTMLDivElement | null>(null);
 
   // Rewards state
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
@@ -136,46 +135,19 @@ export default function WalletPage() {
     }
   }, [discordUnlinking, gatekeeperBase]);
 
-  useEffect(() => {
-    if (!showMobileActions) return;
-
-    function handlePointer(event: MouseEvent) {
-      if (!mobileActionsRef.current?.contains(event.target as Node)) {
-        setShowMobileActions(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setShowMobileActions(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [showMobileActions]);
-
+  // Removed duplicate click handler - MobileMenuOverlay handles click outside
+  
+  // Keep body scroll handler for wallet page
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const originalOverflow = document.body.style.overflow;
-
+    
     if (showMobileActions) {
+      const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = originalOverflow;
       };
     }
-
-    document.body.style.overflow = originalOverflow;
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
   }, [showMobileActions]);
 
   useEffect(() => {

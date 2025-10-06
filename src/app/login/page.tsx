@@ -10,6 +10,7 @@ import { formatAddress } from "@/utils/formatAddress";
 // import AnimatedRoadmap from "@/components/AnimatedRoadmap";
 import SocialLinks from "@/components/SocialLinks";
 import DesktopNavigation from "@/components/DesktopNavigation";
+import LoginBackground from "@/components/LoginBackground";
 import React from "react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getAuth } from "firebase/auth";
@@ -40,7 +41,6 @@ export default function LoginPage() {
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const mobileActionsRef = useRef<HTMLDivElement | null>(null);
-  const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   // const [showRoadmap, setShowRoadmap] = useState(false);
   // const [showWhitepaper, setShowWhitepaper] = useState(false);
@@ -67,37 +67,6 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const video = backgroundVideoRef.current;
-    if (video) {
-      video.playbackRate = 0.75; // slightly faster slow motion
-    }
-    if (!video) return;
-
-    const playVideo = () => {
-      try {
-        const maybePromise = video.play();
-        if (maybePromise !== undefined) {
-          maybePromise.catch(() => {
-            /* Ignore autoplay restrictions */
-          });
-        }
-      } catch {
-        /* Ignore playback errors */
-      }
-    };
-
-    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      playVideo();
-      return;
-    }
-
-    video.addEventListener("loadeddata", playVideo);
-
-    return () => {
-      video.removeEventListener("loadeddata", playVideo);
-    };
-  }, []);
 
 
   useEffect(() => {
@@ -571,30 +540,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] relative overflow-hidden bg-[#865900]">
-      {/* Background Video */}
-      <video
-        ref={backgroundVideoRef}
-        className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        poster="/Loading-Screen-poster.jpg"
-      >
-        <source src="/Loading-Screen.webm" type="video/webm" />
-        <source src="/Loading-Screen.mp4" type="video/mp4" />
-      </video>
-      <div className="absolute inset-0 bg-[#865900] opacity-80"></div>
+    <div className="min-h-screen min-h-[100dvh] relative overflow-hidden bg-black">
+      {/* Mystical Background Animation */}
+      <LoginBackground />
+      
+      {/* Golden overlay */}
+      <div className="absolute inset-0 bg-[#865900] opacity-60 pointer-events-none"></div>
       <div
-        className="absolute inset-0 mix-blend-screen"
+        className="absolute inset-0 mix-blend-screen pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(236, 187, 27, 0.85) 0%, rgba(236, 187, 27, 0.65) 35%, rgba(134, 89, 0, 0.5) 70%, rgba(134, 89, 0, 0.9) 100%)",
+            "radial-gradient(circle at center, rgba(236, 187, 27, 0.5) 0%, rgba(236, 187, 27, 0.3) 35%, rgba(134, 89, 0, 0.2) 70%, rgba(134, 89, 0, 0.4) 100%)",
         }}
       ></div>
-      <div className="absolute inset-0 bg-gradient-to-br from-[#865900]/90 via-[#b47a0a]/75 to-[#6a4700]/85 mix-blend-multiply"></div>
 
       {/* Mobile Header */}
       <header className="lg:hidden relative z-10 flex flex-row justify-between items-center gap-3 p-6 text-black">

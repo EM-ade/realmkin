@@ -1,6 +1,7 @@
-import { useRef, useEffect } from "react";
-import Link from "next/link";
+import { useRef, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { createPortal } from "react-dom";
 
 interface MenuItem {
   label: string;
@@ -42,28 +43,28 @@ export default function MobileMenuOverlay({
   onDisconnectWallet,
 }: MobileMenuOverlayProps) {
   const mobileActionsRef = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+  const previousOverflowRef = useRef<string | null>(null);
 
-  // Close on click outside
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Close on click outside - simplified
   useEffect(() => {
     if (!isOpen) return;
 
-    function handlePointer(event: MouseEvent) {
-      if (!mobileActionsRef.current?.contains(event.target as Node)) {
-        onClose();
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handlePointer);
     document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("mousedown", handlePointer);
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen, onClose]);
@@ -71,33 +72,44 @@ export default function MobileMenuOverlay({
   // Prevent body scroll when open
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const originalOverflow = document.body.style.overflow;
 
     if (isOpen) {
+      previousOverflowRef.current = document.body.style.overflow || "";
       document.body.style.overflow = "hidden";
       return () => {
-        document.body.style.overflow = originalOverflow;
+        if (previousOverflowRef.current !== null) {
+          document.body.style.overflow = previousOverflowRef.current;
+        } else {
+          document.body.style.removeProperty("overflow");
+        }
       };
     }
 
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
+    if (previousOverflowRef.current !== null) {
+      document.body.style.overflow = previousOverflowRef.current;
+      previousOverflowRef.current = null;
+    } else {
+      document.body.style.removeProperty("overflow");
+    }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted || typeof document === "undefined") return null;
 
-  return (
-    <>
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
+      onClick={handleBackdropClick}
+    >
       <div
-        className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
-        onClick={onClose}
-      />
-      <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-        <div
-          ref={mobileActionsRef}
-          className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
-        >
+        ref={mobileActionsRef}
+        className="relative w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
+      >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
             <div className="flex items-center gap-3">
@@ -128,11 +140,13 @@ export default function MobileMenuOverlay({
           {/* Navigation */}
           <nav className="px-4 py-3 space-y-1.5">
             {menuItems.map((item) => (
-              <Link
+              <button
                 key={item.label}
-                href={item.href}
-                onClick={onClose}
-                className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
+                onClick={() => {
+                  router.push(item.href);
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors text-left"
               >
                 <span className="flex h-10 w-10 items-center justify-center">
                   <Image
@@ -146,13 +160,15 @@ export default function MobileMenuOverlay({
                 <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
                   {item.label}
                 </span>
-              </Link>
+              </button>
             ))}
             {isAdmin && (
-              <Link
-                href="/admin"
-                onClick={onClose}
-                className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
+              <button
+                onClick={() => {
+                  router.push("/admin");
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors text-left"
               >
                 <span className="flex h-10 w-10 items-center justify-center">
                   <Image
@@ -166,7 +182,7 @@ export default function MobileMenuOverlay({
                 <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
                   Admin
                 </span>
-              </Link>
+              </button>
             )}
           </nav>
 
@@ -249,7 +265,7 @@ export default function MobileMenuOverlay({
             </div>
           )}
         </div>
-      </div>
-    </>
+    </div>,
+    document.body
   );
 }

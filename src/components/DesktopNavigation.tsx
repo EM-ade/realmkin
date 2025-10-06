@@ -20,20 +20,9 @@ const NAV_ITEMS = [
 
 export default function DesktopNavigation() {
   const pathname = usePathname();
-  const { user, userData, logout } = useAuth();
+  const { user, userData } = useAuth();
   const { account, isConnected, connectWallet, disconnectWallet, isConnecting } = useWeb3();
   
-  // Auto-logout on wallet disconnect (only if user was previously connected)
-  useEffect(() => {
-    // Only trigger logout if user is authenticated but wallet is disconnected
-    if (user && !isConnected && pathname !== '/login') {
-      logout();
-      if (typeof window !== 'undefined') {
-        window.location.assign('/login');
-      }
-    }
-  }, [isConnected, user, logout, pathname]);
-
   // Discord and balance states
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
