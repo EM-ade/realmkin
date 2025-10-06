@@ -20,9 +20,20 @@ const NAV_ITEMS = [
 
 export default function DesktopNavigation() {
   const pathname = usePathname();
-  const { user, userData } = useAuth();
+  const { user, userData, logout } = useAuth();
   const { account, isConnected, connectWallet, disconnectWallet, isConnecting } = useWeb3();
   
+  // Auto-logout on wallet disconnect (only if user was previously connected)
+  useEffect(() => {
+    // Only trigger logout if user is authenticated but wallet is disconnected
+    if (user && !isConnected && pathname !== '/login') {
+      logout();
+      if (typeof window !== 'undefined') {
+        window.location.assign('/login');
+      }
+    }
+  }, [isConnected, user, logout, pathname]);
+
   // Discord and balance states
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
@@ -169,39 +180,41 @@ export default function DesktopNavigation() {
 
   return (
     <nav className="hidden lg:block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
+      <div className="mx-[10%] max-w-7xl">
+        <div className="flex justify-between h-16">
           {/* Left: Logo */}
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10">
-              <Image
-                src="/realmkin-logo.png"
-                alt="Realmkin Logo"
-                width={40}
-                height={40}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <h1 className="font-bold text-base uppercase tracking-wider gold-gradient-text">
-              THE REALMKIN
-            </h1>
-          </Link>
+          <div className="flex items-center px-4">
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="w-14 h-10">
+                <Image
+                  src="/realmkin-logo.png"
+                  alt="Realmkin Logo"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h1 className="font-bold text-base uppercase tracking-wider gold-gradient-text">
+                THE REALMKIN
+              </h1>
+            </Link>
+          </div>
 
           {/* Center: Navigation Links */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 px-8">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm uppercase tracking-wider ${
+                  className={`flex items-center gap-2 px-8 py-2 rounded-lg transition-all text-sm uppercase tracking-wider ${
                     isActive
                       ? "bg-[#DA9C2F] text-black font-semibold"
                       : "text-[#DA9C2F] hover:bg-[#DA9C2F]/10"
                   }`}
                 >
-                  <Image src={item.icon} alt={item.label} width={20} height={20} className="w-5 h-5" />
+                  {/* <Image src={item.icon} alt={item.label} width={20} height={20} className="w-5 h-5" /> */}
                   <span>{item.label}</span>
                 </Link>
               );
@@ -209,67 +222,74 @@ export default function DesktopNavigation() {
           </div>
 
           {/* Right: Wallet Controls */}
-          <div className="flex items-center gap-3">
-            {isConnected && account && pathname === '/wallet' && (
+          <div className="flex items-center gap-6 px-4">
+            {isConnected && account && (
               <>
-                {/* Wallet Balance - Only on wallet page */}
-                <div className="bg-[#0B0B09] pl-3 pr-1 py-2 rounded-lg border border-[#404040] flex-initial min-w-[180px]">
-                  <div className="text-[#DA9C2F] font-medium text-sm whitespace-nowrap flex items-center gap-2">
-                    <Image
-                      src="/wallet.jpeg"
-                      alt="Wallet Logo"
-                      width={16}
-                      height={16}
-                      className="w-6 h-6 object-contain"
-                    />
-                    <span>{formattedWalletBalance}</span>
-                  </div>
-                </div>
-
-                {/* Discord Link Status / Connect Button */}
+                {/* Dynamic Connect Button with Dropdown */}
                 <div className="relative">
                   <button
-                    onClick={() => {
-                      if (!discordLinked) {
-                        handleDiscordConnect();
-                        return;
-                      }
-                      setShowDiscordMenu((v) => !v);
-                    }}
-                    disabled={discordConnecting}
-                    className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border ${discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap`}
+                    onClick={() => setShowDiscordMenu((v) => !v)}
+                    className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-4 py-2 rounded-lg border ${isConnected && discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap min-w-[140px]`}
                   >
-                    {discordLinked ? (
-                      <>
-                        <span>DISCORD LINKED</span>
-                        <span className="ml-1 text-xs opacity-80">▼</span>
-                      </>
-                    ) : (
-                      <span>{discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}</span>
-                    )}
+                    <span>
+                      {isConnected && discordLinked
+                        ? 'Connected'
+                        : isConnected && !discordLinked
+                          ? 'Connect Discord'
+                          : !isConnected && discordLinked
+                            ? 'Connect Wallet'
+                            : 'Connect'}
+                    </span>
+                    <span className="text-xs opacity-80">▼</span>
                   </button>
-                  {discordLinked && showDiscordMenu && (
+                  {/* Dropdown - always accessible */}
+                  {showDiscordMenu && (
                     <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
+                      {/* Discord Option */}
                       <button
-                        onClick={async () => {
-                          const success = await handleDiscordDisconnect();
-                          if (success) {
-                            setShowDiscordMenu(false);
+                        onClick={() => {
+                          if (!discordLinked) {
+                            handleDiscordConnect();
+                          } else {
+                            handleDiscordDisconnect();
                           }
+                          setShowDiscordMenu(false);
                         }}
+                        disabled={discordConnecting || discordUnlinking}
                         className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
                       >
-                        {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect'}
+                        {discordConnecting
+                          ? 'CONNECTING…'
+                          : discordUnlinking
+                            ? 'DISCONNECTING…'
+                            : discordLinked
+                              ? 'Disconnect Discord'
+                              : 'Connect Discord'}
+                      </button>
+                      {/* Wallet Option */}
+                      <button
+                        onClick={() => {
+                          if (!isConnected) {
+                            connectWallet();
+                          } else {
+                            disconnectWallet();
+                          }
+                          setShowDiscordMenu(false);
+                        }}
+                        disabled={isConnecting}
+                        className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg whitespace-nowrap"
+                      >
+                        {isConnected ? 'Disconnect Wallet' : isConnecting ? 'CONNECTING...' : 'Connect Wallet'}
                       </button>
                     </div>
                   )}
                 </div>
 
-                {/* Admin Link - Only on wallet page */}
+                {/* Admin Link - Show on all pages */}
                 {userData?.admin && (
                   <Link
                     href="/admin"
-                    className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors text-center"
+                    className="bg-[#0B0B09] px-4 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors text-center min-w-[100px]"
                   >
                     ADMIN
                   </Link>

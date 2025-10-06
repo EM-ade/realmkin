@@ -204,18 +204,21 @@ export default function Home() {
             {/* Row 1 */}
             <QuickAccessCard
               icon="🎭"
+              iconSrc="/flex-model.png"
               label="My NFTs"
               stat={`${nftCount}`}
               href="/my-nft"
             />
             <QuickAccessCard
               icon="💰"
+              iconSrc="/wallet.png"
               label="Wallet"
               stat={`${balanceDisplay} $`}
               href="/wallet"
             />
             <QuickAccessCard
               icon="⚔️"
+              iconSrc="/game.png"
               label="Game"
               stat="Soon"
               href="/game"
@@ -225,6 +228,7 @@ export default function Home() {
             {/* Row 2 */}
             <QuickAccessCard
               icon="📊"
+              iconSrc="/staking.png"
               label="Staking"
               stat="Soon"
               href="/staking"
@@ -232,7 +236,8 @@ export default function Home() {
             />
             <QuickAccessCard
               icon="🛍️"
-              label="Shop"
+              iconSrc="/merches.png"
+              label="Merch"
               stat="Soon"
               href="/merches"
               disabled

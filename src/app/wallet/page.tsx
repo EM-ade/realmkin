@@ -19,7 +19,6 @@ import {
   UserRewards,
   RewardsCalculation,
 } from "@/services/rewardsService";
-import RealmTransition from "@/components/RealmTransition";
 import { useAutoClaim } from "@/hooks/useAutoClaim";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import SocialLinks from "@/components/SocialLinks";
@@ -238,8 +237,6 @@ export default function WalletPage() {
     }>
   >([]);
 
-  // Admin
-  const [showTransition, setShowTransition] = useState(true);
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -285,11 +282,6 @@ export default function WalletPage() {
     }
   }, [account, user]);
 
-  // Page transition: show overlay on initial auth/page load
-  useEffect(() => {
-    const t = setTimeout(() => setShowTransition(false), 900);
-    return () => clearTimeout(t);
-  }, []);
 
   // Handle withdrawal
   const handleWithdraw = useCallback(async () => {
@@ -572,12 +564,11 @@ const handleTransfer = useCallback(async () => {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-[#080806] relative overflow-hidden">
-        <RealmTransition active={showTransition} />
         {!isMobile && <EtherealParticles />}
         {!isMobile && <ConstellationBackground />}
         
         {/* Mobile Header */}
-        <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 mb-6 animate-fade-in">
+        <header className="lg:hidden  flex flex-row justify-between items-center gap-3 p-4 mb-6 animate-fade-in">
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14 animate-float">
               <Image
@@ -630,7 +621,7 @@ const handleTransfer = useCallback(async () => {
         {/* Admin Dashboard Section removed in favor of dedicated /admin page */}
 
         {/* Main Content Container */}
-        <div className="p-4">
+        <div className="p-4 md:mx-[10%] lg:mx-[15%]">
         {/* Reward Section */}
         <section className="card mb-6 premium-card interactive-element">
           <h2 className="text-label mb-2">REWARD</h2>
@@ -641,14 +632,30 @@ const handleTransfer = useCallback(async () => {
             <p className="text-[#C4A962] text-sm">
               Web3 Gaming Ecosystem • Multi-Contract Support
             </p> */}
-            <div className="text-white font-bold text-2xl mb-2">
-              Claimable:{" "}
-              <span className="">
-                {userRewards
-                  ? rewardsService.formatMKIN(userRewards.pendingRewards)
-                  : "₥0"}{" "}
-                MKIN
-              </span>
+            <div className="flex justify-between items-center">
+              <div className="text-white font-bold text-2xl">
+                Claimable:{" "}
+                <span className="">
+                  {userRewards
+                    ? rewardsService.formatMKIN(userRewards.pendingRewards)
+                    : "₥0"}{" "}
+                  MKIN
+                </span>
+              </div>
+
+              {/* Wallet Balance - Right aligned */}
+              {isConnected && (
+                <div className="flex items-center gap-2 text-[#DA9C2F] font-medium text-sm">
+                  <Image
+                    src="/wallet.jpeg"
+                    alt="Wallet"
+                    width={20}
+                    height={20}
+                    className="w-5 h-5 object-contain"
+                  />
+                  <span className="whitespace-nowrap">{formattedWalletBalance}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col items-center space-y-3 w-full">
@@ -665,20 +672,6 @@ const handleTransfer = useCallback(async () => {
             </div>
           </div>
         </section>
-
-        {/* Wallet Balance Section */}
-        {isConnected && (
-          <section className="card premium-card interactive-element mb-6 inline-flex items-center gap-3 px-4 py-3 rounded-2xl border border-[#404040] bg-[#0B0B09] text-[#DA9C2F] font-semibold animate-fade-in">
-            <Image
-              src="/wallet.jpeg"
-              alt="Wallet"
-              width={20}
-              height={20}
-              className="w-6 h-6 object-contain"
-            />
-            <span>{formattedWalletBalance}</span>
-          </section>
-        )}
 
         {/* Combined Actions Section */}
         <section className="mb-6">

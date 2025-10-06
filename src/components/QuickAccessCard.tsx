@@ -1,7 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 
 interface QuickAccessCardProps {
   icon: string;
+  iconSrc?: string;
   label: string;
   stat: string;
   href: string;
@@ -10,6 +12,7 @@ interface QuickAccessCardProps {
 
 export default function QuickAccessCard({
   icon,
+  iconSrc,
   label,
   stat,
   href,
@@ -18,8 +21,8 @@ export default function QuickAccessCard({
   const CardContent = (
     <div
       className={`
-        relative h-full rounded-xl border border-[#DA9C2F]/30 
-        bg-[#1b1205]/95 backdrop-blur-sm p-3 
+        relative h-full rounded-xl border border-[#DA9C2F]/30
+        bg-[#1b1205]/95 backdrop-blur-sm p-3
         flex flex-col items-center justify-center gap-2
         transition-all duration-300
         ${
@@ -29,8 +32,20 @@ export default function QuickAccessCard({
         }
       `}
     >
-      {/* Icon */}
-      <div className="text-3xl">{icon}</div>
+      {/* Icon - Use image if provided, otherwise fallback to emoji */}
+      {iconSrc ? (
+        <div className="w-10 h-10 flex items-center justify-center">
+          <Image
+            src={iconSrc}
+            alt={label}
+            width={32}
+            height={32}
+            className="w-full h-full object-contain"
+          />
+        </div>
+      ) : (
+        <div className="text-3xl">{icon}</div>
+      )}
 
       {/* Label */}
       <div className="text-[#DA9C2F] text-xs font-bold uppercase tracking-wider text-center">

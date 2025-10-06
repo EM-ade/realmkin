@@ -7,7 +7,6 @@ import RealmTransition from "@/components/RealmTransition";
 export default function RouteTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [show, setShow] = useState(true);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   useLayoutEffect(() => {
     // Mark HTML as hydrated to allow body to show
@@ -15,21 +14,14 @@ export default function RouteTransition({ children }: { children: React.ReactNod
       document.documentElement.classList.add('hydrated');
     }
 
-    // Skip transition after first load
-    if (!isFirstLoad) {
-      setShow(false);
-      return;
-    }
-
-    const MIN_DURATION = 600; // Fast but smooth transition
+    const MIN_DURATION = 5000; // 5-second mystical transition
 
     setShow(true);
     const t = window.setTimeout(() => {
       setShow(false);
-      setIsFirstLoad(false);
     }, MIN_DURATION);
     return () => window.clearTimeout(t);
-  }, [pathname, isFirstLoad]);
+  }, [pathname]);
 
   return (
     <>
