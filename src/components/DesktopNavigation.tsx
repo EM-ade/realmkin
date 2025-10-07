@@ -168,36 +168,35 @@ export default function DesktopNavigation() {
   }, [discordLinked]);
 
   return (
-    <nav className="hidden lg:block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40">
-      <div className="mx-[10%] max-w-7xl">
-        <div className="flex justify-between h-16">
+    <nav className="hidden lg:block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40 border-b border-[#DA9C2F]/15">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 xl:px-10 py-3">
           {/* Left: Logo */}
-          <div className="flex items-center px-4">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-14 h-10">
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-12 h-10 xl:w-16 xl:h-12">
                 <Image
                   src="/realmkin-logo.png"
                   alt="Realmkin Logo"
                   width={40}
                   height={40}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               </div>
-              <h1 className="font-bold text-base uppercase tracking-wider gold-gradient-text">
+              <h1 className="font-bold text-sm uppercase tracking-[0.35em] gold-gradient-text xl:text-base">
                 THE REALMKIN
               </h1>
             </Link>
           </div>
 
           {/* Center: Navigation Links */}
-          <div className="flex items-center gap-4 px-8">
+          <div className="flex items-center gap-2 xl:gap-4">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-8 py-2 rounded-lg transition-all text-sm uppercase tracking-wider ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-xs uppercase tracking-[0.3em] xl:px-6 xl:text-sm ${
                     isActive
                       ? "bg-[#DA9C2F] text-black font-semibold"
                       : "text-[#DA9C2F] hover:bg-[#DA9C2F]/10"
@@ -211,14 +210,14 @@ export default function DesktopNavigation() {
           </div>
 
           {/* Right: Wallet Controls */}
-          <div className="flex items-center gap-6 px-4">
+          <div className="flex items-center gap-4 xl:gap-6">
             {isConnected && account && (
               <>
                 {/* Dynamic Connect Button with Dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setShowDiscordMenu((v) => !v)}
-                    className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-4 py-2 rounded-lg border ${isConnected && discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-sm transition-colors whitespace-nowrap min-w-[140px]`}
+                    className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-3 py-2 rounded-xl border ${isConnected && discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-xs transition-colors whitespace-nowrap min-w-[130px] xl:text-sm`}
                   >
                     <span>
                       {isConnected && discordLinked
@@ -229,7 +228,7 @@ export default function DesktopNavigation() {
                             ? 'Connect Wallet'
                             : 'Connect'}
                     </span>
-                    <span className="text-xs opacity-80">▼</span>
+                    <span className="text-[10px] xl:text-xs opacity-80">▼</span>
                   </button>
                   {/* Dropdown - always accessible */}
                   {showDiscordMenu && (
@@ -245,7 +244,7 @@ export default function DesktopNavigation() {
                           setShowDiscordMenu(false);
                         }}
                         disabled={discordConnecting || discordUnlinking}
-                        className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg"
+                        className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg text-xs"
                       >
                         {discordConnecting
                           ? 'CONNECTING…'
@@ -266,7 +265,7 @@ export default function DesktopNavigation() {
                           setShowDiscordMenu(false);
                         }}
                         disabled={isConnecting}
-                        className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg whitespace-nowrap"
+                        className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg whitespace-nowrap text-xs"
                       >
                         {isConnected ? 'Disconnect Wallet' : isConnecting ? 'CONNECTING...' : 'Connect Wallet'}
                       </button>
@@ -278,7 +277,7 @@ export default function DesktopNavigation() {
                 {userData?.admin && (
                   <Link
                     href="/admin"
-                    className="bg-[#0B0B09] px-4 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors text-center min-w-[100px]"
+                    className="bg-[#0B0B09] px-3 py-2 rounded-xl border border-[#404040] text-[#DA9C2F] font-medium text-xs hover:bg-[#1a1a1a] transition-colors text-center min-w-[90px] xl:text-sm xl:px-4"
                   >
                     ADMIN
                   </Link>
@@ -291,13 +290,12 @@ export default function DesktopNavigation() {
               <button
                 onClick={connectWallet}
                 disabled={isConnecting}
-                className="bg-[#DA9C2F] text-black font-semibold px-4 py-2 rounded-lg hover:bg-[#ffbf00] transition-colors text-sm uppercase tracking-wider disabled:opacity-70"
+                className="bg-[#DA9C2F] text-black font-semibold px-3 py-2 rounded-xl hover:bg-[#ffbf00] transition-colors text-xs uppercase tracking-[0.35em] disabled:opacity-70 xl:text-sm xl:px-5"
               >
                 {isConnecting ? 'CONNECTING...' : 'CONNECT WALLET'}
               </button>
             )}
           </div>
-        </div>
       </div>
     </nav>
   );

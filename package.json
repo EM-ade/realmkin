@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate:wordle": "node scripts/wordle/generate-word-lists.mjs"
   },
   "dependencies": {
     "@metamask/detect-provider": "^2.0.0",

@@ -1,17 +1,68 @@
 import Image from "next/image";
+import Link from "next/link";
+import clsx from "clsx";
+
+type StatusVariant = "coming-soon" | "new" | "available";
 
 export type GameCardProps = {
   title: string;
   description: string;
   imageSrc?: string | null;
   eta?: string;
+  href?: string;
+  status?: StatusVariant;
 };
 
-export default function GameCard({ title, description, imageSrc, eta }: GameCardProps) {
-  return (
+function resolveStatus(status: StatusVariant | undefined, href?: string): StatusVariant {
+  if (status) return status;
+  if (href) return "available";
+  return "coming-soon";
+}
+
+const STATUS_RIBBON: Record<StatusVariant, { label: string; className: string }> = {
+  "coming-soon": {
+    label: "Coming Soon",
+    className: "bg-[#DA9C2F] text-[#050302]",
+  },
+  new: {
+    label: "Now Live",
+    className: "bg-[#2b7a75] text-[#050302]",
+  },
+  available: {
+    label: "Featured",
+    className: "bg-[#F4C752] text-[#050302]",
+  },
+};
+
+const STATUS_BADGE: Record<StatusVariant, { label: string; className: string }> = {
+  "coming-soon": {
+    label: "Coming Soon",
+    className: "bg-[#DA9C2F] text-[#050302]",
+  },
+  new: {
+    label: "Play Now",
+    className: "bg-[#2b7a75]/90 text-[#e7fff8]",
+  },
+  available: {
+    label: "Play Now",
+    className: "bg-[#F4C752] text-[#050302]",
+  },
+};
+
+export default function GameCard({ title, description, imageSrc, eta, href, status }: GameCardProps) {
+  const variant = resolveStatus(status, href);
+  const ribbon = STATUS_RIBBON[variant];
+  const badge = STATUS_BADGE[variant];
+  const isInteractive = Boolean(href);
+
+  const card = (
     <article
-      className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-[#DA9C2F]/25 bg-[#0B0B09]/90 shadow-[0_18px_38px_rgba(0,0,0,0.45)] transition duration-300 ease-out hover:-translate-y-[3px] hover:border-[#DA9C2F]/60 hover:shadow-[0_25px_60px_rgba(218,156,47,0.25)] cursor-not-allowed"
-      aria-disabled="true"
+      className={clsx(
+        "relative flex h-full flex-col overflow-hidden rounded-3xl border border-[#DA9C2F]/25 bg-[#0B0B09]/90 shadow-[0_18px_38px_rgba(0,0,0,0.45)] transition duration-300 ease-out",
+        isInteractive
+          ? "cursor-pointer hover:-translate-y-[3px] hover:border-[#DA9C2F]/60 hover:shadow-[0_25px_60px_rgba(218,156,47,0.25)]"
+          : "cursor-not-allowed"
+      )}
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-[26px] border border-[#DA9C2F]/20 bg-[radial-gradient(circle_at_top,_rgba(218,156,47,0.2),rgba(5,3,2,0.9))] md:aspect-[4/3]">
         {imageSrc ? (
@@ -38,8 +89,13 @@ export default function GameCard({ title, description, imageSrc, eta }: GameCard
         )}
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050302]/80 via-transparent to-transparent" />
-        <span className="pointer-events-none absolute -right-14 top-6 rotate-45 bg-[#DA9C2F] px-10 py-1 text-[10px] font-semibold uppercase tracking-[0.4em] text-[#050302] shadow-[0_8px_20px_rgba(218,156,47,0.35)]">
-          Coming Soon
+        <span
+          className={clsx(
+            "pointer-events-none absolute -right-14 top-6 rotate-45 px-10 py-1 text-[10px] font-semibold uppercase tracking-[0.4em] shadow-[0_8px_20px_rgba(218,156,47,0.35)]",
+            ribbon.className
+          )}
+        >
+          {ribbon.label}
         </span>
       </div>
 
@@ -54,16 +110,32 @@ export default function GameCard({ title, description, imageSrc, eta }: GameCard
         </div>
 
         <div className="mt-auto flex items-center justify-between pt-2">
-          <span className="rounded-full bg-[#DA9C2F] px-4 py-1 text-[10px] font-semibold uppercase tracking-[0.38em] text-[#050302]">
-            Coming Soon
+          <span
+            className={clsx(
+              "rounded-full px-4 py-1 text-[10px] font-semibold uppercase tracking-[0.38em]",
+              badge.className
+            )}
+          >
+            {badge.label}
           </span>
-          {/* {eta && (
-            <span className="text-[10px] uppercase tracking-[0.38em] text-white/45">
-              {eta}
-            </span>
-          )} */}
+          {variant === "coming-soon" && eta ? (
+            <span className="text-[10px] uppercase tracking-[0.38em] text-white/45">{eta}</span>
+          ) : null}
         </div>
       </div>
     </article>
+  );
+
+  if (!isInteractive || !href) {
+    return card;
+  }
+
+  return (
+    <Link
+      href={href}
+      className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DA9C2F]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050302]"
+    >
+      {card}
+    </Link>
   );
 }

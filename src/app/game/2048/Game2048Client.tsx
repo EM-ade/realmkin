@@ -278,10 +278,11 @@ export default function Game2048Client() {
         </div>
       </div>
 
-      <div className="relative flex flex-col gap-6 rounded-3xl border border-[#DA9C2F]/25 bg-[#0B0B09]/80 p-5 shadow-[0_30px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm md:p-8">
+      <div className="relative flex flex-col gap-6 rounded-3xl border border-[#DA9C2F]/25 bg-[#0B0B09]/80 p-5 shadow-[0_30px_60px_RGBA(0,0,0,0.45)] backdrop-blur-sm md:p-8">
         <div
           ref={boardRef}
-          className="relative mx-auto w-full max-w-xl select-none"
+          className="relative mx-auto w-full max-w-xl select-none touch-none"
+          style={{ touchAction: "none" }}
         >
           <div className="relative aspect-square">
             <div className="absolute inset-0 rounded-[32px] bg-[#120C07]/90" />

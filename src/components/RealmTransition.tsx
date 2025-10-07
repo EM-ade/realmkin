@@ -176,7 +176,7 @@ export default function RealmTransition({ active }: RealmTransitionProps) {
         {/* Centered Realmkin Logo */}
         <div className="logo-container">
           <Image
-            src="/realmkin-logo.png"
+            src="/realmkin.png"
             alt="Realmkin"
             width={180}
             height={180}

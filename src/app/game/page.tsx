@@ -40,7 +40,8 @@ export default function GamePage() {
         title: "Wordle",
         description: "Daily cipher challenge harnessing the power of the Void.",
         imageSrc: "/wordle.png",
-        eta: "Phase II",
+        href: "/game/wordle",
+        status: "new",
       },
       {
         title: "Trait Crush",

@@ -1,0 +1,143 @@
+/* Wordle Animations - Exact match to original react-wordle */
+
+@keyframes typeIn {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes revealAbsentCell {
+  0% {
+    transform: rotateX(0deg);
+    background-color: #121213;
+  }
+  50% {
+    background-color: #121213;
+  }
+  50.5% {
+    background-color: #3a3a3c;
+  }
+  100% {
+    transform: rotateX(180deg);
+    background-color: #3a3a3c;
+  }
+}
+
+@keyframes revealPresentCell {
+  0% {
+    transform: rotateX(0deg);
+    background-color: #121213;
+  }
+  50% {
+    background-color: #121213;
+  }
+  50.5% {
+    background-color: #b59f3b;
+  }
+  100% {
+    transform: rotateX(180deg);
+    background-color: #b59f3b;
+  }
+}
+
+@keyframes revealCorrectCell {
+  0% {
+    transform: rotateX(0deg);
+    background-color: #121213;
+  }
+  50% {
+    background-color: #121213;
+  }
+  50.5% {
+    background-color: #538d4e;
+  }
+  100% {
+    transform: rotateX(180deg);
+    background-color: #538d4e;
+  }
+}
+
+@keyframes rotateLetter {
+  0% {
+    transform: rotateX(0deg);
+  }
+  100% {
+    transform: rotateX(180deg);
+  }
+}
+
+@keyframes jiggle {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-10px, 0);
+  }
+  50% {
+    transform: translate(10px, 0);
+  }
+  75% {
+    transform: translate(-10px, 0);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+/* Animation classes */
+.cell {
+  transform-style: preserve-3d;
+}
+
+.cell span {
+  display: inline-block;
+  transform-style: preserve-3d;
+}
+
+.animate-flip {
+  animation-duration: 0.3s;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.animate-flip.absent {
+  animation-name: revealAbsentCell;
+}
+
+.animate-flip.correct {
+  animation-name: revealCorrectCell;
+}
+
+.animate-flip.present {
+  animation-name: revealPresentCell;
+}
+
+.animate-flip-letter {
+  animation-duration: 0.3s;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  animation-name: rotateLetter;
+}
+
+.animate-shake {
+  animation: jiggle 0.3s;
+}
+
+.animate-type-in {
+  animation: typeIn 0.2s;
+}
+
+/* Mobile responsive adjustments */
+@media screen and (max-width: 480px) {
+  .cell {
+    width: 55px;
+    height: 55px;
+    font-size: 2.4rem;
+  }
+}
