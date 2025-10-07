@@ -19,18 +19,21 @@ function resolveStatus(status: StatusVariant | undefined, href?: string): Status
   return "coming-soon";
 }
 
-const STATUS_RIBBON: Record<StatusVariant, { label: string; className: string }> = {
+const STATUS_RIBBON: Record<StatusVariant, { label: string; className: string; style?: string }> = {
   "coming-soon": {
     label: "Coming Soon",
     className: "bg-[#DA9C2F] text-[#050302]",
+    style: "-right-12 top-6 px-10 py-1 text-[10px] tracking-[0.4em] shadow-[0_8px_20px_rgba(218,156,47,0.35)]",
   },
   new: {
-    label: "Now Live",
-    className: "bg-[#2b7a75] text-[#050302]",
+    label: "New",
+    className: "bg-[#46c68e] text-white",
+    style: "-right-[18px] top-6 px-10 py-1.5 text-[11px] tracking-[0.22em] shadow-[0_8px_20px_rgba(70,198,142,0.35)]",
   },
   available: {
     label: "Featured",
     className: "bg-[#F4C752] text-[#050302]",
+    style: "-right-12 top-6 px-10 py-1 text-[10px] tracking-[0.4em] shadow-[0_8px_20px_rgba(218,156,47,0.35)]",
   },
 };
 
@@ -41,7 +44,7 @@ const STATUS_BADGE: Record<StatusVariant, { label: string; className: string }> 
   },
   new: {
     label: "Play Now",
-    className: "bg-[#2b7a75]/90 text-[#e7fff8]",
+    className: "bg-[#46c68e] text-white",
   },
   available: {
     label: "Play Now",
@@ -91,7 +94,8 @@ export default function GameCard({ title, description, imageSrc, eta, href, stat
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050302]/80 via-transparent to-transparent" />
         <span
           className={clsx(
-            "pointer-events-none absolute -right-14 top-6 rotate-45 px-10 py-1 text-[10px] font-semibold uppercase tracking-[0.4em] shadow-[0_8px_20px_rgba(218,156,47,0.35)]",
+            "pointer-events-none absolute rotate-45 font-semibold uppercase",
+            ribbon.style,
             ribbon.className
           )}
         >

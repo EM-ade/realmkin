@@ -113,6 +113,40 @@ export default function Realmkin2048Page() {
           </div>
         </section> */}
 
+        <section className="relative overflow-hidden rounded-3xl border border-[#DA9C2F]/25 bg-[#0B0B09]/80 px-6 py-6 shadow-[0_35px_80px_rgba(0,0,0,0.55)] backdrop-blur-sm md:px-8 md:py-8">
+          <div className="absolute -right-16 top-1/2 hidden h-60 w-60 -translate-y-1/2 rounded-full bg-[#2b7a75]/10 blur-3xl lg:block" aria-hidden="true" />
+          <div className="absolute -top-16 left-6 h-32 w-32 rounded-full border border-[#2b7a75]/30 bg-[#2b7a75]/5 blur-2xl" aria-hidden="true" />
+
+          <div className="flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl space-y-3">
+              <div className="flex items-center gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.5em] text-[#DA9C2F]/70">Arcade Nexus</p>
+                <span className="rounded-full bg-[#2b7a75] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-[0_4px_12px_rgba(43,122,117,0.4)]">
+                  NEW
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold uppercase tracking-[0.28em] text-[#F4C752] md:text-3xl">
+                Realmkin 2048
+              </h2>
+              <p className="text-sm text-white/70 md:text-base">
+                Merge arcane tiles to awaken legendary Realmkin relics. Combine powers of two to forge greater mysteries in this mystical puzzle realm.
+              </p>
+            </div>
+
+            <div className="relative flex w-full max-w-xs items-center justify-center self-stretch rounded-3xl border border-[#2b7a75]/40 bg-[#050302]/60 p-6 shadow-inner shadow-[#2b7a75]/20 lg:max-w-sm">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#2b7a75]/15 via-transparent to-transparent" aria-hidden="true" />
+              <Image
+                src="/2048.png"
+                alt="Realmkin 2048 sigil"
+                width={200}
+                height={200}
+                className="relative z-10 h-auto w-32 opacity-90 drop-shadow-[0_0_30px_rgba(43,122,117,0.5)] lg:w-40"
+                priority
+              />
+            </div>
+          </div>
+        </section>
+
         <Game2048Client />
 
         <section className="flex flex-col items-center gap-3 text-center">

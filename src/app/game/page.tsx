@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import DesktopNavigation from "@/components/DesktopNavigation";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import SocialLinks from "@/components/SocialLinks";
-import GameCard from "@/components/GameCard";
+import GameCard, { type GameCardProps } from "@/components/GameCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -26,6 +26,8 @@ type GameDefinition = {
   description: string;
   imageSrc?: string | null;
   eta?: string;
+  href?: string;
+  status?: GameCardProps["status"];
 };
 
 export default function GamePage() {
@@ -40,8 +42,7 @@ export default function GamePage() {
         title: "Wordle",
         description: "Daily cipher challenge harnessing the power of the Void.",
         imageSrc: "/wordle.png",
-        href: "/game/wordle",
-        status: "new",
+        eta: "Phase I",
       },
       {
         title: "Trait Crush",
@@ -53,7 +54,8 @@ export default function GamePage() {
         title: "2048",
         description: "Merge arcane tiles to awaken legendary Realmkin relics.",
         imageSrc: "/2048.png",
-        eta: "Phase III",
+        href: "/game/2048",
+        status: "new",
       },
       {
         title: "Word Blast",
@@ -199,7 +201,15 @@ export default function GamePage() {
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
             {games.map((game) => (
-              <GameCard key={game.title} title={game.title} description={game.description} imageSrc={game.imageSrc ?? undefined} eta={game.eta} />
+              <GameCard
+                key={game.title}
+                title={game.title}
+                description={game.description}
+                imageSrc={game.imageSrc ?? undefined}
+                // eta={game.eta}
+                href={game.href}
+                status={game.status}
+              />
             ))}
           </div>
         </section>
