@@ -8,6 +8,7 @@ interface QuickAccessCardProps {
   stat: string;
   href: string;
   disabled?: boolean;
+  isNew?: boolean;
 }
 
 export default function QuickAccessCard({
@@ -17,6 +18,7 @@ export default function QuickAccessCard({
   stat,
   href,
   disabled = false,
+  isNew = false,
 }: QuickAccessCardProps) {
   const CardContent = (
     <div
@@ -61,6 +63,13 @@ export default function QuickAccessCard({
       {disabled && (
         <div className="absolute top-1 right-1 bg-[#DA9C2F]/20 text-[#DA9C2F] text-[10px] px-2 py-0.5 rounded-full font-bold">
           SOON
+        </div>
+      )}
+      
+      {/* NEW Badge */}
+      {isNew && !disabled && (
+        <div className="absolute top-1 right-1 bg-[#46c68e] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+          NEW
         </div>
       )}
     </div>
