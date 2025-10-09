@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import DesktopNavigation from "@/components/DesktopNavigation";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import SocialLinks from "@/components/SocialLinks";
 import GameCard, { type GameCardProps } from "@/components/GameCard";
+import Leaderboard from "@/components/leaderboard/Leaderboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { LeaderboardCategory, LeaderboardTabConfig, LeaderboardEntry } from "@/types/leaderboard";
+import { leaderboardService } from "@/services/leaderboardService";
 
 const EtherealParticles = dynamic(
   () => import("@/components/MagicalAnimations").then((mod) => mod.EtherealParticles),
@@ -31,10 +34,14 @@ type GameDefinition = {
 };
 
 export default function GamePage() {
-  const { userData } = useAuth();
+  const { userData, user } = useAuth();
   const { connectWallet, disconnectWallet, account, isConnected, isConnecting } = useWeb3();
   const isMobile = useIsMobile();
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [activeLeaderboardTab, setActiveLeaderboardTab] = useState<LeaderboardCategory>("totalScore");
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(true);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
 
   const games = useMemo<GameDefinition[]>(
     () => [
@@ -90,6 +97,109 @@ export default function GamePage() {
     ],
     []
   );
+
+  // Leaderboard configuration
+  const leaderboardTabs: LeaderboardTabConfig[] = [
+    {
+      key: "totalScore",
+      label: "Total Score",
+      icon: "📊",
+      description: "Combined points from all games",
+    },
+    {
+      key: "streak",
+      label: "Streak",
+      icon: "🔥",
+      description: "Consecutive days played",
+      valueSuffix: " days",
+    },
+  ];
+
+  // Load leaderboard data
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
+    const loadLeaderboard = async () => {
+      setIsLoadingLeaderboard(true);
+      setLeaderboardError(null);
+
+      try {
+        // Initialize leaderboard (check for monthly reset)
+        await leaderboardService.checkAndPerformMonthlyReset();
+
+        // Subscribe to real-time updates
+        unsubscribe = leaderboardService.subscribeToLeaderboard(
+          activeLeaderboardTab as "totalScore" | "streak",
+          100,
+          (entries) => {
+            setLeaderboardEntries(entries);
+            setIsLoadingLeaderboard(false);
+          }
+        );
+      } catch (error) {
+        console.error("Failed to load leaderboard:", error);
+        setLeaderboardError("Failed to load leaderboard data");
+        setIsLoadingLeaderboard(false);
+        
+        // Fallback to mock data on error
+        setLeaderboardEntries([
+          {
+            userId: "mock1",
+            username: "CipherMaster",
+            rank: 1,
+            value: 2450,
+            gamesPlayed: 12,
+            breakdown: { wordle: 850, "2048": 1600 },
+          },
+          {
+            userId: "mock2",
+            username: "VoidWalker", 
+            rank: 2,
+            value: 2180,
+            gamesPlayed: 15,
+            breakdown: { wordle: 920, "2048": 1260 },
+          },
+        ]);
+      }
+    };
+
+    loadLeaderboard();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [activeLeaderboardTab]);
+
+  // Calculate summary stats
+  const leaderboardSummary = useMemo(() => {
+    const totalPlayers = leaderboardEntries.length;
+    const totalGames = leaderboardEntries.reduce((sum, entry) => sum + (entry.gamesPlayed || 0), 0);
+    const userEntry = leaderboardEntries.find(entry => entry.userId === user?.uid);
+    
+    return {
+      totalPlayers,
+      totalGames,
+      userRank: userEntry?.rank || undefined,
+      userValue: userEntry?.value || 0,
+      userValueLabel: userEntry?.valueLabel,
+    };
+  }, [leaderboardEntries, user?.uid]);
+
+  // Generate metadata
+  const leaderboardMetadata = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const daysUntilReset = Math.ceil((nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    return {
+      periodLabel: currentMonth,
+      periodRange: `${currentMonth.split(' ')[0]} 1 - ${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()}`,
+      countdownLabel: `Resets in ${daysUntilReset} days`,
+    };
+  }, []);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050302]">
@@ -212,6 +322,34 @@ export default function GamePage() {
               />
             ))}
           </div>
+        </section>
+
+        {/* Leaderboard Section */}
+        <section>
+          <Leaderboard
+            title="Monthly Champions"
+            subtitle="Compete across all realms for ultimate glory"
+            highlightUserId={user?.uid}
+            entries={leaderboardEntries}
+            tabs={leaderboardTabs}
+            activeTab={activeLeaderboardTab}
+            onTabChange={setActiveLeaderboardTab}
+            metadata={leaderboardMetadata}
+            summary={leaderboardSummary}
+            isLoading={isLoadingLeaderboard}
+            emptyState={
+              leaderboardError ? (
+                <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-red-500/30 bg-red-900/20 px-6 py-10 text-center">
+                  <p className="text-sm font-semibold uppercase tracking-[0.28em] text-red-400">
+                    Connection Error
+                  </p>
+                  <p className="text-xs leading-relaxed text-white/60">
+                    {leaderboardError}. Showing fallback data.
+                  </p>
+                </div>
+              ) : undefined
+            }
+          />
         </section>
 
         <section className="flex flex-col items-center gap-3 text-center">

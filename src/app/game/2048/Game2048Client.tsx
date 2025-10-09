@@ -5,6 +5,10 @@ import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { GameEngine, GameSnapshot } from "@/lib/games/realmkin-2048/engine";
 import type { Direction, TileSnapshot } from "@/lib/games/realmkin-2048/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { calculate2048Points } from "@/lib/scoring";
+import { leaderboardService } from "@/services/leaderboardService";
+import type { Difficulty as LeaderboardDifficulty } from "@/types/leaderboard";
 
 const SWIPE_THRESHOLD = 24;
 
@@ -55,6 +59,7 @@ function formatScore(value: number): string {
 }
 
 export default function Game2048Client() {
+  const { user, userData } = useAuth();
   const [difficulty, setDifficulty] = useState<Difficulty>("simple");
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
@@ -62,6 +67,8 @@ export default function Game2048Client() {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const tileCacheRef = useRef<Map<number, TileSnapshot>>(new Map());
   const [animatedTiles, setAnimatedTiles] = useState<AnimatedTile[]>([]);
+  const [isSubmittingScore, setIsSubmittingScore] = useState(false);
+  const lastSubmittedScoreRef = useRef<number>(0);
 
   const gridSize = DIFFICULTY_CONFIG[difficulty].gridSize;
 
@@ -204,6 +211,49 @@ export default function Game2048Client() {
   const handleContinue = useCallback(() => {
     engineRef.current?.continueGame();
   }, []);
+
+  // Submit score to leaderboard when game ends
+  const submitScoreToLeaderboard = useCallback(async (finalScore: number) => {
+    if (!user || !userData?.username || isSubmittingScore) return;
+    if (finalScore <= lastSubmittedScoreRef.current) return; // Only submit if score improved
+
+    setIsSubmittingScore(true);
+    try {
+      // Map 2048 difficulty to leaderboard difficulty
+      const leaderboardDifficulty: LeaderboardDifficulty = difficulty === "simple" 
+        ? "simple" 
+        : difficulty === "intermediate" 
+        ? "intermediate" 
+        : "hard";
+
+      const points = calculate2048Points(finalScore, leaderboardDifficulty);
+      
+      await leaderboardService.submitScore(
+        user.uid,
+        userData.username,
+        points,
+        "2048"
+      );
+
+      // Update streak (user played today)
+      await leaderboardService.updateStreak(user.uid, userData.username);
+
+      lastSubmittedScoreRef.current = finalScore;
+      console.log(`Score submitted: ${finalScore} → ${points} points`);
+    } catch (error) {
+      console.error("Failed to submit score:", error);
+    } finally {
+      setIsSubmittingScore(false);
+    }
+  }, [user, userData, difficulty, isSubmittingScore]);
+
+  // Watch for game over and submit score
+  useEffect(() => {
+    if (snapshot?.over && !snapshot.keepPlaying && snapshot.score > 0) {
+      // Game ended, submit score
+      submitScoreToLeaderboard(snapshot.score);
+    }
+  }, [snapshot?.over, snapshot?.keepPlaying, snapshot?.score, submitScoreToLeaderboard]);
 
   return (
     <div className="flex w-full flex-col gap-8 text-white">

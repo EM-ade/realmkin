@@ -41,6 +41,28 @@ const AdminPage = () => {
 
             {/* Grid Sections */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Leaderboard Management Card */}
+              <section className="card premium-card interactive-element">
+                <h2 className="text-label mb-2">LEADERBOARD MANAGEMENT</h2>
+                <p className="text-sm text-[#C4A962] mb-3">
+                  View current rankings, manage monthly winners, and export leaderboard data.
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-300 space-y-1 mb-4">
+                  <li>View current month top 100 players</li>
+                  <li>Browse archived monthly winners</li>
+                  <li>Export leaderboard data to CSV</li>
+                  <li>Manual monthly reset (emergency)</li>
+                </ul>
+                <div className="flex gap-2">
+                  <Link
+                    href="/admin/leaderboard"
+                    className="btn-primary text-sm"
+                  >
+                    Open Leaderboard Admin
+                  </Link>
+                </div>
+              </section>
+
               {/* Contracts Overview Card */}
               <section className="card premium-card interactive-element">
                 <h2 className="text-label mb-2">CONTRACT BONUSES</h2>
