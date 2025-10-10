@@ -81,12 +81,21 @@ export function calculateTraitCrushPoints(
   difficulty: Difficulty,
   combos: number = 0
 ): number {
-  // Placeholder implementation
-  const basePoints = Math.floor(score / 100);
-  const multiplier = DIFFICULTY_2048_MULTIPLIERS[difficulty]; // Reuse 2048 multipliers
-  const comboBonus = combos * 10;
+  if (score <= 0) return 0;
   
-  return Math.round((basePoints * multiplier) + comboBonus);
+  // Base calculation: score divided by 5 for balanced points
+  // Expected range: 150-500 points per session
+  const basePoints = score / 5;
+  
+  // Apply difficulty multiplier (same as 2048)
+  const multiplier = DIFFICULTY_2048_MULTIPLIERS[difficulty];
+  
+  // Combo bonus: 15 points per combo (rewards skilled play)
+  const comboBonus = combos * 15;
+  
+  const totalPoints = (basePoints * multiplier) + comboBonus;
+  
+  return Math.round(totalPoints);
 }
 
 export function calculateWordBlastPoints(

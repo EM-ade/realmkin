@@ -174,11 +174,42 @@ interface GameScore {
 
 ## Future Games
 
-### Trait Crush (Phase II)
-**Estimated Range**: 150-500 points per session
-- Points based on combos and cleared tiles
-- Difficulty multipliers similar to 2048
-- Time bonus for fast completion
+### Trait Crush ✅ (Implemented)
+
+#### Base Calculation
+```
+Points = (Game Score ÷ 5) × Difficulty Multiplier + Combo Bonus
+```
+
+#### Difficulty Multipliers & Time Limits
+- **Simple** (Novice): `1.0×` | **3 minutes** (180 seconds)
+- **Intermediate** (Adept): `1.3×` | **2 minutes** (120 seconds)
+- **Hard** (Master): `1.6×` | **1.5 minutes** (90 seconds)
+
+#### Combo Bonus
+- **Per Combo**: `+15 points`
+- Combos occur when multiple matches happen in sequence
+
+#### Game End Conditions
+- **Time runs out** (auto-submit score)
+- **Player clicks "End Game"** (manual submit)
+
+#### Examples
+| Game Score | Difficulty    | Combos | Calculation                    | Final Points |
+|------------|---------------|--------|--------------------------------|--------------|
+| 1,000      | Simple        | 0      | 1000 ÷ 5 × 1.0 + 0            | 200          |
+| 1,500      | Intermediate  | 5      | 1500 ÷ 5 × 1.3 + (5 × 15)     | 465          |
+| 2,000      | Hard          | 10     | 2000 ÷ 5 × 1.6 + (10 × 15)    | 790          |
+
+#### Scoring Trigger
+- Points submitted when time expires OR player ends game
+- Score based on total matches and combos achieved
+- Higher difficulty = less time but higher multiplier
+
+#### Expected Range
+- **Novice** (3 min): 150-300 points per session
+- **Adept** (2 min): 200-450 points per session
+- **Master** (90 sec): 250-500 points per session
 
 ### Word Blast (Phase III)
 **Estimated Range**: 100-400 points per session

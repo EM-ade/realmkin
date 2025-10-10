@@ -75,7 +75,7 @@ export async function GET() {
           price: listingsData.find((item) => item.tokenMint === mint)?.price ?? null,
           seller: listingsData.find((item) => item.tokenMint === mint)?.seller ?? null,
         };
-      } catch (error) {
+      } catch {
         return null;
       }
     });

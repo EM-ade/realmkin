@@ -7,9 +7,10 @@ import Link from "next/link";
 import { leaderboardService } from "@/services/leaderboardService";
 import { LeaderboardEntry } from "@/types/leaderboard";
 
-interface MonthlyArchive {
+// Use any for archive data since it comes from Firestore with Timestamp types
+type MonthlyArchiveData = {
   monthId: string;
-  archivedAt: any;
+  archivedAt: unknown;
   topScores: Array<{
     rank: number;
     userId: string;
@@ -24,15 +25,15 @@ interface MonthlyArchive {
     currentStreak: number;
     longestStreak: number;
   }>;
-}
+} | null;
 
 export default function AdminLeaderboardPage() {
   const { userData, loading } = useAuth();
   const router = useRouter();
   const [currentLeaderboard, setCurrentLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [currentStreaks, setCurrentStreaks] = useState<LeaderboardEntry[]>([]);
+  const [, setCurrentStreaks] = useState<LeaderboardEntry[]>([]);
   const [selectedArchive, setSelectedArchive] = useState<string>("");
-  const [archiveData, setArchiveData] = useState<MonthlyArchive | null>(null);
+  const [archiveData, setArchiveData] = useState<MonthlyArchiveData>(null);
   const [isLoadingCurrent, setIsLoadingCurrent] = useState(true);
   const [isLoadingArchive, setIsLoadingArchive] = useState(false);
   const [activeTab, setActiveTab] = useState<"current" | "archive">("current");
@@ -78,7 +79,7 @@ export default function AdminLeaderboardPage() {
       setIsLoadingArchive(true);
       try {
         const data = await leaderboardService.getMonthlyArchive(selectedArchive);
-        setArchiveData(data);
+        setArchiveData(data as MonthlyArchiveData);
       } catch (error) {
         console.error("Failed to load archive:", error);
         setArchiveData(null);
@@ -105,7 +106,7 @@ export default function AdminLeaderboardPage() {
   }, []);
 
   // Export to CSV
-  const exportToCSV = (data: any[], filename: string) => {
+  const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
     if (data.length === 0) return;
 
     const headers = Object.keys(data[0]).join(",");
