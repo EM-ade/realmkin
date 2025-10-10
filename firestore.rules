@@ -176,6 +176,75 @@ service cloud.firestore {
       allow delete: if false;
     }
     
+    // Leaderboard collections - stores monthly leaderboard data
+    match /leaderboards/current/metadata/info {
+      // Anyone can read metadata (for UI display)
+      allow read: if true;
+      
+      // Only authenticated users can update metadata (for monthly reset)
+      allow create, update: if isAuthenticated();
+      
+      // No deletes
+      allow delete: if false;
+    }
+    
+    match /leaderboards/current/totalScore/{userId} {
+      // Anyone can read leaderboard entries
+      allow read: if true;
+      
+      // Only the user can write their own score
+      allow create, update: if isAuthenticated() && 
+                               request.auth.uid == userId &&
+                               request.resource.data.userId == userId &&
+                               request.resource.data.totalScore >= 0 &&
+                               request.resource.data.gamesPlayed >= 0;
+      
+      // No deletes (scores persist for the month)
+      allow delete: if false;
+    }
+    
+    match /leaderboards/current/streak/{userId} {
+      // Anyone can read streak entries
+      allow read: if true;
+      
+      // Only the user can write their own streak
+      allow create, update: if isAuthenticated() && 
+                               request.auth.uid == userId &&
+                               request.resource.data.userId == userId &&
+                               request.resource.data.currentStreak >= 0;
+      
+      // No deletes (streaks persist for the month)
+      allow delete: if false;
+    }
+    
+    // Monthly archive - stores past leaderboard winners
+    match /monthlyArchive/{monthId} {
+      // Anyone can read archived data
+      allow read: if true;
+      
+      // Only authenticated users can create archives (for monthly reset)
+      allow create: if isAuthenticated();
+      
+      // No updates or deletes (archives are permanent)
+      allow update, delete: if false;
+    }
+    
+    // User stats - stores individual player statistics
+    match /userStats/{userId} {
+      // Users can read their own stats, others can read for leaderboard purposes
+      allow read: if true;
+      
+      // Only the user can update their own stats
+      allow create, update: if isAuthenticated() && 
+                               request.auth.uid == userId &&
+                               request.resource.data.totalGamesPlayed >= 0 &&
+                               request.resource.data.lifetimeScore >= 0 &&
+                               request.resource.data.currentStreak >= 0;
+      
+      // No deletes
+      allow delete: if false;
+    }
+    
     // Deny all other collections by default
     match /{document=**} {
       allow read, write: if false;

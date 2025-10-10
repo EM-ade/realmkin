@@ -45,6 +45,9 @@ import {
   saveCompletion,
   saveStats,
 } from "@/lib/games/realmkin-wordle/storage";
+import { useAuth } from "@/contexts/AuthContext";
+import { calculateWordlePoints } from "@/lib/scoring";
+import { leaderboardService } from "@/services/leaderboardService";
 import "./wordle-animations.css";
 
 const ALERT_TIMEOUT_MS = 2400;
@@ -298,6 +301,7 @@ export default function GameWordleClient() {
 }
 
 function GameContent() {
+  const { user, userData } = useAuth();
   const showAlert = useAlert();
   const { showBanner, clearBanner } = useCompletionBanner();
   const [difficulty, setDifficulty] = useState<Difficulty>("simple");
@@ -307,6 +311,7 @@ function GameContent() {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [shakeRowIndex, setShakeRowIndex] = useState<number | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isSubmittingScore, setIsSubmittingScore] = useState(false);
   const [completions, setCompletions] = useState<Record<Difficulty, WordleCompletion | null>>(() => {
     // Return empty state during SSR to avoid hydration mismatch
     if (typeof window === "undefined") {
@@ -423,7 +428,7 @@ function GameContent() {
       currentGuess: "",
     }));
 
-    const complete = (outcome: "won" | "lost") => {
+    const complete = async (outcome: "won" | "lost") => {
       const completion: WordleCompletion = {
         dateKey: board.dateKey,
         outcome,
@@ -433,6 +438,41 @@ function GameContent() {
       setCompletions((prev) => ({ ...prev, [board.difficulty]: completion }));
       updateBoard((prev) => ({ ...prev, locked: true, gameState: outcome === "won" ? "won" : "lost" }));
       setStats((prev) => updateStatsAfterGame(prev, board.difficulty, outcome, board.dateKey));
+      
+      // Submit score to leaderboard if user won
+      if (outcome === "won" && user && userData?.username && !isSubmittingScore) {
+        setIsSubmittingScore(true);
+        try {
+          const attempts = board.guesses.length + 1; // +1 for the current winning guess
+          
+          // Get current streak for bonus calculation
+          const currentStreak = stats.currentStreak;
+          
+          const points = calculateWordlePoints(
+            attempts,
+            board.difficulty,
+            currentStreak,
+            true
+          );
+          
+          await leaderboardService.submitScore(
+            user.uid,
+            userData.username,
+            points,
+            "wordle"
+          );
+
+          // Update streak (user played today)
+          await leaderboardService.updateStreak(user.uid, userData.username);
+
+          console.log(`Wordle score submitted: ${attempts} attempts → ${points} points`);
+        } catch (error) {
+          console.error("Failed to submit Wordle score:", error);
+        } finally {
+          setIsSubmittingScore(false);
+        }
+      }
+      
       window.setTimeout(() => setIsStatsOpen(true), 900);
     };
 
