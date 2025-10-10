@@ -49,13 +49,15 @@ export default function GamePage() {
         title: "Wordle",
         description: "Daily cipher challenge harnessing the power of the Void.",
         imageSrc: "/wordle.png",
-        eta: "Phase I",
+        href: "/game/wordle",
+        status: "new",
       },
       {
         title: "Trait Crush",
         description: "Align traits and trigger cascading combos for MKIN rewards.",
         imageSrc: "/trait-crush.png",
-        eta: "Phase II",
+        href: "/game/trait-crush",
+        status: "new",
       },
       {
         title: "2048",

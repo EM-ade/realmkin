@@ -8,21 +8,22 @@ import {
   query,
   orderBy,
   limit,
-  where,
   serverTimestamp,
   writeBatch,
   onSnapshot,
   Unsubscribe,
+  Timestamp,
+  FieldValue,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { GameType, Difficulty, LeaderboardEntry } from "@/types/leaderboard";
+import { GameType, LeaderboardEntry } from "@/types/leaderboard";
 
 // Types for Firestore documents
 interface LeaderboardMetadata {
   monthId: string;
   startDate: string;
   endDate: string;
-  lastReset: any; // serverTimestamp
+  lastReset: Timestamp | FieldValue | null;
 }
 
 interface TotalScoreEntry {
@@ -30,8 +31,9 @@ interface TotalScoreEntry {
   username: string;
   totalScore: number;
   gamesPlayed: number;
-  lastUpdated: any; // serverTimestamp
-  breakdown: Record<string, number>;
+  lastUpdated: Timestamp | FieldValue | null;
+  breakdown: Record<string, number>; // Leaderboard points per game
+  rawScores?: Record<string, number>; // Raw game scores (for display)
 }
 
 interface StreakEntry {
@@ -59,7 +61,7 @@ interface UserStats {
 
 interface MonthlyArchive {
   monthId: string;
-  archivedAt: any; // serverTimestamp
+  archivedAt: Timestamp | FieldValue | null;
   topScores: Array<{
     rank: number;
     userId: string;
@@ -196,7 +198,8 @@ class LeaderboardService {
     userId: string,
     username: string,
     points: number,
-    gameType: GameType
+    gameType: GameType,
+    rawScore?: number // Optional: raw game score for display purposes
   ): Promise<void> {
     await this.checkAndPerformMonthlyReset();
 
@@ -215,12 +218,18 @@ class LeaderboardService {
           const scoreDifference = points - currentGameScore;
           const newBreakdown = { ...currentData.breakdown };
           newBreakdown[gameType] = points; // Replace with new high score
+          
+          const newRawScores = { ...(currentData.rawScores || {}) };
+          if (rawScore !== undefined) {
+            newRawScores[gameType] = rawScore; // Store raw game score
+          }
 
           await updateDoc(scoreRef, {
             totalScore: currentData.totalScore + scoreDifference, // Add only the difference
             gamesPlayed: currentData.gamesPlayed + 1,
             lastUpdated: serverTimestamp(),
             breakdown: newBreakdown,
+            rawScores: newRawScores,
           });
           
           console.log(`New high score for ${gameType}! ${currentGameScore} → ${points} (+${scoreDifference})`);
@@ -242,6 +251,7 @@ class LeaderboardService {
           gamesPlayed: 1,
           lastUpdated: serverTimestamp(),
           breakdown: { [gameType]: points },
+          rawScores: rawScore !== undefined ? { [gameType]: rawScore } : {},
         };
         
         await setDoc(scoreRef, newEntry);
@@ -253,6 +263,22 @@ class LeaderboardService {
     } catch (error) {
       console.error("Error submitting score:", error);
       throw error;
+    }
+  }
+
+  // Get user's score data
+  async getUserScore(userId: string): Promise<TotalScoreEntry | null> {
+    try {
+      const scoreRef = doc(db, this.COLLECTIONS.TOTAL_SCORE, userId);
+      const scoreDoc = await getDoc(scoreRef);
+      
+      if (scoreDoc.exists()) {
+        return scoreDoc.data() as TotalScoreEntry;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching user score:", error);
+      return null;
     }
   }
 
@@ -372,22 +398,36 @@ class LeaderboardService {
       limit(limitCount)
     );
     
-    return onSnapshot(q, (snapshot) => {
-      const entries = snapshot.docs.map((doc, index) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const entries: LeaderboardEntry[] = snapshot.docs.map((doc, index) => {
         const data = doc.data();
-        return {
-          userId: data.userId,
-          username: data.username,
-          rank: index + 1,
-          value: data[orderField],
-          gamesPlayed: type === "totalScore" ? data.gamesPlayed : undefined,
-          breakdown: type === "totalScore" ? data.breakdown : undefined,
-          lastUpdated: data.lastUpdated?.toMillis() || data.lastPlayed,
-        };
+        
+        if (type === "totalScore") {
+          const scoreData = data as TotalScoreEntry;
+          return {
+            userId: scoreData.userId,
+            username: scoreData.username,
+            rank: index + 1,
+            value: scoreData.totalScore,
+            gamesPlayed: scoreData.gamesPlayed,
+            breakdown: scoreData.breakdown,
+          };
+        } else {
+          const streakData = data as StreakEntry;
+          return {
+            userId: streakData.userId,
+            username: streakData.username,
+            rank: index + 1,
+            value: streakData.currentStreak,
+            valueLabel: `${streakData.currentStreak} days`,
+          };
+        }
       });
       
       callback(entries);
     });
+    
+    return unsubscribe;
   }
 
   // Get user's rank in leaderboard
@@ -463,7 +503,7 @@ class LeaderboardService {
               avgScore: points,
               bestScore: points,
             },
-          } as Record<GameType, any>,
+          } as Record<GameType, { played: number; avgScore: number; bestScore: number }>,
         };
         
         await setDoc(statsRef, newStats);

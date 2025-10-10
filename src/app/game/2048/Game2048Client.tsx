@@ -68,9 +68,29 @@ export default function Game2048Client() {
   const tileCacheRef = useRef<Map<number, TileSnapshot>>(new Map());
   const [animatedTiles, setAnimatedTiles] = useState<AnimatedTile[]>([]);
   const [isSubmittingScore, setIsSubmittingScore] = useState(false);
+  const [highScore, setHighScore] = useState<number>(0);
   const lastSubmittedScoreRef = useRef<number>(0);
 
   const gridSize = DIFFICULTY_CONFIG[difficulty].gridSize;
+
+  // Fetch user's high score on mount
+  useEffect(() => {
+    const fetchHighScore = async () => {
+      if (!user) return;
+      
+      try {
+        const scoreDoc = await leaderboardService.getUserScore(user.uid);
+        if (scoreDoc) {
+          const game2048RawScore = scoreDoc.rawScores?.["2048"] || 0;
+          setHighScore(game2048RawScore);
+        }
+      } catch (error) {
+        console.error("Failed to fetch high score:", error);
+      }
+    };
+
+    fetchHighScore();
+  }, [user]);
 
   useEffect(() => {
     const engine = new GameEngine({
@@ -232,8 +252,14 @@ export default function Game2048Client() {
         user.uid,
         userData.username,
         points,
-        "2048"
+        "2048",
+        finalScore // Pass raw game score
       );
+      
+      // Update high score display if new high score
+      if (finalScore > highScore) {
+        setHighScore(finalScore);
+      }
 
       // Update streak (user played today)
       await leaderboardService.updateStreak(user.uid, userData.username);
@@ -245,7 +271,7 @@ export default function Game2048Client() {
     } finally {
       setIsSubmittingScore(false);
     }
-  }, [user, userData, difficulty, isSubmittingScore]);
+  }, [user, userData, difficulty, isSubmittingScore, highScore]);
 
   // Watch for game over and submit score
   useEffect(() => {
@@ -322,8 +348,8 @@ export default function Game2048Client() {
             <p className="mt-2 text-2xl font-bold text-[#F4C752]">{formatScore(snapshot?.score ?? 0)}</p>
           </div>
           <div className="rounded-2xl border border-[#DA9C2F]/30 bg-[#050302]/80 px-5 py-4 text-center">
-            <p className="text-xs uppercase tracking-[0.32em] text-white/60">Best</p>
-            <p className="mt-2 text-2xl font-bold text-[#DA9C2F]">{formatScore(snapshot?.bestScore ?? 0)}</p>
+            <p className="text-xs uppercase tracking-[0.32em] text-white/60">High Score</p>
+            <p className="mt-2 text-2xl font-bold text-[#DA9C2F]">{formatScore(highScore)}</p>
           </div>
         </div>
       </div>

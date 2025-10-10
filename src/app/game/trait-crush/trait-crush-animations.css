@@ -1,0 +1,172 @@
+/* Trait Crush Game Animations */
+
+@keyframes trait-crush {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes trait-slide-down {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes trait-pop-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes trait-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes trait-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(244, 199, 82, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(244, 199, 82, 0.8), 0 0 30px rgba(244, 199, 82, 0.6);
+  }
+}
+
+@keyframes combo-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.trait-crush {
+  animation: trait-crush 0.4s ease-out forwards;
+}
+
+.trait-slide-down {
+  animation: trait-slide-down 0.3s ease-out forwards;
+}
+
+.trait-pop-in {
+  animation: trait-pop-in 0.3s ease-out forwards;
+}
+
+.trait-shake {
+  animation: trait-shake 0.5s ease-in-out;
+}
+
+.trait-glow {
+  animation: trait-glow 1s ease-in-out infinite;
+}
+
+.combo-pulse {
+  animation: combo-pulse 0.3s ease-in-out;
+}
+
+/* Tile hover effects */
+.trait-tile {
+  transition: all 0.2s ease;
+}
+
+.trait-tile:hover:not(:disabled) {
+  transform: scale(1.05);
+  filter: brightness(1.2);
+}
+
+.trait-tile:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.trait-tile.selected {
+  animation: trait-glow 0.8s ease-in-out infinite;
+  transform: scale(1.1);
+  z-index: 10;
+}
+
+/* Match highlight effect */
+@keyframes match-highlight {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.5) saturate(1.5);
+  }
+}
+
+.match-highlight {
+  animation: match-highlight 0.4s ease-in-out 2;
+}
+
+/* Combo text animation */
+@keyframes combo-text {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px) scale(1);
+    opacity: 0;
+  }
+}
+
+.combo-text {
+  animation: combo-text 1s ease-out forwards;
+}
+
+/* Score popup animation */
+@keyframes score-popup {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-30px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) scale(1);
+    opacity: 0;
+  }
+}
+
+.score-popup {
+  animation: score-popup 1.2s ease-out forwards;
+}

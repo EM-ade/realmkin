@@ -220,7 +220,7 @@ export default function Home() {
               icon="⚔️"
               iconSrc="/game.png"
               label="Game"
-              stat="1 Live"
+              stat="3 Live"
               href="/game"
               isNew
             />
