@@ -756,7 +756,13 @@ export default function GameTraitCrushClient() {
       </div>
 
       <div className="relative rounded-3xl border border-[#DA9C2F]/20 bg-[#0B0B09]/80 p-5 shadow-[0_30px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm">
-        <div className="grid gap-1 sm:gap-2" style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))` }}>
+        <div
+          className="grid gap-1 sm:gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
+            touchAction: "none",
+          }}
+        >
           {gameState.board.map((row) =>
             row.map((tile) => (
               <motion.button
@@ -793,6 +799,10 @@ export default function GameTraitCrushClient() {
 
                   skipClickRef.current = true;
                   handleSwipe(start.row, start.col, deltaX, deltaY);
+                }}
+                onTouchMove={(event) => {
+                  if (event.touches.length !== 1) return;
+                  event.preventDefault();
                 }}
                 disabled={gameState.isProcessing || gameState.gameOver}
                 layout
