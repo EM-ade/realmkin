@@ -15,13 +15,14 @@ const BOARD_SIZE_DESKTOP = 6;
 const BOARD_SIZE_MOBILE = 6;
 const TRAITS = ["Strength", "Wisdom", "Agility", "Vitality", "Spirit", "Fortune"];
 
-// Animation timing constants (in milliseconds) - Optimized for smooth flow
+// Animation timing constants (in milliseconds) - Candy Crush style
 const ANIMATION_TIMINGS = {
-  SWAP: 600,       // Tile swap animation (slow for clear visibility)
-  CRUSH: 300,      // Tile crushing animation duration
-  COLLAPSE: 400,   // Tile falling/collapsing animation
-  REFILL: 300,     // New tile drop-in animation
+  SWAP: 200,       // Tile swap animation (fast like Candy Crush)
+  CRUSH: 200,      // Tile crushing animation duration
+  COLLAPSE: 200,   // Tile falling/collapsing animation
+  REFILL: 200,     // New tile drop-in animation
   MATCH_CHECK: 100, // Brief pause for match detection
+  GAME_LOOP: 100,  // Game loop interval (like Candy Crush)
 };
 // Removed TRAIT_COLORS - all tiles use same neutral background
 
@@ -92,8 +93,8 @@ interface Tile {
   trait: string;
   row: number;
   col: number;
-  isCrushing?: boolean;
-  isNew?: boolean;
+  isCrushing: boolean;
+  isNew: boolean;
 }
 
 interface GameState {
@@ -111,20 +112,73 @@ function randomTrait(): string {
   return TRAITS[Math.floor(Math.random() * TRAITS.length)];
 }
 
+// Helper to check if placing a trait would create a match
+function wouldCreateMatch(board: Tile[][], row: number, col: number, trait: string): boolean {
+  const size = board.length;
+  
+  // Check horizontal (left and right)
+  let horizontalCount = 1;
+  // Count left
+  for (let c = col - 1; c >= 0 && board[row][c]?.trait === trait; c--) {
+    horizontalCount++;
+  }
+  // Count right
+  for (let c = col + 1; c < size && board[row][c]?.trait === trait; c++) {
+    horizontalCount++;
+  }
+  if (horizontalCount >= 3) return true;
+  
+  // Check vertical (up and down)
+  let verticalCount = 1;
+  // Count up
+  for (let r = row - 1; r >= 0 && board[r][col]?.trait === trait; r--) {
+    verticalCount++;
+  }
+  // Count down
+  for (let r = row + 1; r < size && board[r][col]?.trait === trait; r++) {
+    verticalCount++;
+  }
+  if (verticalCount >= 3) return true;
+  
+  return false;
+}
+
 function createEmptyBoard(size: number): Tile[][] {
   const board: Tile[][] = [];
+  
+  // Initialize empty board structure
   for (let r = 0; r < size; r++) {
     const row: Tile[] = [];
     for (let c = 0; c < size; c++) {
       row.push({
         id: `${r}-${c}`,
-        trait: randomTrait(),
+        trait: "",
         row: r,
         col: c,
+        isCrushing: false,
+        isNew: false,
       });
     }
     board.push(row);
   }
+  
+  // Fill board ensuring no starting matches
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      let trait = randomTrait();
+      let attempts = 0;
+      const maxAttempts = 20;
+      
+      // Keep trying until we find a trait that doesn't create a match
+      while (wouldCreateMatch(board, r, c, trait) && attempts < maxAttempts) {
+        trait = randomTrait();
+        attempts++;
+      }
+      
+      board[r][c].trait = trait;
+    }
+  }
+  
   return board;
 }
 
@@ -152,6 +206,14 @@ export default function GameTraitCrushClient() {
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStartRef = useRef<{ row: number; col: number; x: number; y: number } | null>(null);
   const skipClickRef = useRef(false);
+  const gameLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dragStateRef = useRef<{
+    colorBeingDragged: string | null;
+    colorBeingReplaced: string | null;
+    squareIdBeingDragged: number | null;
+    squareIdBeingReplaced: number | null;
+  }>({ colorBeingDragged: null, colorBeingReplaced: null, squareIdBeingDragged: null, squareIdBeingReplaced: null });
+  const comboChainRef = useRef(0);
 
   const showAlert = useCallback((message: string, tone: AlertTone = "info") => {
     // Clear any existing alert first
@@ -280,55 +342,24 @@ export default function GameTraitCrushClient() {
     }
   }, [gameState.timeRemaining, gameState.gameOver, handleGameOver, showAlert]);
 
-  // Check for matches and crush them (Candy Crush style)
-  const checkAndCrushMatches = useCallback((board: Tile[][]): { newBoard: Tile[][], matchCount: number } => {
-    let matchCount = 0;
-    const newBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: false, isNew: false })));
+  // Check for 4-in-a-row matches (Candy Crush priority) - Don't blank immediately
+  const checkRowForFour = useCallback((board: Tile[][]): { newBoard: Tile[][], matchCount: number } => {
+    const newBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
     const size = board.length;
+    let matchCount = 0;
 
-    // Check horizontal matches (rows)
     for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size - 2; c++) {
-        const tile1 = newBoard[r][c];
-        const tile2 = newBoard[r][c + 1];
-        const tile3 = newBoard[r][c + 2];
-
-        // Match if all three traits are the same and not blank
-        if (tile1.trait === tile2.trait && 
-            tile2.trait === tile3.trait && 
-            tile1.trait !== "blank") {
-          tile1.isCrushing = true;
-          tile2.isCrushing = true;
-          tile3.isCrushing = true;
-          matchCount += 3;
-        }
-      }
-    }
-
-    // Check vertical matches (columns)
-    for (let c = 0; c < size; c++) {
-      for (let r = 0; r < size - 2; r++) {
-        const tile1 = newBoard[r][c];
-        const tile2 = newBoard[r + 1][c];
-        const tile3 = newBoard[r + 2][c];
-
-        // Match if all three traits are the same and not blank
-        if (tile1.trait === tile2.trait && 
-            tile2.trait === tile3.trait && 
-            tile1.trait !== "blank") {
-          tile1.isCrushing = true;
-          tile2.isCrushing = true;
-          tile3.isCrushing = true;
-          matchCount += 3;
-        }
-      }
-    }
-
-    // Mark crushing tiles as blank after animation
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        if (newBoard[r][c].isCrushing) {
-          newBoard[r][c].trait = "blank";
+      for (let c = 0; c < size - 3; c++) {
+        const rowOfFour = [c, c + 1, c + 2, c + 3];
+        const decidedTrait = newBoard[r][c].trait;
+        const isBlank = decidedTrait === "blank" || decidedTrait === "";
+        
+        if (!isBlank && rowOfFour.every(col => newBoard[r][col].trait === decidedTrait)) {
+          rowOfFour.forEach(col => {
+            newBoard[r][col].isCrushing = true;
+            // Don't set to blank yet - keep visible during crush animation
+          });
+          matchCount += 4;
         }
       }
     }
@@ -336,15 +367,129 @@ export default function GameTraitCrushClient() {
     return { newBoard, matchCount };
   }, []);
 
-  // Slide tiles down to fill blanks
-  const slideTraits = useCallback((board: Tile[][]): Tile[][] => {
-    const newBoard = board.map(row => row.map(tile => ({ ...tile })));
+  const checkColumnForFour = useCallback((board: Tile[][]): { newBoard: Tile[][], matchCount: number } => {
+    const newBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
     const size = board.length;
+    let matchCount = 0;
 
     for (let c = 0; c < size; c++) {
+      for (let r = 0; r < size - 3; r++) {
+        const columnOfFour = [r, r + 1, r + 2, r + 3];
+        const decidedTrait = newBoard[r][c].trait;
+        const isBlank = decidedTrait === "blank" || decidedTrait === "";
+        
+        if (!isBlank && columnOfFour.every(row => newBoard[row][c].trait === decidedTrait)) {
+          columnOfFour.forEach(row => {
+            newBoard[row][c].isCrushing = true;
+            // Don't set to blank yet - keep visible during crush animation
+          });
+          matchCount += 4;
+        }
+      }
+    }
+
+    return { newBoard, matchCount };
+  }, []);
+
+  // Check for 3-in-a-row matches (after 4-match check) - Don't blank immediately
+  const checkRowForThree = useCallback((board: Tile[][]): { newBoard: Tile[][], matchCount: number } => {
+    const newBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
+    const size = board.length;
+    let matchCount = 0;
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size - 2; c++) {
+        const rowOfThree = [c, c + 1, c + 2];
+        const decidedTrait = newBoard[r][c].trait;
+        const isBlank = decidedTrait === "blank" || decidedTrait === "";
+        
+        if (!isBlank && rowOfThree.every(col => newBoard[r][col].trait === decidedTrait)) {
+          rowOfThree.forEach(col => {
+            newBoard[r][col].isCrushing = true;
+            // Don't set to blank yet - keep visible during crush animation
+          });
+          matchCount += 3;
+        }
+      }
+    }
+
+    return { newBoard, matchCount };
+  }, []);
+
+  const checkColumnForThree = useCallback((board: Tile[][]): { newBoard: Tile[][], matchCount: number } => {
+    const newBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
+    const size = board.length;
+    let matchCount = 0;
+
+    for (let c = 0; c < size; c++) {
+      for (let r = 0; r < size - 2; r++) {
+        const columnOfThree = [r, r + 1, r + 2];
+        const decidedTrait = newBoard[r][c].trait;
+        const isBlank = decidedTrait === "blank" || decidedTrait === "";
+        
+        if (!isBlank && columnOfThree.every(row => newBoard[row][c].trait === decidedTrait)) {
+          columnOfThree.forEach(row => {
+            newBoard[row][c].isCrushing = true;
+            // Don't set to blank yet - keep visible during crush animation
+          });
+          matchCount += 3;
+        }
+      }
+    }
+
+    return { newBoard, matchCount };
+  }, []);
+
+  // Combined match checking (Candy Crush order: 4s first, then 3s)
+  const checkAndCrushMatches = useCallback((board: Tile[][]): { newBoard: Tile[][], matchCount: number, scorePoints: number } => {
+    let currentBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
+    let totalMatchCount = 0;
+    let totalScorePoints = 0;
+
+    // Check 4-in-a-row first (priority)
+    const row4Result = checkRowForFour(currentBoard);
+    currentBoard = row4Result.newBoard;
+    if (row4Result.matchCount > 0) {
+      totalMatchCount += row4Result.matchCount;
+      totalScorePoints += row4Result.matchCount; // 1 point per tile in 4-match
+    }
+
+    const col4Result = checkColumnForFour(currentBoard);
+    currentBoard = col4Result.newBoard;
+    if (col4Result.matchCount > 0) {
+      totalMatchCount += col4Result.matchCount;
+      totalScorePoints += col4Result.matchCount; // 1 point per tile in 4-match
+    }
+
+    // Then check 3-in-a-row
+    const row3Result = checkRowForThree(currentBoard);
+    currentBoard = row3Result.newBoard;
+    if (row3Result.matchCount > 0) {
+      totalMatchCount += row3Result.matchCount;
+      totalScorePoints += row3Result.matchCount; // 1 point per tile in 3-match
+    }
+
+    const col3Result = checkColumnForThree(currentBoard);
+    currentBoard = col3Result.newBoard;
+    if (col3Result.matchCount > 0) {
+      totalMatchCount += col3Result.matchCount;
+      totalScorePoints += col3Result.matchCount; // 1 point per tile in 3-match
+    }
+
+    return { newBoard: currentBoard, matchCount: totalMatchCount, scorePoints: totalScorePoints };
+  }, [checkRowForFour, checkColumnForFour, checkRowForThree, checkColumnForThree]);
+
+  // Slide tiles down to fill blanks (Candy Crush style)
+  const slideTraits = useCallback((board: Tile[][]): Tile[][] => {
+    const newBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
+    const size = board.length;
+
+    // Move candies down column by column
+    for (let c = 0; c < size; c++) {
       let writeIndex = size - 1;
+      // Start from bottom and move up
       for (let r = size - 1; r >= 0; r--) {
-        if (newBoard[r][c].trait !== "blank") {
+        if (newBoard[r][c].trait !== "blank" && newBoard[r][c].trait !== "") {
           if (writeIndex !== r) {
             newBoard[writeIndex][c].trait = newBoard[r][c].trait;
             newBoard[r][c].trait = "blank";
@@ -357,22 +502,25 @@ export default function GameTraitCrushClient() {
     return newBoard;
   }, []);
 
-  // Generate new traits at the top
+  // Generate new traits at the top (Candy Crush style)
   const generateNewTraits = useCallback((board: Tile[][]): Tile[][] => {
     const newBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: false, isNew: false })));
     const size = board.length;
 
-    // Only fill blank spaces at the TOP of each column
-    // After sliding, blanks should only be at the top
+    // Fill empty squares in the first row first
+    for (let c = 0; c < size; c++) {
+      if (newBoard[0][c].trait === "blank" || newBoard[0][c].trait === "") {
+        newBoard[0][c].trait = randomTrait();
+        newBoard[0][c].isNew = true;
+      }
+    }
+
+    // Then fill remaining blanks from top to bottom
     for (let c = 0; c < size; c++) {
       for (let r = 0; r < size; r++) {
-        if (newBoard[r][c].trait === "blank") {
+        if (newBoard[r][c].trait === "blank" || newBoard[r][c].trait === "") {
           newBoard[r][c].trait = randomTrait();
-          newBoard[r][c].isNew = true; // Mark as new for animation
-        } else {
-          // Stop checking this column once we hit a non-blank tile
-          // (all blanks should be at the top after sliding)
-          break;
+          newBoard[r][c].isNew = true;
         }
       }
     }
@@ -395,7 +543,7 @@ export default function GameTraitCrushClient() {
       for (let c = 0; c < size; c++) {
         // Try swapping with right neighbor
         if (c < size - 1) {
-          const testBoard = board.map(row => row.map(tile => ({ ...tile })));
+          const testBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
           const temp = testBoard[r][c].trait;
           testBoard[r][c].trait = testBoard[r][c + 1].trait;
           testBoard[r][c + 1].trait = temp;
@@ -407,7 +555,7 @@ export default function GameTraitCrushClient() {
         
         // Try swapping with bottom neighbor
         if (r < size - 1) {
-          const testBoard = board.map(row => row.map(tile => ({ ...tile })));
+          const testBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
           const temp = testBoard[r][c].trait;
           testBoard[r][c].trait = testBoard[r + 1][c].trait;
           testBoard[r + 1][c].trait = temp;
@@ -443,7 +591,7 @@ export default function GameTraitCrushClient() {
     }
     
     // Redistribute shuffled traits
-    const newBoard = board.map(row => row.map(tile => ({ ...tile })));
+    const newBoard = board.map(row => row.map(tile => ({ ...tile, isCrushing: tile.isCrushing ?? false, isNew: tile.isNew ?? false })));
     let traitIndex = 0;
     
     for (let r = 0; r < size; r++) {
@@ -470,22 +618,33 @@ export default function GameTraitCrushClient() {
       return;
     }
 
-    const newBoard = gameState.board.map(row => row.map(t => ({ ...t })));
+    const newBoard = gameState.board.map(row => row.map(t => ({ ...t, isCrushing: t.isCrushing ?? false, isNew: t.isNew ?? false })));
     const temp = newBoard[source.row][source.col].trait;
     newBoard[source.row][source.col].trait = newBoard[target.row][target.col].trait;
     newBoard[target.row][target.col].trait = temp;
 
     if (!isValidMove(newBoard)) {
+      // Invalid move - revert the swap visually
       showAlert("No match! Try again", "error");
       setSelectedTile(null);
+      
+      // Briefly show the swap then revert
+      setGameState(prev => ({ ...prev, board: newBoard }));
+      setTimeout(() => {
+        const revertBoard = gameState.board.map(row => row.map(t => ({ ...t, isCrushing: t.isCrushing ?? false, isNew: t.isNew ?? false })));
+        setGameState(prev => ({ ...prev, board: revertBoard }));
+      }, ANIMATION_TIMINGS.SWAP);
       return;
     }
 
+    // Valid move - apply it and increment moves counter
+    // Reset combo chain on new user move
+    comboChainRef.current = 1; // Start at 1 for the initial match
+    
     setGameState(prev => ({
       ...prev,
       board: newBoard,
       moves: prev.moves + 1,
-      isProcessing: true,
     }));
     setSelectedTile(null);
   }, [gameState.board, gameState.gameOver, gameState.isProcessing, isValidMove, showAlert]);
@@ -540,19 +699,46 @@ export default function GameTraitCrushClient() {
     attemptSwap(sourceTile, targetTile);
   }, [attemptSwap, gameState.board, boardSize]);
 
-  // Immediate match checking after board changes
+  // Continuous game loop (Candy Crush style) - runs every 100ms
   useEffect(() => {
-    if (gameState.gameOver || gameState.isProcessing) return;
-    
-    // Check for matches immediately when board changes
-    const testBoard = gameState.board.map(row => row.map(tile => ({ ...tile })));
-    const { matchCount } = checkAndCrushMatches(testBoard);
-    
-    if (matchCount > 0) {
-      // Trigger processing immediately
-      setGameState(prev => ({ ...prev, isProcessing: true }));
+    if (gameState.gameOver) {
+      // Clear game loop when game is over
+      if (gameLoopRef.current) {
+        clearInterval(gameLoopRef.current);
+        gameLoopRef.current = null;
+      }
+      return;
     }
-  }, [gameState.board, gameState.gameOver, gameState.isProcessing, checkAndCrushMatches]);
+
+    // Start game loop
+    gameLoopRef.current = setInterval(() => {
+      setGameState(prev => {
+        if (prev.isProcessing || prev.gameOver) return prev;
+
+        // Check for matches
+        const { newBoard, matchCount, scorePoints } = checkAndCrushMatches(prev.board);
+        
+        if (matchCount > 0) {
+          // Matches found - update board and trigger processing
+          return {
+            ...prev,
+            board: newBoard,
+            score: prev.score + scorePoints,
+            isProcessing: true,
+          };
+        }
+        
+        return prev;
+      });
+    }, ANIMATION_TIMINGS.GAME_LOOP);
+
+    return () => {
+      if (gameLoopRef.current) {
+        clearInterval(gameLoopRef.current);
+        gameLoopRef.current = null;
+      }
+    };
+  }, [gameState.gameOver, checkAndCrushMatches]);
 
   // Check for no valid moves and reshuffle if needed
   useEffect(() => {
@@ -566,80 +752,95 @@ export default function GameTraitCrushClient() {
       // Reshuffle until we get a board with valid moves
       let newBoard = reshuffleBoard(gameState.board);
       let attempts = 0;
-      const maxAttempts = 10;
+      const maxAttempts = 20; // Increased attempts
       
       while (!hasValidMoves(newBoard) && attempts < maxAttempts) {
         newBoard = reshuffleBoard(newBoard);
         attempts++;
       }
       
+      // If still no valid moves after max attempts, regenerate entire board
+      if (!hasValidMoves(newBoard)) {
+        console.warn("Reshuffle failed, regenerating board");
+        newBoard = createEmptyBoard(gameState.board.length);
+        
+        // Ensure regenerated board has valid moves
+        let regenAttempts = 0;
+        while (!hasValidMoves(newBoard) && regenAttempts < 5) {
+          newBoard = createEmptyBoard(gameState.board.length);
+          regenAttempts++;
+        }
+      }
+      
       setGameState(prev => ({ ...prev, board: newBoard }));
     }
   }, [gameState.board, gameState.gameOver, gameState.isProcessing, hasValidMoves, reshuffleBoard, showAlert]);
 
-  // Process matches continuously
+  // Process cascading after matches are found
   useEffect(() => {
     if (!gameState.isProcessing || processingRef.current) return;
 
     processingRef.current = true;
 
-    const processMatches = async () => {
-      // Brief initial delay for visual clarity
-      await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.MATCH_CHECK));
+    const processCascade = async () => {
+      // Wait for crush animation to play
+      await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.CRUSH));
 
-      let currentBoard = gameState.board;
-      let totalMatchCount = 0;
-      let comboCount = 0;
+      // NOW set crushing tiles to blank (after animation)
+      const blankedBoard = gameState.board.map(row => 
+        row.map(tile => ({
+          ...tile,
+          trait: tile.isCrushing ? "blank" : tile.trait,
+          isCrushing: false,
+        }))
+      );
 
-      // Keep processing until no more matches
-      while (true) {
-        const { newBoard, matchCount } = checkAndCrushMatches(currentBoard);
-        
-        if (matchCount === 0) break;
+      // Immediately slide tiles down (no gap)
+      const slidBoard = slideTraits(blankedBoard);
+      setGameState(prev => ({ ...prev, board: slidBoard }));
+      
+      // Wait for collapse animation
+      await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.COLLAPSE));
 
-        totalMatchCount += matchCount;
-        comboCount++;
-        currentBoard = newBoard;
-
-        // Wait for crushing animation to complete
-        await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.CRUSH + 50));
-
-        currentBoard = slideTraits(currentBoard);
-        // Wait for collapse animation to complete
-        await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.COLLAPSE + 50));
-
-        currentBoard = generateNewTraits(currentBoard);
-        // Wait for refill animation to complete
-        await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.REFILL + 50));
-      }
-
-      if (totalMatchCount > 0) {
-        const points = totalMatchCount * 10 * (comboCount > 1 ? comboCount : 1);
-        
-        setGameState(prev => ({
-          ...prev,
-          board: currentBoard,
-          score: prev.score + points,
-          combos: prev.combos + (comboCount > 1 ? 1 : 0),
-          isProcessing: false,
-        }));
-
-        if (comboCount > 1) {
-          showAlert(`${comboCount}x Combo! +${points}`, "success");
-        }
+      // Generate new traits
+      const refilledBoard = generateNewTraits(slidBoard);
+      
+      // Check if refill created new matches (for combo tracking)
+      const { matchCount: newMatches } = checkAndCrushMatches(refilledBoard);
+      
+      if (newMatches > 0) {
+        // Cascade continues - increment combo chain
+        comboChainRef.current += 1;
       } else {
-        setGameState(prev => ({
-          ...prev,
-          board: currentBoard,
-          isProcessing: false,
-        }));
+        // No more matches - show combo alert if chain > 1
+        if (comboChainRef.current > 1) {
+          const comboMultiplier = comboChainRef.current;
+          showAlert(`${comboMultiplier}x Combo!`, "success");
+          
+          // Update combo counter in game state
+          setGameState(prev => ({
+            ...prev,
+            board: refilledBoard,
+            combos: prev.combos + 1,
+            isProcessing: false,
+          }));
+        } else {
+          setGameState(prev => ({ ...prev, board: refilledBoard, isProcessing: false }));
+        }
+        
+        // Reset combo chain for next user move
+        comboChainRef.current = 0;
+        processingRef.current = false;
+        return;
       }
-
+      
+      // Continue processing (cascade continues)
+      setGameState(prev => ({ ...prev, board: refilledBoard, isProcessing: false }));
       processingRef.current = false;
     };
 
-    processMatches();
-  }, [gameState.isProcessing, gameState.board, checkAndCrushMatches, slideTraits, generateNewTraits, showAlert]);
+    processCascade();
+  }, [gameState.isProcessing, gameState.board, slideTraits, generateNewTraits, checkAndCrushMatches, showAlert]);
 
   // Handle difficulty change
   const handleDifficultyChange = useCallback((newDifficulty: Difficulty) => {
@@ -818,11 +1019,11 @@ export default function GameTraitCrushClient() {
                     ease: [0.4, 0, 0.2, 1],
                   },
                   scale: {
-                    duration: tile.isNew ? ANIMATION_TIMINGS.REFILL / 1000 : 0.2,
+                    duration: tile.isNew ? ANIMATION_TIMINGS.REFILL / 1000 : ANIMATION_TIMINGS.SWAP / 1000,
                     ease: [0.34, 1.56, 0.64, 1],
                   },
                   opacity: {
-                    duration: 0.2,
+                    duration: ANIMATION_TIMINGS.CRUSH / 1000,
                   },
                 }}
                 className={clsx(
