@@ -1,13 +1,14 @@
 /* Trait Crush Game Animations */
 
+/* Optimized crush animation - faster and punchier */
 @keyframes trait-crush {
   0% {
     transform: scale(1);
     opacity: 1;
   }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
+  40% {
+    transform: scale(1.15);
+    opacity: 0.9;
   }
   100% {
     transform: scale(0);
@@ -15,28 +16,39 @@
   }
 }
 
-@keyframes trait-slide-down {
+/* Smooth collapse/fall animation */
+@keyframes trait-collapse {
   0% {
-    transform: translateY(-100%);
-    opacity: 0;
+    transform: translateY(0);
   }
   100% {
-    transform: translateY(0);
-    opacity: 1;
+    transform: translateY(var(--fall-distance, 100%));
   }
 }
 
+/* New tile entry from top - with bounce */
 @keyframes trait-pop-in {
   0% {
-    transform: scale(0);
+    transform: translateY(-120%) scale(0.8);
     opacity: 0;
   }
-  50% {
-    transform: scale(1.1);
+  60% {
+    transform: translateY(0) scale(1.05);
+    opacity: 1;
   }
   100% {
-    transform: scale(1);
+    transform: translateY(0) scale(1);
     opacity: 1;
+  }
+}
+
+/* Swap animation for smooth tile exchange */
+@keyframes trait-swap {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(var(--swap-x, 0), var(--swap-y, 0));
   }
 }
 
@@ -74,15 +86,19 @@
 }
 
 .trait-crush {
-  animation: trait-crush 0.4s ease-out forwards;
+  animation: trait-crush 0.3s cubic-bezier(0.4, 0, 0.6, 1) forwards;
 }
 
-.trait-slide-down {
-  animation: trait-slide-down 0.3s ease-out forwards;
+.trait-collapse {
+  animation: trait-collapse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .trait-pop-in {
-  animation: trait-pop-in 0.3s ease-out forwards;
+  animation: trait-pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.trait-swap {
+  animation: trait-swap 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .trait-shake {
@@ -97,23 +113,26 @@
   animation: combo-pulse 0.3s ease-in-out;
 }
 
-/* Tile hover effects */
+/* Tile hover effects with GPU acceleration */
 .trait-tile {
   transition: all 0.2s ease;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
 }
 
 .trait-tile:hover:not(:disabled) {
-  transform: scale(1.05);
+  transform: scale(1.05) translateZ(0);
   filter: brightness(1.2);
 }
 
 .trait-tile:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: scale(0.95) translateZ(0);
 }
 
 .trait-tile.selected {
   animation: trait-glow 0.8s ease-in-out infinite;
-  transform: scale(1.1);
+  transform: scale(1.1) translateZ(0);
   z-index: 10;
 }
 

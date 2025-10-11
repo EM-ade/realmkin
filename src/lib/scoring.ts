@@ -9,7 +9,7 @@ const DIFFICULTY_2048_MULTIPLIERS: Record<Difficulty, number> = {
 };
 
 // Difficulty multipliers for Wordle
-const DIFFICULTY_WORDLE_MULTIPLIERS: Record<Difficulty, number> = {
+export const DIFFICULTY_WORDLE_MULTIPLIERS: Record<Difficulty, number> = {
   simple: 1.0,
   intermediate: 1.5,
   advanced: 2.0,
@@ -17,7 +17,7 @@ const DIFFICULTY_WORDLE_MULTIPLIERS: Record<Difficulty, number> = {
 };
 
 // Base points for Wordle by number of attempts
-const WORDLE_BASE_POINTS: Record<number, number> = {
+export const WORDLE_BASE_POINTS: Record<number, number> = {
   1: 300, // Perfect
   2: 250, // Excellent
   3: 200, // Very Good
@@ -27,9 +27,9 @@ const WORDLE_BASE_POINTS: Record<number, number> = {
 };
 
 // Wordle bonuses
-const WORDLE_DAILY_BONUS = 20;
-const WORDLE_STREAK_BONUS = 50;
-const WORDLE_STREAK_THRESHOLD = 3;
+export const WORDLE_DAILY_BONUS = 20;
+export const WORDLE_STREAK_BONUS = 50;
+export const WORDLE_STREAK_THRESHOLD = 3;
 
 /**
  * Calculate points for a 2048 game
