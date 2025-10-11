@@ -25,6 +25,8 @@ const ANIMATION_TIMINGS = {
 };
 // Removed TRAIT_COLORS - all tiles use same neutral background
 
+const SWIPE_THRESHOLD = 24;
+
 const TRAIT_IMAGES: Record<string, string> = {
   Strength: "/strength.png",
   Wisdom: "/wisdom.png",
@@ -148,6 +150,8 @@ export default function GameTraitCrushClient() {
   const [highScore, setHighScore] = useState<number>(0);
   const processingRef = useRef(false);
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swipeStartRef = useRef<{ row: number; col: number; x: number; y: number } | null>(null);
+  const skipClickRef = useRef(false);
 
   const showAlert = useCallback((message: string, tone: AlertTone = "info") => {
     // Clear any existing alert first
@@ -453,7 +457,40 @@ export default function GameTraitCrushClient() {
     return newBoard;
   }, []);
 
-  // Handle tile swap
+  const attemptSwap = useCallback((source: Tile, target: Tile) => {
+    if (gameState.isProcessing || gameState.gameOver) return;
+
+    const rowDiff = Math.abs(source.row - target.row);
+    const colDiff = Math.abs(source.col - target.col);
+    const isAdjacent = (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+    if (!isAdjacent) return;
+
+    if (source.trait === "blank" || target.trait === "blank") {
+      setSelectedTile(null);
+      return;
+    }
+
+    const newBoard = gameState.board.map(row => row.map(t => ({ ...t })));
+    const temp = newBoard[source.row][source.col].trait;
+    newBoard[source.row][source.col].trait = newBoard[target.row][target.col].trait;
+    newBoard[target.row][target.col].trait = temp;
+
+    if (!isValidMove(newBoard)) {
+      showAlert("No match! Try again", "error");
+      setSelectedTile(null);
+      return;
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      board: newBoard,
+      moves: prev.moves + 1,
+      isProcessing: true,
+    }));
+    setSelectedTile(null);
+  }, [gameState.board, gameState.gameOver, gameState.isProcessing, isValidMove, showAlert]);
+
+  // Handle tile swap via taps/clicks
   const handleTileSwap = useCallback((tile: Tile) => {
     if (gameState.isProcessing || gameState.gameOver) return;
 
@@ -462,13 +499,11 @@ export default function GameTraitCrushClient() {
       return;
     }
 
-    // Check if same tile clicked
     if (selectedTile.id === tile.id) {
       setSelectedTile(null);
       return;
     }
 
-    // Check if tiles are adjacent
     const rowDiff = Math.abs(selectedTile.row - tile.row);
     const colDiff = Math.abs(selectedTile.col - tile.col);
     const isAdjacent = (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
@@ -478,34 +513,32 @@ export default function GameTraitCrushClient() {
       return;
     }
 
-    // Don't swap blank tiles
-    if (selectedTile.trait === "blank" || tile.trait === "blank") {
-      setSelectedTile(null);
+    attemptSwap(selectedTile, tile);
+  }, [gameState.gameOver, gameState.isProcessing, selectedTile, attemptSwap]);
+
+  const handleSwipe = useCallback((startRow: number, startCol: number, deltaX: number, deltaY: number) => {
+    const board = gameState.board;
+    const sourceTile = board[startRow]?.[startCol];
+    if (!sourceTile) return;
+
+    let targetRow = startRow;
+    let targetCol = startCol;
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      targetCol += deltaX > 0 ? 1 : -1;
+    } else {
+      targetRow += deltaY > 0 ? 1 : -1;
+    }
+
+    if (targetRow < 0 || targetRow >= boardSize || targetCol < 0 || targetCol >= boardSize) {
       return;
     }
 
-    // Swap tiles
-    const newBoard = gameState.board.map(row => row.map(t => ({ ...t })));
-    const temp = newBoard[selectedTile.row][selectedTile.col].trait;
-    newBoard[selectedTile.row][selectedTile.col].trait = newBoard[tile.row][tile.col].trait;
-    newBoard[tile.row][tile.col].trait = temp;
+    const targetTile = board[targetRow]?.[targetCol];
+    if (!targetTile) return;
 
-    // Check if valid move
-    if (!isValidMove(newBoard)) {
-      showAlert("No match! Try again", "error");
-      setSelectedTile(null);
-      return;
-    }
-
-    // Valid move - update state
-    setGameState(prev => ({
-      ...prev,
-      board: newBoard,
-      moves: prev.moves + 1,
-      isProcessing: true,
-    }));
-    setSelectedTile(null);
-  }, [gameState, selectedTile, isValidMove, showAlert]);
+    attemptSwap(sourceTile, targetTile);
+  }, [attemptSwap, gameState.board, boardSize]);
 
   // Immediate match checking after board changes
   useEffect(() => {
@@ -729,7 +762,38 @@ export default function GameTraitCrushClient() {
               <motion.button
                 key={tile.id}
                 type="button"
-                onClick={() => handleTileSwap(tile)}
+                onClick={() => {
+                  if (skipClickRef.current) {
+                    skipClickRef.current = false;
+                    return;
+                  }
+                  handleTileSwap(tile);
+                }}
+                onTouchStart={(event) => {
+                  if (event.touches.length !== 1) return;
+                  const touch = event.touches[0];
+                  swipeStartRef.current = {
+                    row: tile.row,
+                    col: tile.col,
+                    x: touch.clientX,
+                    y: touch.clientY,
+                  };
+                }}
+                onTouchEnd={(event) => {
+                  const start = swipeStartRef.current;
+                  swipeStartRef.current = null;
+                  if (!start || event.changedTouches.length !== 1) return;
+                  const touch = event.changedTouches[0];
+                  const deltaX = touch.clientX - start.x;
+                  const deltaY = touch.clientY - start.y;
+
+                  if (Math.abs(deltaX) < SWIPE_THRESHOLD && Math.abs(deltaY) < SWIPE_THRESHOLD) {
+                    return;
+                  }
+
+                  skipClickRef.current = true;
+                  handleSwipe(start.row, start.col, deltaX, deltaY);
+                }}
                 disabled={gameState.isProcessing || gameState.gameOver}
                 layout
                 initial={tile.isNew ? { scale: 0, opacity: 0 } : false}
