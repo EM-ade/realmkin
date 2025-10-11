@@ -69,7 +69,14 @@ export default function Game2048Client() {
   const [animatedTiles, setAnimatedTiles] = useState<AnimatedTile[]>([]);
   const [isSubmittingScore, setIsSubmittingScore] = useState(false);
   const [highScore, setHighScore] = useState<number>(0);
+  const [submissionFeedback, setSubmissionFeedback] = useState<string | null>(null);
   const lastSubmittedScoreRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!submissionFeedback) return;
+    const timeout = setTimeout(() => setSubmissionFeedback(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [submissionFeedback]);
 
   const gridSize = DIFFICULTY_CONFIG[difficulty].gridSize;
 
@@ -247,6 +254,7 @@ export default function Game2048Client() {
         : "hard";
 
       const points = calculate2048Points(finalScore, leaderboardDifficulty);
+      const beatHighScore = finalScore > highScore;
       
       await leaderboardService.submitScore(
         user.uid,
@@ -257,17 +265,33 @@ export default function Game2048Client() {
       );
       
       // Update high score display if new high score
-      if (finalScore > highScore) {
+      if (beatHighScore) {
         setHighScore(finalScore);
+      }
+
+      try {
+        const scoreDoc = await leaderboardService.getUserScore(user.uid);
+        if (scoreDoc) {
+          const leaderboardHighScore = scoreDoc.rawScores?.["2048"] ?? finalScore;
+          setHighScore(leaderboardHighScore);
+        }
+      } catch (error) {
+        console.warn("Unable to refresh 2048 high score:", error);
       }
 
       // Update streak (user played today)
       await leaderboardService.updateStreak(user.uid, userData.username);
 
       lastSubmittedScoreRef.current = finalScore;
+      setSubmissionFeedback(
+        beatHighScore
+          ? "New best score recorded on the leaderboard!"
+          : "Score submitted to the leaderboard."
+      );
       console.log(`Score submitted: ${finalScore} → ${points} points`);
     } catch (error) {
       console.error("Failed to submit score:", error);
+      setSubmissionFeedback("Failed to submit score. Please try again later.");
     } finally {
       setIsSubmittingScore(false);
     }
@@ -283,6 +307,19 @@ export default function Game2048Client() {
 
   return (
     <div className="flex w-full flex-col gap-8 text-white">
+      <AnimatePresence>
+        {submissionFeedback ? (
+          <motion.div
+            key="submission-feedback"
+            className="pointer-events-none self-center rounded-full border border-[#DA9C2F]/40 bg-[#0B0B09]/90 px-4 py-2 text-[11px] uppercase tracking-[0.28em] text-[#F4C752] shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+          >
+            {submissionFeedback}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       <div className="flex flex-col gap-6 rounded-3xl border border-[#DA9C2F]/25 bg-[#0B0B09]/80 p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm md:flex-row md:items-start md:justify-between md:p-8">
         <div className="space-y-4 md:max-w-lg">
           <div className="space-y-1">

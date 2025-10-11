@@ -15,14 +15,13 @@ const BOARD_SIZE_DESKTOP = 6;
 const BOARD_SIZE_MOBILE = 6;
 const TRAITS = ["Strength", "Wisdom", "Agility", "Vitality", "Spirit", "Fortune"];
 
-// Animation timing constants (in milliseconds)
+// Animation timing constants (in milliseconds) - Optimized for smooth flow
 const ANIMATION_TIMINGS = {
-  CRUSH: 500,      // Tile crushing animation duration
-  SLIDE: 800,      // Tile sliding/falling animation duration
-  POP_IN: 400,     // New tile pop-in animation duration
-  CRUSH_DELAY: 550,   // Wait time after crushing
-  SLIDE_DELAY: 850,   // Wait time after sliding
-  POP_IN_DELAY: 450,  // Wait time after pop-in
+  SWAP: 600,       // Tile swap animation (slow for clear visibility)
+  CRUSH: 300,      // Tile crushing animation duration
+  COLLAPSE: 400,   // Tile falling/collapsing animation
+  REFILL: 300,     // New tile drop-in animation
+  MATCH_CHECK: 100, // Brief pause for match detection
 };
 // Removed TRAIT_COLORS - all tiles use same neutral background
 
@@ -508,24 +507,18 @@ export default function GameTraitCrushClient() {
     setSelectedTile(null);
   }, [gameState, selectedTile, isValidMove, showAlert]);
 
-  // Auto-detect and process matches (Candy Crush style - continuous checking)
+  // Immediate match checking after board changes
   useEffect(() => {
-    if (gameState.gameOver) return;
+    if (gameState.gameOver || gameState.isProcessing) return;
     
-    const interval = setInterval(() => {
-      if (gameState.isProcessing || processingRef.current) return;
-      
-      // Check if there are any matches on the current board
-      const testBoard = gameState.board.map(row => row.map(tile => ({ ...tile })));
-      const { matchCount } = checkAndCrushMatches(testBoard);
-      
-      if (matchCount > 0 && !gameState.isProcessing) {
-        // Trigger processing to clear matches
-        setGameState(prev => ({ ...prev, isProcessing: true }));
-      }
-    }, 100); // Check every 100ms like Candy Crush
+    // Check for matches immediately when board changes
+    const testBoard = gameState.board.map(row => row.map(tile => ({ ...tile })));
+    const { matchCount } = checkAndCrushMatches(testBoard);
     
-    return () => clearInterval(interval);
+    if (matchCount > 0) {
+      // Trigger processing immediately
+      setGameState(prev => ({ ...prev, isProcessing: true }));
+    }
   }, [gameState.board, gameState.gameOver, gameState.isProcessing, checkAndCrushMatches]);
 
   // Check for no valid moves and reshuffle if needed
@@ -558,7 +551,8 @@ export default function GameTraitCrushClient() {
     processingRef.current = true;
 
     const processMatches = async () => {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Brief initial delay for visual clarity
+      await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.MATCH_CHECK));
 
       let currentBoard = gameState.board;
       let totalMatchCount = 0;
@@ -574,16 +568,16 @@ export default function GameTraitCrushClient() {
         comboCount++;
         currentBoard = newBoard;
 
-        // Wait for crushing animation to complete (400ms)
-        await new Promise(resolve => setTimeout(resolve, 450));
+        // Wait for crushing animation to complete
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.CRUSH + 50));
 
         currentBoard = slideTraits(currentBoard);
-        // Wait for sliding animation to complete (600ms)
-        await new Promise(resolve => setTimeout(resolve, 650));
+        // Wait for collapse animation to complete
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.COLLAPSE + 50));
 
         currentBoard = generateNewTraits(currentBoard);
-        // Wait for pop-in animation to complete (300ms)
-        await new Promise(resolve => setTimeout(resolve, 350));
+        // Wait for refill animation to complete
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_TIMINGS.REFILL + 50));
       }
 
       if (totalMatchCount > 0) {
@@ -703,7 +697,7 @@ export default function GameTraitCrushClient() {
           </div>
         </div>
 
-        <div className="flex flex-row gap-3 md:flex-col">
+        <div className="grid grid-cols-2 gap-3 md:flex md:flex-col">
           <div className="rounded-2xl border border-[#DA9C2F]/30 bg-[#050302]/80 px-5 py-4 text-center">
             <p className="text-xs uppercase tracking-[0.32em] text-white/60">Time</p>
             <p className={clsx(
@@ -738,23 +732,42 @@ export default function GameTraitCrushClient() {
                 onClick={() => handleTileSwap(tile)}
                 disabled={gameState.isProcessing || gameState.gameOver}
                 layout
+                initial={tile.isNew ? { scale: 0, opacity: 0 } : false}
+                animate={{ 
+                  scale: 1, 
+                  opacity: tile.trait === "blank" ? 0 : 1,
+                }}
+                exit={{ scale: 0, opacity: 0 }}
                 transition={{
                   layout: {
-                    duration: ANIMATION_TIMINGS.SLIDE / 1000,
-                    ease: [0.25, 0.8, 0.25, 1],
+                    duration: ANIMATION_TIMINGS.COLLAPSE / 1000,
+                    ease: [0.4, 0, 0.2, 1],
+                  },
+                  scale: {
+                    duration: tile.isNew ? ANIMATION_TIMINGS.REFILL / 1000 : 0.2,
+                    ease: [0.34, 1.56, 0.64, 1],
+                  },
+                  opacity: {
+                    duration: 0.2,
                   },
                 }}
                 className={clsx(
                   "relative aspect-square rounded-lg border-2 bg-[#1a1612]/80 border-[#DA9C2F]/20 overflow-hidden trait-tile",
-                  tile.trait === "blank" && "opacity-0",
+                  tile.trait === "blank" && "opacity-0 pointer-events-none",
                   tile.isCrushing && "trait-crush",
                   tile.isNew && "trait-pop-in",
                   selectedTile?.id === tile.id && "selected ring-4 ring-[#F4C752] border-[#F4C752]",
-                  !gameState.isProcessing && !gameState.gameOver && "cursor-pointer",
+                  !gameState.isProcessing && !gameState.gameOver && tile.trait !== "blank" && "cursor-pointer",
                   (gameState.isProcessing || gameState.gameOver) && "cursor-not-allowed opacity-70"
                 )}
-                whileHover={{ scale: gameState.isProcessing || gameState.gameOver ? 1 : 1.05 }}
-                whileTap={{ scale: gameState.isProcessing || gameState.gameOver ? 1 : 0.95 }}
+                whileHover={{ 
+                  scale: gameState.isProcessing || gameState.gameOver || tile.trait === "blank" ? 1 : 1.08,
+                  transition: { duration: 0.15 }
+                }}
+                whileTap={{ 
+                  scale: gameState.isProcessing || gameState.gameOver || tile.trait === "blank" ? 1 : 0.92,
+                  transition: { duration: 0.1 }
+                }}
               >
                 {tile.trait !== "blank" && (
                   <Image
@@ -770,6 +783,35 @@ export default function GameTraitCrushClient() {
             ))
           )}
         </div>
+
+        {gameState.gameOver && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-[#050302]/90 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.42em] text-[#F4C752]/80">Time&apos;s Up</p>
+              <div className="rounded-3xl border border-[#DA9C2F]/40 bg-[#0B0B09]/80 px-8 py-6 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+                <p className="text-sm uppercase tracking-[0.32em] text-white/60">Final Score</p>
+                <p className="mt-3 text-4xl font-bold text-[#F4C752]">{gameState.score}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.28em] text-white/50">Combos: {gameState.combos} • Moves: {gameState.moves}</p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleNewGame}
+                  className="rounded-full bg-[#DA9C2F] px-6 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-[#050302] transition hover:bg-[#f4c752]"
+                >
+                  Play Again
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowStats(true)}
+                  className="rounded-full border border-[#DA9C2F]/40 px-6 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-white/80 transition hover:bg-white/10"
+                >
+                  View Stats
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col items-center gap-2 text-center text-xs uppercase tracking-[0.28em] text-white/55 md:flex-row md:justify-center">

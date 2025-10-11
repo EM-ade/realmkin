@@ -46,7 +46,14 @@ import {
   saveStats,
 } from "@/lib/games/realmkin-wordle/storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { calculateWordlePoints } from "@/lib/scoring";
+import {
+  calculateWordlePoints,
+  DIFFICULTY_WORDLE_MULTIPLIERS,
+  WORDLE_BASE_POINTS,
+  WORDLE_DAILY_BONUS,
+  WORDLE_STREAK_BONUS,
+  WORDLE_STREAK_THRESHOLD,
+} from "@/lib/scoring";
 import { leaderboardService } from "@/services/leaderboardService";
 import "./wordle-animations.css";
 
@@ -122,13 +129,55 @@ function CompletionBanner({
   );
 }
 
-function SuccessBanner({ difficulty, nextReset }: { difficulty: Difficulty; nextReset: string }) {
+function SuccessBanner({
+  difficulty,
+  nextReset,
+  attempts,
+  totalPoints,
+  scaledBase,
+  basePoints,
+  multiplier,
+  streakBonus,
+}: {
+  difficulty: Difficulty;
+  nextReset: string;
+  attempts: number;
+  totalPoints: number;
+  scaledBase: number;
+  basePoints: number;
+  multiplier: number;
+  streakBonus: number;
+}) {
   return (
-    <div className="space-y-2">
-      <p className="text-xs uppercase tracking-[0.32em] text-[#75d4cc]">Cipher Cleared</p>
-      <p className="text-sm leading-relaxed text-white/80">
-        You mastered the {DIFFICULTY_LABELS[difficulty]} realm. A fresh sigil descends at <span className="text-[#F4C752]">{nextReset}</span>.
-      </p>
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.32em] text-[#75d4cc]">Cipher Cleared</p>
+        <p className="text-sm leading-relaxed text-white/80">
+          You mastered the {DIFFICULTY_LABELS[difficulty]} realm in <span className="font-semibold text-[#F4C752]">{attempts}</span> {attempts === 1 ? "attempt" : "attempts"}. A fresh sigil descends at <span className="text-[#F4C752]">{nextReset}</span>.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-[#DA9C2F]/25 bg-[#0E0905]/70 p-4 text-[11px] uppercase tracking-[0.24em] text-white/70">
+        <p className="text-center text-[#DA9C2F]/75">Score Breakdown</p>
+        <div className="mt-3 space-y-2 text-left">
+          <div className="flex items-center justify-between">
+            <span>Base {basePoints} × {multiplier.toFixed(1)}</span>
+            <span className="text-[#F4C752]">{scaledBase}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Daily Bonus</span>
+            <span className="text-[#F4C752]">+{WORDLE_DAILY_BONUS}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Streak Bonus</span>
+            <span className={clsx(streakBonus > 0 ? "text-[#F4C752]" : "text-white/40")}>{streakBonus > 0 ? `+${streakBonus}` : "—"}</span>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between rounded-xl border border-[#F4C752]/40 bg-[#F4C752]/10 px-3 py-2 text-sm font-semibold text-[#F4C752]">
+          <span>Total</span>
+          <span>{totalPoints}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -477,11 +526,24 @@ function GameContent() {
     };
 
     if (isWin) {
+      const attempts = board.guesses.length + 1;
+      const basePoints = WORDLE_BASE_POINTS[attempts] ?? 0;
+      const multiplier = DIFFICULTY_WORDLE_MULTIPLIERS[board.difficulty] ?? 1;
+      const scaledBase = Math.round(basePoints * multiplier);
+      const streakBonus = stats.currentStreak >= WORDLE_STREAK_THRESHOLD ? WORDLE_STREAK_BONUS : 0;
+      const totalPoints = calculateWordlePoints(attempts, board.difficulty, stats.currentStreak, true);
+
       showAlert("Cipher cracked!", "success");
       showBanner(
         <SuccessBanner
           difficulty={board.difficulty}
           nextReset={getNextResetTime()}
+          attempts={attempts}
+          totalPoints={totalPoints}
+          scaledBase={scaledBase}
+          basePoints={basePoints}
+          multiplier={multiplier}
+          streakBonus={streakBonus}
         />
       );
       complete("won");
