@@ -498,7 +498,7 @@ export default function MyNFTPage() {
 
                 {/* NFT Info Overlay */}
                 {selectedNFT && (
-                  <div className="absolute top-4 left-4 bg-[#1b1205]/95 backdrop-blur-md border border-[#f4c752]/30 rounded-xl px-5 py-4 max-w-xs shadow-lg">
+                  <div className="absolute top-4 left-4 bg-[#1b1205]/95 backdrop-blur-md border border-[#f4c752]/30 rounded-xl px-5 py-4 max-w-sm shadow-lg max-h-[calc(100vh-320px)] overflow-y-auto">
                     <h3 className="text-[#f4c752] font-bold text-lg mb-2">{selectedNFT.name}</h3>
                     <p
                       className="text-sm font-bold uppercase tracking-wider mb-3"
@@ -507,10 +507,22 @@ export default function MyNFTPage() {
                       {selectedNFT.rarity || 'COMMON'}
                     </p>
                     {selectedNFT.power && (
-                      <p className="text-sm text-[#f7dca1]/80">
+                      <p className="text-sm text-[#f7dca1]/80 mb-3">
                         Power: <span className="text-[#f4c752] font-bold">{selectedNFT.power}</span>
                       </p>
                     )}
+                    
+                    {/* Overall Rarity Display */}
+                    {selectedNFT.attributes && selectedNFT.attributes.length > 0 && (() => {
+                      const overallRarity = selectedNFT.attributes.find(
+                        attr => attr.trait_type.toUpperCase() === 'OVERALL RARITY'
+                      );
+                      return overallRarity ? (
+                        <p className="text-sm text-[#f7dca1]/80">
+                          Overall Rarity: <span className="text-[#f4c752] font-bold">{overallRarity.value}</span>
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>

@@ -64,6 +64,8 @@ interface MagicEdenSolanaNFT {
   attributes?: NFTAttribute[];
   traits?: NFTAttribute[];
   collection?: string;
+  collectionAddress?: string; // Collection contract address
+  collectionKey?: string; // Alternative collection address field
   symbol?: string;
   properties?: {
     files?: Array<{
@@ -236,6 +238,12 @@ class NFTService {
         }
       );
 
+      // Load active contract addresses from Firestore
+      const configured = await this.loadActiveContractAddresses();
+      const allowedContracts = configured.length > 0
+        ? Array.from(new Set([this.REALMKIN_SOLANA_CONTRACT_ADDRESS, ...configured]))
+        : [this.REALMKIN_SOLANA_CONTRACT_ADDRESS];
+
       // Filter for Realmkin collection - Magic Eden API might not filter properly by collection param
       const realmkinNFTs = response.data.filter((nft: MagicEdenSolanaNFT) => 
         nft.collection === this.MAGIC_EDEN_COLLECTION_SYMBOL || 
@@ -248,9 +256,14 @@ class NFTService {
         })
       );
 
+      // Filter NFTs by allowed contracts (validate against admin-registered contracts)
+      const filteredNFTs = nfts.filter((nft) => 
+        nft !== null && allowedContracts.includes(nft.contractAddress)
+      );
+
       const result = {
-        nfts: nfts.filter((nft) => nft !== null),
-        totalCount: realmkinNFTs.length,
+        nfts: filteredNFTs,
+        totalCount: filteredNFTs.length,
       };
 
       // Cache the result
@@ -438,6 +451,18 @@ class NFTService {
       const power = this.calculateNFTPower(attributes);
       const rarity = this.determineRarity(attributes);
 
+      // Try to extract collection address from various fields
+      // If not available, try to extract from creators (first verified creator is often the collection)
+      let contractAddress = nft.collectionAddress || nft.collectionKey;
+      if (!contractAddress && nft.creators && nft.creators.length > 0) {
+        const verifiedCreator = nft.creators.find(c => c.verified);
+        contractAddress = verifiedCreator?.address || nft.creators[0].address;
+      }
+      // Fallback to default contract
+      if (!contractAddress) {
+        contractAddress = this.REALMKIN_SOLANA_CONTRACT_ADDRESS;
+      }
+
       return {
         id: nft.mintAddress || nft.tokenMint || nft.mint || "",
         name: nft.name || `Realmkin #${nft.mintAddress}`,
@@ -446,7 +471,7 @@ class NFTService {
         attributes,
         power,
         rarity,
-        contractAddress: this.REALMKIN_SOLANA_CONTRACT_ADDRESS,
+        contractAddress,
         tokenId: nft.mintAddress || nft.tokenMint || nft.mint || "",
       };
     } catch (error) {
