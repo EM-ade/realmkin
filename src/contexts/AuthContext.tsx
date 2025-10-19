@@ -64,7 +64,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
-            setUserData(userDoc.data() as UserData);
+            const data = userDoc.data() as UserData;
+            
+            // Check if user is admin via wallet address in environment variable
+            const adminWallets = process.env.NEXT_PUBLIC_ADMIN_WALLETS?.split(',').map(w => w.trim().toLowerCase()) || [];
+            const userWallet = data.walletAddress?.toLowerCase();
+            const isAdmin = userWallet ? adminWallets.includes(userWallet) : false;
+            
+            console.log('🔍 Admin Check:', {
+              userWallet,
+              adminWallets,
+              isAdmin,
+              envVar: process.env.NEXT_PUBLIC_ADMIN_WALLETS
+            });
+            
+            setUserData({
+              ...data,
+              admin: isAdmin
+            });
           }
         } catch (error) {
           console.error("Error fetching user data:", error);

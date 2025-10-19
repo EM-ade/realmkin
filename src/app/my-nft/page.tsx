@@ -94,7 +94,6 @@ export default function MyNFTPage() {
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
   const [discordConnecting, setDiscordConnecting] = useState(false);
-  const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
@@ -118,19 +117,8 @@ export default function MyNFTPage() {
   }, [testMode, nfts]);
 
   const walletDisplayValue = useMemo(() => {
-    const fb = userRewards ? userRewards.totalRealmkin : null;
-    const uni = typeof unifiedBalance === "number" ? unifiedBalance : null;
-    if (fb !== null && uni !== null) {
-      return Math.max(fb, uni);
-    }
-    if (uni !== null) {
-      return uni;
-    }
-    if (fb !== null) {
-      return fb;
-    }
-    return 0;
-  }, [userRewards, unifiedBalance]);
+    return userRewards ? userRewards.totalRealmkin : 0;
+  }, [userRewards]);
 
   const formattedWalletBalance = useMemo(
     () => `${rewardsService.formatMKIN(walletDisplayValue)} MKIN`,
@@ -248,36 +236,6 @@ export default function MyNFTPage() {
     checkLink();
   }, [user?.uid, gatekeeperBase]);
 
-  // Fetch unified balance
-  useEffect(() => {
-    async function fetchUnifiedBalance() {
-      try {
-        const auth = getAuth();
-        if (!auth.currentUser) {
-          setUnifiedBalance(null);
-          return;
-        }
-        const token = await auth.currentUser.getIdToken();
-        const res = await fetch(`${gatekeeperBase}/api/balance`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          setUnifiedBalance(null);
-          return;
-        }
-        const data = await res.json();
-        if (typeof data?.balance === 'number') {
-          setUnifiedBalance(data.balance);
-        } else {
-          setUnifiedBalance(null);
-        }
-      } catch {
-        setUnifiedBalance(null);
-      }
-    }
-    fetchUnifiedBalance();
-  }, [user?.uid, gatekeeperBase]);
 
   const getRarityColor = (rarity: string) => {
     switch (rarity?.toUpperCase()) {
