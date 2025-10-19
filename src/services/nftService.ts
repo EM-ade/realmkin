@@ -257,11 +257,11 @@ class NFTService {
       );
 
       // Filter NFTs by allowed contracts (validate against admin-registered contracts)
-      const filteredNFTs = nfts.filter((nft) => 
+      const filteredNFTs = nfts.filter((nft): nft is NFTMetadata => 
         nft !== null && allowedContracts.includes(nft.contractAddress)
       );
 
-      const result = {
+      const result: NFTCollection = {
         nfts: filteredNFTs,
         totalCount: filteredNFTs.length,
       };

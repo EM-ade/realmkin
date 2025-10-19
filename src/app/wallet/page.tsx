@@ -366,13 +366,7 @@ const handleTransfer = useCallback(async () => {
       throw new Error(j?.error || 'Transfer failed');
     }
 
-    // Optionally, refresh unified balance display by fetching again
-    try {
-      const balanceData = await res.json().catch(() => null);
-      if (balanceData && typeof balanceData.balance === 'number') {
-        setUnifiedBalance(balanceData.balance);
-      }
-    } catch {}
+    // Balance will be refreshed automatically via userRewards state
 
     // Show transfer confirmation
     setLastTransferAmount(amount);
