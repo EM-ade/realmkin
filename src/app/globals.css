@@ -706,3 +706,67 @@ html.hydrated body {
   box-shadow: 0 0 0 3px rgba(218, 156, 47, 0.3);
   border-color: #DA9C2F;
 }
+
+/* WordLink Game Animations */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) translateY(-20px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+.animate-sparkle {
+  animation: sparkle 1.5s ease-out infinite;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Custom scrollbar for WordLink */
+.wordlink-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(218, 156, 47, 0.4) #0B0B09;
+}
+
+.wordlink-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wordlink-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(218, 156, 47, 0.4);
+  border-radius: 3px;
+}
+
+.wordlink-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(218, 156, 47, 0.6);
+}
+
+.wordlink-scrollbar::-webkit-scrollbar-track {
+  background-color: #0B0B09;
+}
