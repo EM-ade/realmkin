@@ -20,6 +20,7 @@ export interface UserRewards {
   walletAddress: string;
   totalNFTs: number;
   weeklyRate: number;
+  bonusWeeklyRate?: number; // Manual bonus added by admin
   totalEarned: number;
   totalClaimed: number;
   totalRealmkin: number;
@@ -216,7 +217,7 @@ class RewardsService {
   }
 
   // Calculate weekly rate using Firestore configs; default to base for unknown contracts (Option A)
-  private async calculateWeeklyRate(nfts: Array<{ contractAddress: string }>): Promise<number> {
+  private async calculateWeeklyRate(nfts: Array<{ contractAddress: string }>, userId?: string): Promise<number> {
     const configs = await this.loadContractConfigs();
     let totalWeeklyRewards = 0;
 
@@ -230,7 +231,31 @@ class RewardsService {
         totalWeeklyRewards += this.WEEKLY_RATE_PER_NFT;
       }
     }
+    
+    // Add user-specific bonus if exists
+    if (userId) {
+      const bonusRate = await this.getUserBonusRate(userId);
+      totalWeeklyRewards += bonusRate;
+    }
+    
     return totalWeeklyRewards;
+  }
+  
+  // Get user-specific bonus weekly rate from Firestore
+  private async getUserBonusRate(userId: string): Promise<number> {
+    try {
+      const userRewardsRef = doc(db, "userRewards", userId);
+      const userDoc = await getDoc(userRewardsRef);
+      
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        return typeof data.bonusWeeklyRate === 'number' ? Math.max(0, data.bonusWeeklyRate) : 0;
+      }
+      return 0;
+    } catch (error) {
+      console.error('Error fetching user bonus rate:', error);
+      return 0;
+    }
   }
 
   // Compute welcome bonus for any newly detected NFTs per contract
@@ -281,7 +306,7 @@ class RewardsService {
     const existingDoc = await getDoc(userRewardsRef);
 
     const now = new Date();
-    const weeklyRate = nfts.length > 0 ? await this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
+    const weeklyRate = nfts.length > 0 ? await this.calculateWeeklyRate(nfts, userId) : nftCount * this.WEEKLY_RATE_PER_NFT;
 
     if (existingDoc.exists()) {
       const existingData = existingDoc.data() as UserRewards;
@@ -307,7 +332,7 @@ class RewardsService {
       const newNFTBonus = nfts.length > 0
         ? await this.computeAndRecordWelcomeBonuses(userId, nfts)
         : Math.max(0, nftCount - previousNFTCount) * this.NEW_NFT_BONUS;
-      const weeklyRewards = nfts.length > 0 ? await this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
+      const weeklyRewards = nfts.length > 0 ? await this.calculateWeeklyRate(nfts, userId) : nftCount * this.WEEKLY_RATE_PER_NFT;
 
       const updatedData: Partial<UserRewards> = {
         totalNFTs: nftCount,
@@ -333,7 +358,7 @@ class RewardsService {
       const welcomeBonus = nfts.length > 0
         ? await this.computeAndRecordWelcomeBonuses(userId, nfts)
         : nftCount * this.NEW_NFT_BONUS;
-      const weeklyRewards = nfts.length > 0 ? await this.calculateWeeklyRate(nfts) : nftCount * this.WEEKLY_RATE_PER_NFT;
+      const weeklyRewards = nfts.length > 0 ? await this.calculateWeeklyRate(nfts, userId) : nftCount * this.WEEKLY_RATE_PER_NFT;
       const totalInitialRewards = weeklyRewards + welcomeBonus;
 
       const newUserRewards: UserRewards = {
