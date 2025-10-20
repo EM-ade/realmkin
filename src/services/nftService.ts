@@ -184,10 +184,11 @@ class NFTService {
         ? Array.from(new Set([this.REALMKIN_SOLANA_CONTRACT_ADDRESS, ...configured]))
         : [this.REALMKIN_SOLANA_CONTRACT_ADDRESS];
 
-      // Filter for allowed collections/contracts via Helius grouping
+      // Filter for allowed collections/contracts via Helius grouping (case-insensitive)
+      const allowedContractsLower = allowedContracts.map(addr => addr.toLowerCase());
       const realmkinNFTs = response.data.result.items.filter((nft: HeliusNFT) =>
         nft.grouping?.some(
-          (group) => group.group_key === "collection" && allowedContracts.includes(group.group_value)
+          (group) => group.group_key === "collection" && allowedContractsLower.includes(group.group_value?.toLowerCase())
         )
       );
 
@@ -257,8 +258,10 @@ class NFTService {
       );
 
       // Filter NFTs by allowed contracts (validate against admin-registered contracts)
+      // Use case-insensitive comparison
+      const allowedContractsLower = allowedContracts.map(addr => addr.toLowerCase());
       const filteredNFTs = nfts.filter((nft): nft is NFTMetadata => 
-        nft !== null && allowedContracts.includes(nft.contractAddress)
+        nft !== null && allowedContractsLower.includes(nft.contractAddress.toLowerCase())
       );
 
       const result: NFTCollection = {
