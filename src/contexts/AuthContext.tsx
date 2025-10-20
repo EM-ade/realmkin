@@ -71,11 +71,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const userWallet = data.walletAddress?.toLowerCase();
             const isAdmin = userWallet ? adminWallets.includes(userWallet) : false;
             
-            console.log('🔍 Admin Check:', {
+            console.log('🔍 Admin Check (DETAILED):', {
               userWallet,
+              userWalletRaw: data.walletAddress,
               adminWallets,
+              adminWalletsRaw: process.env.NEXT_PUBLIC_ADMIN_WALLETS,
               isAdmin,
-              envVar: process.env.NEXT_PUBLIC_ADMIN_WALLETS
+              envVar: process.env.NEXT_PUBLIC_ADMIN_WALLETS,
+              fullUserData: data,
+              userId: user.uid,
+              environment: process.env.NODE_ENV
             });
             
             setUserData({
