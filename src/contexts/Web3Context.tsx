@@ -11,6 +11,7 @@ import {
 import { isValidSolanaAddress } from "@/utils/formatAddress";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
 // Enhanced error message function for Solana wallet connections with mobile support
 interface ConnectionErrorResponse {
@@ -131,6 +132,34 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const { publicKey, connected, connecting, disconnect: adapterDisconnect } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
 
+  // Auto-authenticate with Firebase when wallet connects
+  const autoAuthenticateFirebase = async (walletAddress: string) => {
+    try {
+      const auth = getAuth();
+      
+      // Skip if already authenticated
+      if (auth.currentUser) {
+        console.log('✅ Already authenticated with Firebase');
+        return;
+      }
+
+      // Create temp credentials based on wallet address
+      const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
+      const tempPassword = walletAddress;
+
+      console.log('🔐 Auto-authenticating with Firebase for wallet:', walletAddress);
+      
+      try {
+        await signInWithEmailAndPassword(auth, tempEmail, tempPassword);
+        console.log('✅ Auto-authentication successful');
+      } catch (error) {
+        console.log('ℹ️ Firebase account not found for this wallet. User needs to sign up via /login');
+      }
+    } catch (error) {
+      console.error('Auto-authentication error:', error);
+    }
+  };
+
   // Sync adapter state into this context
   useEffect(() => {
     try {
@@ -147,6 +176,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             address,
             timestamp: Date.now(),
           }));
+
+          // Auto-authenticate with Firebase
+          autoAuthenticateFirebase(address);
         }
       } else {
         setAccount(null);
@@ -311,6 +343,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             address: connectedAddress,
             timestamp: Date.now()
           }));
+          
+          // Auto-authenticate with Firebase
+          await autoAuthenticateFirebase(connectedAddress);
           return;
         }
 
@@ -647,6 +682,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             setAccount(connectedAddress);
             setIsConnected(true);
             setProvider(null);
+            
+            // Auto-authenticate with Firebase
+            await autoAuthenticateFirebase(connectedAddress);
             return;
 
           } else if (walletType === "solflare") {
@@ -691,12 +729,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
               type: 'solflare',
               address: connectedAddress,
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              isMobile: isMobile
             }));
 
             setAccount(connectedAddress);
             setIsConnected(true);
             setProvider(null);
+            
+            // Auto-authenticate with Firebase
+            await autoAuthenticateFirebase(connectedAddress);
             return;
 
           } else if (walletType === "backpack") {
@@ -735,6 +777,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             setAccount(connectedAddress);
             setIsConnected(true);
             setProvider(null);
+            
+            // Auto-authenticate with Firebase
+            await autoAuthenticateFirebase(connectedAddress);
             return;
 
           } else if (walletType === "glow") {
@@ -773,6 +818,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             setAccount(connectedAddress);
             setIsConnected(true);
             setProvider(null);
+            
+            // Auto-authenticate with Firebase
+            await autoAuthenticateFirebase(connectedAddress);
             return;
 
           } else {
