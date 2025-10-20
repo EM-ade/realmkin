@@ -38,32 +38,29 @@ export default function Home() {
   const isMobile = useIsMobile();
 
   const [showMobileActions, setShowMobileActions] = useState(false);
-  const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
+  const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const [discordConnecting, setDiscordConnecting] = useState(false);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
 
-  // Fetch unified balance (same as wallet page)
+  // Fetch user rewards from Firebase
   useEffect(() => {
-    async function fetchUnifiedBalance() {
-      if (user?.uid) {
-        try {
-          const response = await fetch(`${gatekeeperBase}/api/balance/${user.uid}`);
-          if (response.ok) {
-            const data = await response.json();
-            setUnifiedBalance(data.balance || 0);
-          }
-        } catch (error) {
-          console.error("Error fetching balance:", error);
-          setUnifiedBalance(null);
-        }
-      } else {
-        setUnifiedBalance(null);
+    async function fetchUserRewards() {
+      if (!user?.uid) {
+        setUserRewards(null);
+        return;
+      }
+      try {
+        const rewards = await rewardsService.getUserRewards(user.uid);
+        setUserRewards(rewards);
+      } catch (error) {
+        console.error('Error fetching user rewards:', error);
+        setUserRewards(null);
       }
     }
-    fetchUnifiedBalance();
-  }, [user?.uid, gatekeeperBase]);
+    fetchUserRewards();
+  }, [user?.uid]);
 
   // Check Discord link status
   useEffect(() => {
@@ -110,7 +107,7 @@ export default function Home() {
 
   // Calculate stats
   const nftCount = nfts?.length || 0;
-  const balanceDisplay = unifiedBalance === null ? "…" : (unifiedBalance ?? 0).toFixed(2);
+  const balanceDisplay = userRewards ? userRewards.totalRealmkin.toFixed(2) : "0.00";
 
   // Mobile menu items
   const mobileMenuItems = useMemo(

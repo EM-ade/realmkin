@@ -94,7 +94,6 @@ export default function MyNFTPage() {
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
   const [discordConnecting, setDiscordConnecting] = useState(false);
-  const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
@@ -118,19 +117,8 @@ export default function MyNFTPage() {
   }, [testMode, nfts]);
 
   const walletDisplayValue = useMemo(() => {
-    const fb = userRewards ? userRewards.totalRealmkin : null;
-    const uni = typeof unifiedBalance === "number" ? unifiedBalance : null;
-    if (fb !== null && uni !== null) {
-      return Math.max(fb, uni);
-    }
-    if (uni !== null) {
-      return uni;
-    }
-    if (fb !== null) {
-      return fb;
-    }
-    return 0;
-  }, [userRewards, unifiedBalance]);
+    return userRewards ? userRewards.totalRealmkin : 0;
+  }, [userRewards]);
 
   const formattedWalletBalance = useMemo(
     () => `${rewardsService.formatMKIN(walletDisplayValue)} MKIN`,
@@ -248,36 +236,6 @@ export default function MyNFTPage() {
     checkLink();
   }, [user?.uid, gatekeeperBase]);
 
-  // Fetch unified balance
-  useEffect(() => {
-    async function fetchUnifiedBalance() {
-      try {
-        const auth = getAuth();
-        if (!auth.currentUser) {
-          setUnifiedBalance(null);
-          return;
-        }
-        const token = await auth.currentUser.getIdToken();
-        const res = await fetch(`${gatekeeperBase}/api/balance`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          setUnifiedBalance(null);
-          return;
-        }
-        const data = await res.json();
-        if (typeof data?.balance === 'number') {
-          setUnifiedBalance(data.balance);
-        } else {
-          setUnifiedBalance(null);
-        }
-      } catch {
-        setUnifiedBalance(null);
-      }
-    }
-    fetchUnifiedBalance();
-  }, [user?.uid, gatekeeperBase]);
 
   const getRarityColor = (rarity: string) => {
     switch (rarity?.toUpperCase()) {
@@ -498,7 +456,7 @@ export default function MyNFTPage() {
 
                 {/* NFT Info Overlay */}
                 {selectedNFT && (
-                  <div className="absolute top-4 left-4 bg-[#1b1205]/95 backdrop-blur-md border border-[#f4c752]/30 rounded-xl px-5 py-4 max-w-xs shadow-lg">
+                  <div className="absolute top-4 left-4 bg-[#1b1205]/95 backdrop-blur-md border border-[#f4c752]/30 rounded-xl px-5 py-4 max-w-sm shadow-lg max-h-[calc(100vh-320px)] overflow-y-auto">
                     <h3 className="text-[#f4c752] font-bold text-lg mb-2">{selectedNFT.name}</h3>
                     <p
                       className="text-sm font-bold uppercase tracking-wider mb-3"
@@ -507,10 +465,22 @@ export default function MyNFTPage() {
                       {selectedNFT.rarity || 'COMMON'}
                     </p>
                     {selectedNFT.power && (
-                      <p className="text-sm text-[#f7dca1]/80">
+                      <p className="text-sm text-[#f7dca1]/80 mb-3">
                         Power: <span className="text-[#f4c752] font-bold">{selectedNFT.power}</span>
                       </p>
                     )}
+                    
+                    {/* Overall Rarity Display */}
+                    {selectedNFT.attributes && selectedNFT.attributes.length > 0 && (() => {
+                      const overallRarity = selectedNFT.attributes.find(
+                        attr => attr.trait_type.toUpperCase() === 'OVERALL RARITY'
+                      );
+                      return overallRarity ? (
+                        <p className="text-sm text-[#f7dca1]/80">
+                          Overall Rarity: <span className="text-[#f4c752] font-bold">{overallRarity.value}</span>
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>

@@ -51,7 +51,6 @@ export default function WalletPage() {
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
   const [discordConnecting, setDiscordConnecting] = useState(false);
-  const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
@@ -67,19 +66,8 @@ export default function WalletPage() {
   const [lastClaimWallet, setLastClaimWallet] = useState<string>("");
 
   const walletDisplayValue = useMemo(() => {
-    const fb = userRewards ? userRewards.totalRealmkin : null;
-    const uni = typeof unifiedBalance === "number" ? unifiedBalance : null;
-    if (fb !== null && uni !== null) {
-      return Math.max(fb, uni);
-    }
-    if (uni !== null) {
-      return uni;
-    }
-    if (fb !== null) {
-      return fb;
-    }
-    return 0;
-  }, [userRewards, unifiedBalance]);
+    return userRewards ? userRewards.totalRealmkin : 0;
+  }, [userRewards]);
 
   const formattedWalletBalance = useMemo(
     () => `${rewardsService.formatMKIN(walletDisplayValue)} MKIN`,
@@ -378,13 +366,7 @@ const handleTransfer = useCallback(async () => {
       throw new Error(j?.error || 'Transfer failed');
     }
 
-    // Optionally, refresh unified balance display by fetching again
-    try {
-      const balanceData = await res.json().catch(() => null);
-      if (balanceData && typeof balanceData.balance === 'number') {
-        setUnifiedBalance(balanceData.balance);
-      }
-    } catch {}
+    // Balance will be refreshed automatically via userRewards state
 
     // Show transfer confirmation
     setLastTransferAmount(amount);
@@ -502,36 +484,6 @@ const handleTransfer = useCallback(async () => {
     checkLink();
   }, [user?.uid, gatekeeperBase]);
 
-  // Fetch unified balance from Gatekeeper for consistency with Discord bot
-  useEffect(() => {
-    async function fetchUnifiedBalance() {
-      try {
-        const auth = getAuth();
-        if (!auth.currentUser) {
-          setUnifiedBalance(null);
-          return;
-        }
-        const token = await auth.currentUser.getIdToken();
-        const res = await fetch(`${gatekeeperBase}/api/balance`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          setUnifiedBalance(null);
-          return;
-        }
-        const data = await res.json();
-        if (typeof data?.balance === 'number') {
-          setUnifiedBalance(data.balance);
-        } else {
-          setUnifiedBalance(null);
-        }
-      } catch {
-        setUnifiedBalance(null);
-      }
-    }
-    fetchUnifiedBalance();
-  }, [user?.uid, gatekeeperBase]);
 
   return (
     <ProtectedRoute>

@@ -194,9 +194,7 @@ export default function MobileMenuOverlay({
                   onClick={() => {
                     if (!discordLinked && onDiscordConnect) {
                       onDiscordConnect();
-                      return;
-                    }
-                    if (onDiscordDisconnect) {
+                    } else if (discordLinked && onDiscordDisconnect) {
                       onDiscordDisconnect();
                     }
                   }}
@@ -208,6 +206,8 @@ export default function MobileMenuOverlay({
                       ? "Disconnect Discord"
                       : discordConnecting
                       ? "Connecting…"
+                      : discordUnlinking
+                      ? "Disconnecting…"
                       : "Connect Discord"}
                   </span>
                   <span className="text-xs text-[#DA9C2F] opacity-70">
@@ -232,19 +232,19 @@ export default function MobileMenuOverlay({
                   </div>
                   <button
                     onClick={() => {
-                      onClose();
                       if (isConnected && onDisconnectWallet) {
                         onDisconnectWallet();
-                      } else if (onConnectWallet) {
+                      } else if (!isConnected && onConnectWallet) {
                         onConnectWallet();
                       }
+                      onClose();
                     }}
                     disabled={isConnecting}
                     className="basis-[70%] flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
                   >
                     <span>
                       {isConnected
-                        ? "Connected"
+                        ? "Disconnect Wallet"
                         : isConnecting
                         ? "Connecting…"
                         : "Connect Wallet"}

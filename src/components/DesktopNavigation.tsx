@@ -27,25 +27,13 @@ export default function DesktopNavigation() {
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
   const [discordConnecting, setDiscordConnecting] = useState(false);
-  const [unifiedBalance, setUnifiedBalance] = useState<number | null>(null);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
 
   const walletDisplayValue = useMemo(() => {
-    const fb = userRewards ? userRewards.totalRealmkin : null;
-    const uni = typeof unifiedBalance === "number" ? unifiedBalance : null;
-    if (fb !== null && uni !== null) {
-      return Math.max(fb, uni);
-    }
-    if (uni !== null) {
-      return uni;
-    }
-    if (fb !== null) {
-      return fb;
-    }
-    return 0;
-  }, [userRewards, unifiedBalance]);
+    return userRewards ? userRewards.totalRealmkin : 0;
+  }, [userRewards]);
 
   const formattedWalletBalance = useMemo(
     () => `${rewardsService.formatMKIN(walletDisplayValue)} MKIN`,
@@ -130,36 +118,23 @@ export default function DesktopNavigation() {
     checkLink();
   }, [user?.uid, gatekeeperBase]);
 
-  // Fetch unified balance
+  // Fetch user rewards from Firebase
   useEffect(() => {
-    async function fetchUnifiedBalance() {
+    async function fetchUserRewards() {
+      if (!user?.uid) {
+        setUserRewards(null);
+        return;
+      }
       try {
-        const auth = getAuth();
-        if (!auth.currentUser) {
-          setUnifiedBalance(null);
-          return;
-        }
-        const token = await auth.currentUser.getIdToken();
-        const res = await fetch(`${gatekeeperBase}/api/balance`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          setUnifiedBalance(null);
-          return;
-        }
-        const data = await res.json();
-        if (typeof data?.balance === 'number') {
-          setUnifiedBalance(data.balance);
-        } else {
-          setUnifiedBalance(null);
-        }
-      } catch {
-        setUnifiedBalance(null);
+        const rewards = await rewardsService.getUserRewards(user.uid);
+        setUserRewards(rewards);
+      } catch (error) {
+        console.error('Error fetching user rewards:', error);
+        setUserRewards(null);
       }
     }
-    fetchUnifiedBalance();
-  }, [user?.uid, gatekeeperBase]);
+    fetchUserRewards();
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!discordLinked) {
@@ -216,58 +191,56 @@ export default function DesktopNavigation() {
                 {/* Dynamic Connect Button with Dropdown */}
                 <div className="relative">
                   <button
-                    onClick={() => setShowDiscordMenu((v) => !v)}
+                    onClick={() => {
+                      // If both are connected, clicking the button should show the menu
+                      // If only one is connected, clicking should disconnect that one
+                      if (isConnected && discordLinked) {
+                        setShowDiscordMenu((v) => !v);
+                      } else if (isConnected && !discordLinked) {
+                        disconnectWallet();
+                      } else if (!isConnected && discordLinked) {
+                        handleDiscordDisconnect();
+                      } else {
+                        setShowDiscordMenu((v) => !v);
+                      }
+                    }}
                     className={`flex items-center justify-between gap-2 bg-[#0B0B09] px-3 py-2 rounded-xl border ${isConnected && discordLinked ? 'border-[#2E7D32] text-emerald-400' : 'border-[#404040] text-[#DA9C2F] hover:bg-[#1a1a1a]'} font-medium text-xs transition-colors whitespace-nowrap min-w-[130px] xl:text-sm`}
                   >
                     <span>
                       {isConnected && discordLinked
                         ? 'Connected'
                         : isConnected && !discordLinked
-                          ? 'Connect Discord'
+                          ? 'Disconnect Wallet'
                           : !isConnected && discordLinked
-                            ? 'Connect Wallet'
+                            ? 'Disconnect Discord'
                             : 'Connect'}
                     </span>
                     <span className="text-[10px] xl:text-xs opacity-80">▼</span>
                   </button>
-                  {/* Dropdown - always accessible */}
-                  {showDiscordMenu && (
+                  {/* Dropdown - only show when both are connected */}
+                  {showDiscordMenu && isConnected && discordLinked && (
                     <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
                       {/* Discord Option */}
                       <button
                         onClick={() => {
-                          if (!discordLinked) {
-                            handleDiscordConnect();
-                          } else {
-                            handleDiscordDisconnect();
-                          }
+                          handleDiscordDisconnect();
                           setShowDiscordMenu(false);
                         }}
-                        disabled={discordConnecting || discordUnlinking}
+                        disabled={discordUnlinking}
                         className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg text-xs"
                       >
-                        {discordConnecting
-                          ? 'CONNECTING…'
-                          : discordUnlinking
-                            ? 'DISCONNECTING…'
-                            : discordLinked
-                              ? 'Disconnect Discord'
-                              : 'Connect Discord'}
+                        {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect Discord'}
                       </button>
                       {/* Wallet Option */}
                       <button
                         onClick={() => {
-                          if (!isConnected) {
-                            connectWallet();
-                          } else {
-                            disconnectWallet();
-                          }
+                          disconnectWallet();
                           setShowDiscordMenu(false);
                         }}
                         disabled={isConnecting}
                         className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg whitespace-nowrap text-xs"
                       >
-                        {isConnected ? 'Disconnect Wallet' : isConnecting ? 'CONNECTING...' : 'Connect Wallet'}
+                        {isConnecting ? 'DISCONNECTING...' : 'Disconnect Wallet'}
                       </button>
                     </div>
                   )}
