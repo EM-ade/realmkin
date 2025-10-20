@@ -1,3 +1,9 @@
+// Position in a grid
+export interface Position {
+  row: number;
+  col: number;
+}
+
 // Letter in the circle
 export interface Letter {
   char: string;
@@ -63,6 +69,13 @@ export interface GameState {
 // Letter generation result
 export interface LetterSetResult {
   letters: Letter[];
+  totalWords: number;
+  validWords: Set<string>;
+}
+
+// Grid generation result
+export interface GridResult {
+  grid: Letter[][];
   totalWords: number;
   validWords: Set<string>;
 }

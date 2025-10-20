@@ -60,7 +60,7 @@ function createRandomGrid(difficulty: DifficultyTier): Letter[][] {
       
       grid[row][col] = {
         char,
-        position: { row, col },
+        index: row * GRID_SIZE + col, // Calculate index from position
         isSelected: false,
         isValidated: false,
         isRare: isRareLetter(char),

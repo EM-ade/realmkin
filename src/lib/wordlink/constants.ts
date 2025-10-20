@@ -34,6 +34,9 @@ export const WARNING_TIME = 15; // seconds
 export const MIN_LETTERS = 5;
 export const MAX_LETTERS = 5;
 
+// Grid configuration (for grid-based word games)
+export const GRID_SIZE = 4; // 4x4 grid
+
 // Difficulty configurations
 export const DIFFICULTY_CONFIGS: Record<DifficultyTier, DifficultyConfig> = {
   easy: {

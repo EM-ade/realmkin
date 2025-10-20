@@ -87,7 +87,7 @@ export default function WordLinkPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.5em] text-[#DA9C2F]/70">Arcade Nexus / Word Games</p>
               <h2 className="text-2xl font-bold uppercase tracking-[0.28em] text-[#F4C752] md:text-4xl">WordLink</h2>
               <p className="text-sm text-white/70 md:text-base">
-                Connect letters in the circle to form words. You'll get 4-5 random letters—create as many 3-4 letter words as you can! Build combos, earn bonuses, and clear rounds for massive rewards. The difficulty increases as you progress—how many rounds can you master?
+                Connect letters in the circle to form words. You&apos;ll get 4-5 random letters—create as many 3-4 letter words as you can! Build combos, earn bonuses, and clear rounds for massive rewards. The difficulty increases as you progress—how many rounds can you master?
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full border border-[#46c68e]/60 bg-[#46c68e]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-[#46c68e]">

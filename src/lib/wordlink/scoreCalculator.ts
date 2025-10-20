@@ -12,7 +12,7 @@ export function calculateWordScore(
   lastWordTime: number
 ): { points: number; bonuses: WordBonuses } {
   // Base points
-  let basePoints = word.length === 3 ? POINTS.THREE_LETTER : POINTS.FOUR_LETTER;
+  const basePoints = word.length === 3 ? POINTS.THREE_LETTER : POINTS.FOUR_LETTER;
   
   // Check for rare letters
   const rareLetterCount = word.split('').filter(char => 
