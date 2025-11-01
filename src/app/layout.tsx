@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Web3Provider } from "@/contexts/Web3Context";
 import { NFTProvider } from "@/contexts/NFTContext";
+import { StakingProvider } from "@/contexts/StakingContext";
 import SolanaWalletProvider from "@/contexts/SolanaWalletProvider";
 import RouteTransition from "@/components/RouteTransition";
 
@@ -100,9 +101,11 @@ export default function RootLayout({
         <AuthProvider>
           <SolanaWalletProvider>
             <Web3Provider>
-              <RouteTransition>
-                <NFTProvider>{children}</NFTProvider>
-              </RouteTransition>
+              <StakingProvider>
+                <RouteTransition>
+                  <NFTProvider>{children}</NFTProvider>
+                </RouteTransition>
+              </StakingProvider>
             </Web3Provider>
           </SolanaWalletProvider>
         </AuthProvider>

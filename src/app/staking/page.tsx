@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useWeb3 } from "@/contexts/Web3Context";
+import { useStaking } from "@/contexts/StakingContext";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { formatAddress } from "@/utils/formatAddress";
 import DesktopNavigation from "@/components/DesktopNavigation";
+import { getAPYForLockPeriod, estimateRewards } from "@/config/staking.config";
 
-const LOCK_OPTIONS = [
+const LOCK_OPTIONS: Array<{ label: string; value: "flexible" | "30" | "90" }> = [
   { label: "Flexible", value: "flexible" },
   { label: "30 Days", value: "30" },
   { label: "90 Days", value: "90" },
@@ -29,8 +31,10 @@ const NAV_ITEMS = [
 
 export default function StakingPage() {
   const [amount, setAmount] = useState("");
-  const [selectedLock, setSelectedLock] = useState("flexible");
-  const [selectedBoost, setSelectedBoost] = useState<number | null>(null);
+  const [selectedLock, setSelectedLock] = useState<"flexible" | "30" | "60" | "90">("flexible");
+  const [selectedBoost, setSelectedBoost] = useState(0);
+  const [isStaking, setIsStaking] = useState(false);
+  const [isUnstaking, setIsUnstaking] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const mobileActionsRef = useRef<HTMLDivElement | null>(null);
 
@@ -41,6 +45,19 @@ export default function StakingPage() {
     isConnecting,
     account,
   } = useWeb3();
+  
+  const {
+    stakes,
+    totalStaked,
+    totalRewards,
+    walletBalance,
+    globalTVL,
+    totalStakers,
+    createStake,
+    unstake,
+    isLoading: stakingLoading,
+  } = useStaking();
+  
   const { setVisible: setWalletModalVisible } = useWalletModal();
 
   useEffect(() => {
@@ -99,22 +116,125 @@ export default function StakingPage() {
     []
   );
 
-  const mockWallet = useMemo(
+  // Calculate estimated rewards based on current inputs
+  const estimatedRewards = useMemo(() => {
+    if (!amount || isNaN(parseFloat(amount))) return 0;
+    const lockDays = selectedLock === "flexible" ? 0 : selectedLock === "30" ? 30 : selectedLock === "60" ? 60 : 90;
+    const apy = getAPYForLockPeriod(selectedLock);
+    return estimateRewards(parseFloat(amount), lockDays, apy);
+  }, [amount, selectedLock]);
+
+  // Handle stake button click
+  const handleStake = async () => {
+    if (!amount || isStaking) return;
+    
+    setIsStaking(true);
+    try {
+      alert("⏳ Processing your stake...\n\nPlease wait while we send your tokens to the staking wallet.");
+      const result = await createStake(parseFloat(amount), selectedLock);
+      console.log("Stake created:", result);
+      alert(`✅ Stake successful!\n\nTransaction ID: ${result.stakeEntry}\n\nYour ${selectedLock === "flexible" ? "flexible" : selectedLock + "-day"} stake of ${amount} $MKIN is now earning rewards!\n\nAPY: ${getAPYForLockPeriod(selectedLock)}%`);
+      setAmount("");
+      setSelectedBoost(0);
+    } catch (error) {
+      console.error("Stake failed:", error);
+      alert(`❌ Staking failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsStaking(false);
+    }
+  };
+  // Handle unstake button click
+  const handleUnstake = async (stakeEntry: string) => {
+    if (isUnstaking) return;
+    
+    const stakeToUnstake = stakes.find(s => s.stakeEntry === stakeEntry);
+    if (!stakeToUnstake) {
+      alert("Stake not found");
+      return;
+    }
+    
+    // Calculate penalty if locked
+    let penaltyPercent = 0;
+    if (!stakeToUnstake.isUnlocked) {
+      if (stakeToUnstake.lockPeriod === "flexible") {
+        // No penalty for flexible
+        penaltyPercent = 0;
+      } else if (stakeToUnstake.lockPeriod === "30") {
+        penaltyPercent = 10;
+      } else if (stakeToUnstake.lockPeriod === "60") {
+        penaltyPercent = 15;
+      } else if (stakeToUnstake.lockPeriod === "90") {
+        penaltyPercent = 20;
+      }
+    }
+    
+    const penalty = (stakeToUnstake.amount * penaltyPercent) / 100;
+    const amountToReturn = stakeToUnstake.amount - penalty;
+    const rewardsToReturn = stakeToUnstake.isUnlocked ? stakeToUnstake.rewards : 0;
+    
+    let confirmMessage = `Unstake ${stakeToUnstake.amount} $MKIN?\n\n`;
+    if (stakeToUnstake.isUnlocked) {
+      confirmMessage += `✅ Lock period ended\n\nYou will receive:\n- ${amountToReturn.toFixed(2)} $MKIN (principal)\n- ${rewardsToReturn.toFixed(2)} $MKIN (rewards)\n- Total: ${(amountToReturn + rewardsToReturn).toFixed(2)} $MKIN`;
+    } else {
+      confirmMessage += `⚠️ Early unstake penalty: ${penaltyPercent}%\n\nYou will receive:\n- ${amountToReturn.toFixed(2)} $MKIN (after ${penaltyPercent}% penalty)\n- $0 in rewards (forfeited)\n\nPenalty amount: ${penalty.toFixed(2)} $MKIN`;
+    }
+    
+    const confirmed = confirm(confirmMessage);
+    if (!confirmed) return;
+    
+    setIsUnstaking(true);
+    try {
+      // Call API to unstake and transfer tokens
+      const response = await fetch("/api/unstake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet: account,
+          stakeId: stakeEntry,
+          action: "complete",
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to unstake");
+      }
+      
+      // Immediate success feedback
+      alert(`✅ Unstake initiated!\n\nTx: ${data.txSignature.slice(0, 20)}...\n\nYou will receive:\n- ${data.amountReturned.toFixed(2)} $MKIN (principal)\n- ${data.rewardsReturned.toFixed(2)} $MKIN (rewards)\n\nTokens arriving in your wallet now!`);
+    } catch (error) {
+      console.error("Unstake failed:", error);
+      alert(`❌ Unstaking failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsUnstaking(false);
+    }
+  };
+
+  // Handle boost preset click (sets amount as % of balance)
+  const handleBoostPreset = (preset: number) => {
+    setSelectedBoost(preset);
+    // Use real wallet balance
+    setAmount((walletBalance * preset).toString());
+  };
+  
+  // Wallet data for display
+  const walletData = useMemo(
     () => ({
-      address: "0x1234...ABCD",
-      balance: 1234,
-      staked: 500,
-      rewards: 25,
+      address: account ? formatAddress(account, 4, 4) : "Not connected",
+      balance: walletBalance,
+      staked: totalStaked,
+      rewards: totalRewards,
     }),
-    []
+    [account, walletBalance, totalStaked, totalRewards]
   );
 
-  const mockMetrics = useMemo(
+  const metrics = useMemo(
     () => ({
-      totalValueLocked: 123456,
-      totalStakers: 4321,
+      totalValueLocked: globalTVL,
+      totalStakers: totalStakers,
     }),
-    []
+    [globalTVL, totalStakers]
   );
 
   return (
@@ -275,25 +395,25 @@ export default function StakingPage() {
                 <div className="mt-5 space-y-5 text-[#f7dca1]">
                   <div>
                     <p className="staking-label">Address</p>
-                    <p className="staking-value">{mockWallet.address}</p>
+                    <p className="staking-value">{walletData.address}</p>
                   </div>
                   <div>
                     <p className="staking-label">Wallet Balance</p>
-                    <p className="staking-value">{mockWallet.balance} $MKIN</p>
+                    <p className="staking-value">{walletData.balance} $MKIN</p>
                   </div>
                   <div>
                     <p className="staking-label">Staked Balance</p>
-                    <p className="staking-value">{mockWallet.staked} $MKIN</p>
+                    <p className="staking-value">{walletData.staked.toFixed(2)} $MKIN</p>
                   </div>
                   <div>
                     <p className="staking-label">Rewards Earned</p>
-                    <p className="staking-value">{mockWallet.rewards} $MKIN</p>
+                    <p className="staking-value">{walletData.rewards.toFixed(2)} $MKIN</p>
                   </div>
                 </div>
               </div>
 
               <div className="staking-card-section">
-                <h2 className="staking-card-title">Stake / Unstake</h2>
+                <h2 className="staking-card-title">Stake</h2>
                 <div className="mt-5 flex flex-col gap-4">
                   <input
                     value={amount}
@@ -303,11 +423,21 @@ export default function StakingPage() {
                     type="number"
                     min="0"
                   />
+                  <select
+                    value={selectedLock}
+                    onChange={(e) => setSelectedLock(e.target.value as any)}
+                    className="rounded-xl bg-black/45 px-4 py-3 text-sm text-[#f7dca1] focus:outline-none focus:ring-2 focus:ring-[#f4c752]/60"
+                  >
+                    <option value="flexible">Flexible (20% APY)</option>
+                    <option value="30">30 Days (48% APY)</option>
+                    <option value="60">60 Days (64% APY)</option>
+                    <option value="90">90 Days (100% APY)</option>
+                  </select>
                   <div className="flex items-center justify-between gap-2">
                     {BOOST_PRESETS.map((preset) => (
                       <button
                         key={preset.label}
-                        onClick={() => setSelectedBoost(preset.value)}
+                        onClick={() => handleBoostPreset(preset.value)}
                         className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold uppercase tracking-[0.2em] transition ${
                           selectedBoost === preset.value
                             ? "border-[#f4c752] bg-[#f4c752] text-black"
@@ -318,14 +448,52 @@ export default function StakingPage() {
                       </button>
                     ))}
                   </div>
-                  <div className="flex gap-3">
-                    <button className="flex-1 rounded-xl bg-[#f4c752] py-3 text-sm font-semibold uppercase tracking-[0.28em] text-black transition hover:scale-[1.01]">
-                      Stake $MKIN
-                    </button>
-                    <button className="flex-1 rounded-xl border border-[#f4c752]/50 bg-black/40 py-3 text-sm font-semibold uppercase tracking-[0.28em] text-[#f7dca1] transition hover:border-[#f4c752]/80">
-                      Unstake $MKIN
-                    </button>
-                  </div>
+                  <button 
+                    onClick={handleStake}
+                    disabled={!isConnected || isStaking || !amount}
+                    className="w-full rounded-xl bg-[#f4c752] py-3 text-sm font-semibold uppercase tracking-[0.28em] text-black transition hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isStaking ? "Staking..." : "Stake $MKIN"}
+                  </button>
+                </div>
+              </div>
+
+
+              <div className="staking-card-section">
+                <h2 className="staking-card-title">Your Stakes</h2>
+                <div className="mt-5 flex flex-col gap-4">
+                  {stakes.length === 0 ? (
+                    <p className="text-sm text-[#f7dca1]/60">No active stakes yet. Start staking to earn rewards!</p>
+                  ) : (
+                    stakes.map((stake) => (
+                      <div key={stake.id} className="rounded-xl bg-black/45 p-4 border border-[#f4c752]/30">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="text-sm text-[#f7dca1]/80">
+                              {stake.amount} $MKIN • {stake.lockPeriod === "flexible" ? "Flexible" : `${stake.lockPeriod}-day`}
+                            </p>
+                            <p className="text-xs text-[#f7dca1]/50 mt-1">
+                              Rewards: {stake.rewards.toFixed(2)} $MKIN
+                            </p>
+                            <p className="text-xs text-[#f7dca1]/50">
+                              {stake.isUnlocked ? (
+                                <span className="text-[#90EE90]">✅ Unlocked - Ready to unstake</span>
+                              ) : (
+                                <span className="text-[#FFB6C1]">🔒 Locked for {stake.daysUntilUnlock} days</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleUnstake(stake.stakeEntry)}
+                          disabled={isUnstaking}
+                          className="w-full rounded-lg bg-[#f4c752]/20 border border-[#f4c752]/50 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#f7dca1] transition hover:bg-[#f4c752]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isUnstaking ? "Processing..." : stake.isUnlocked ? "Unstake" : `Unstake (${stake.lockPeriod === "30" ? "10" : stake.lockPeriod === "60" ? "15" : "20"}% penalty)`}
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -334,19 +502,25 @@ export default function StakingPage() {
                 <div className="mt-5 flex flex-col gap-6">
                   <div className="relative mx-auto flex h-32 w-32 items-center justify-center rounded-full border-2 border-[#f4c752]/40 bg-black/25 shadow-[0_0_30px_rgba(244,199,82,0.18)]">
                     <div className="text-center">
-                      <p className="text-sm uppercase tracking-[0.26em] text-[#f7dca1]/60">xx %</p>
-                      <p className="text-xs uppercase tracking+[0.32em] text-[#f7dca1]/45">APY Boost</p>
+                      <p className="text-sm uppercase tracking-[0.26em] text-[#f7dca1]/60">{getAPYForLockPeriod(selectedLock)}%</p>
+                      <p className="text-xs uppercase tracking+[0.32em] text-[#f7dca1]/45">APY</p>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div>
                       <p className="staking-label">Total Value Locked</p>
-                      <p className="staking-value">${mockMetrics.totalValueLocked.toLocaleString()}</p>
+                      <p className="staking-value">{metrics.totalValueLocked.toLocaleString()} $MKIN</p>
                     </div>
                     <div>
                       <p className="staking-label">Total Stakers</p>
-                      <p className="staking-value">{mockMetrics.totalStakers.toLocaleString()} wallets</p>
+                      <p className="staking-value">{metrics.totalStakers.toLocaleString()} wallets</p>
                     </div>
+                    {estimatedRewards > 0 && (
+                      <div>
+                        <p className="staking-label">Estimated Rewards</p>
+                        <p className="staking-value">{estimatedRewards.toFixed(2)} $MKIN</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
