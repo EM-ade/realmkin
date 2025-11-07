@@ -1,0 +1,251 @@
+{
+	"textures": [
+		{
+			"image": "map-01.png",
+			"format": "RGBA8888",
+			"size": {
+				"w": 899,
+				"h": 578
+			},
+			"scale": 1,
+			"frames": [
+				{
+					"filename": "rocks-01.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 63,
+						"h": 67
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 49,
+						"w": 61,
+						"h": 16
+					},
+					"frame": {
+						"x": 2,
+						"y": 2,
+						"w": 61,
+						"h": 16
+					}
+				},
+				{
+					"filename": "rocks-02.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 63,
+						"h": 67
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 14,
+						"w": 63,
+						"h": 53
+					},
+					"frame": {
+						"x": 65,
+						"y": 2,
+						"w": 63,
+						"h": 53
+					}
+				},
+				{
+					"filename": "Tilemap_Flat_Long.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 192,
+						"h": 63
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 192,
+						"h": 63
+					},
+					"frame": {
+						"x": 130,
+						"y": 2,
+						"w": 192,
+						"h": 63
+					}
+				},
+				{
+					"filename": "sand-02.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 190,
+						"h": 64
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 190,
+						"h": 64
+					},
+					"frame": {
+						"x": 324,
+						"y": 2,
+						"w": 190,
+						"h": 64
+					}
+				},
+				{
+					"filename": "Water.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 64,
+						"h": 64
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 64,
+						"h": 64
+					},
+					"frame": {
+						"x": 516,
+						"y": 2,
+						"w": 64,
+						"h": 64
+					}
+				},
+				{
+					"filename": "sand-04.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 61,
+						"h": 65
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 61,
+						"h": 65
+					},
+					"frame": {
+						"x": 582,
+						"y": 2,
+						"w": 61,
+						"h": 65
+					}
+				},
+				{
+					"filename": "Tilemap_Flat_Full.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 190,
+						"h": 188
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 190,
+						"h": 188
+					},
+					"frame": {
+						"x": 645,
+						"y": 2,
+						"w": 190,
+						"h": 188
+					}
+				},
+				{
+					"filename": "sand-01.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 190,
+						"h": 190
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 190,
+						"h": 190
+					},
+					"frame": {
+						"x": 2,
+						"y": 192,
+						"w": 190,
+						"h": 190
+					}
+				},
+				{
+					"filename": "sand-03.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 61,
+						"h": 191
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 61,
+						"h": 191
+					},
+					"frame": {
+						"x": 194,
+						"y": 192,
+						"w": 61,
+						"h": 191
+					}
+				},
+				{
+					"filename": "Tilemap_Flat_Vertial.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 62,
+						"h": 191
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 62,
+						"h": 191
+					},
+					"frame": {
+						"x": 257,
+						"y": 192,
+						"w": 62,
+						"h": 191
+					}
+				},
+				{
+					"filename": "Tilemap_color1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 576,
+						"h": 384
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 576,
+						"h": 384
+					},
+					"frame": {
+						"x": 321,
+						"y": 192,
+						"w": 576,
+						"h": 384
+					}
+				}
+			]
+		}
+	],
+	"meta": {
+		"app": "https://www.codeandweb.com/texturepacker",
+		"version": "3.0",
+		"smartupdate": "$TexturePacker:SmartUpdate:2321281f959aa07cd0ae12a6c9f81c19:885683931e9996cb4011fe2bfbc5cc44:1788fbe0a1abeb46b220b94a185998ce$"
+	}
+}
