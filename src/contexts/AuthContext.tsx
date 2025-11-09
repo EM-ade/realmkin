@@ -8,7 +8,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 interface UserData {
@@ -104,8 +104,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       console.log("🔐 Attempting login with email:", email);
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("✅ Login successful");
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Update last login timestamp
+      const userDocRef = doc(db, "users", user.uid);
+      await updateDoc(userDocRef, { lastLogin: serverTimestamp() });
+
+      console.log("✅ Login successful and timestamp updated");
     } catch (error: unknown) {
       console.error("❌ Login failed:", error);
       const errorMessage =

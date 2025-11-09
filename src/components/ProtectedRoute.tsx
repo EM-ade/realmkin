@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
@@ -14,17 +14,19 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
   const { user, userData, loading } = useAuth();
   const { isConnected } = useWeb3();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;
 
-    // Allow access if either user is authenticated OR wallet is connected
-    if (!user && !isConnected) {
-      router.push('/login');
+    // Require BOTH: authenticated user AND connected wallet
+    if (!user || !isConnected) {
+      const target = encodeURIComponent(pathname || '/');
+      router.push(`/login?redirect=${target}`);
       return;
     }
 
-    if (adminWallets && userData && !adminWallets.includes(userData.walletAddress ?? '')) {
+    if (adminWallets && userData && !adminWallets.includes((userData.walletAddress ?? '').toLowerCase())) {
       router.push('/');
     }
   }, [user, userData, loading, isConnected, router, adminWallets]);
@@ -44,12 +46,12 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
     );
   }
 
-  // Allow access if either authenticated or wallet connected
-  if (!user && !isConnected) {
+  // Block render if either is missing (router will redirect)
+  if (!user || !isConnected) {
     return null;
   }
 
-  if (adminWallets && userData && !adminWallets.includes(userData.walletAddress ?? '')) {
+  if (adminWallets && userData && !adminWallets.includes((userData.walletAddress ?? '').toLowerCase())) {
     return null;
   }
 

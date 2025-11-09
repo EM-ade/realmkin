@@ -5,8 +5,12 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Web3Provider } from "@/contexts/Web3Context";
 import { NFTProvider } from "@/contexts/NFTContext";
+import { StakingProvider } from "@/contexts/StakingContext";
 import SolanaWalletProvider from "@/contexts/SolanaWalletProvider";
 import RouteTransition from "@/components/RouteTransition";
+import { Toaster } from "react-hot-toast";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Hertical Sans Regular font for header
 const herticalSans = localFont({
@@ -100,12 +104,17 @@ export default function RootLayout({
         <AuthProvider>
           <SolanaWalletProvider>
             <Web3Provider>
-              <RouteTransition>
-                <NFTProvider>{children}</NFTProvider>
-              </RouteTransition>
+              <StakingProvider>
+                <Toaster position="top-right" toastOptions={{className:'bg-[#101010] text-[#f4c752] font-medium border border-[#f4c752]/40'}} />
+                  <RouteTransition>
+                  <NFTProvider>{children}</NFTProvider>
+                </RouteTransition>
+              </StakingProvider>
             </Web3Provider>
           </SolanaWalletProvider>
         </AuthProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

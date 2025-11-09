@@ -12,6 +12,9 @@ import { isValidSolanaAddress } from "@/utils/formatAddress";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { db } from "@/config/firebase";
+import { useRouter } from 'next/navigation';
 
 // Enhanced error message function for Solana wallet connections with mobile support
 interface ConnectionErrorResponse {
@@ -94,6 +97,7 @@ const isMobileDevice = (): boolean => {
 
 interface Web3ContextType {
   account: string | null;
+  uid: string | null;
   isConnected: boolean;
   isConnecting: boolean;
   connectWallet: () => Promise<void>;
@@ -104,6 +108,7 @@ interface Web3ContextType {
 
 const Web3Context = createContext<Web3ContextType>({
   account: null,
+  uid: null,
   isConnected: false,
   isConnecting: false,
   connectWallet: async () => {},
@@ -122,6 +127,7 @@ interface Web3ProviderProps {
 
 export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const [account, setAccount] = useState<string | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [provider, setProvider] = useState<null>(null);
@@ -131,32 +137,74 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   // Bridge to Solana Wallet Adapter state
   const { publicKey, connected, connecting, disconnect: adapterDisconnect } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
+  const router = useRouter();
 
   // Auto-authenticate with Firebase when wallet connects
   const autoAuthenticateFirebase = async (walletAddress: string) => {
     try {
       const auth = getAuth();
       
-      // Skip if already authenticated
       if (auth.currentUser) {
-        console.log('✅ Already authenticated with Firebase');
-        return;
+        if (auth.currentUser.uid) {
+          setUid(auth.currentUser.uid);
+          return;
+        }
       }
 
-      // Create temp credentials based on wallet address
       const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
       const tempPassword = walletAddress;
 
-      console.log('🔐 Auto-authenticating with Firebase for wallet:', walletAddress);
+      console.log(`🔐 Authenticating wallet: ${walletAddress}`);
       
       try {
-        await signInWithEmailAndPassword(auth, tempEmail, tempPassword);
-        console.log('✅ Auto-authentication successful');
-      } catch (error) {
-        console.log('ℹ️ Firebase account not found for this wallet. User needs to sign up via /login');
+        const userCredential = await signInWithEmailAndPassword(auth, tempEmail, tempPassword);
+        setUid(userCredential.user.uid);
+
+        const walletLower = walletAddress.toLowerCase();
+
+        // Ensure wallet mapping exists (lowercased key)
+        const walletDocRef = doc(db, "wallets", walletLower);
+        const walletDoc = await getDoc(walletDocRef);
+        if (!walletDoc.exists()) {
+          console.log('📝 Creating missing wallet mapping...');
+          await setDoc(walletDocRef, { 
+            uid: userCredential.user.uid,
+            createdAt: new Date()
+          });
+          console.log('✅ Wallet mapping created');
+        }
+
+        // Ensure user profile exists
+        try {
+          const userDocRef = doc(db, "users", userCredential.user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (!userDoc.exists()) {
+            console.log('📝 Creating missing user profile...');
+            await setDoc(userDocRef, {
+              walletAddress: walletLower,
+              createdAt: new Date(),
+            });
+            console.log('✅ User profile created');
+          }
+        } catch (profileErr) {
+          console.warn('⚠️ Failed to ensure user profile exists:', profileErr);
+        }
+
+        console.log('✅ Sign-in successful');
+      } catch (error: unknown) {
+        const authError = error as { code?: string };
+        if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
+          console.log('ℹ️ No account found. Redirecting to create profile.');
+          // Only redirect if we're not already on the login page
+          if (!window.location.pathname.includes('/login')) {
+            router.push(`/login?wallet=${walletAddress}`);
+          }
+        } else {
+          console.error('🚨 Firebase sign-in error:', error);
+        }
       }
     } catch (error) {
-      console.error('Auto-authentication error:', error);
+      console.error('🚨 Auto-authentication process failed:', error);
     }
   };
 
@@ -182,6 +230,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         }
       } else {
         setAccount(null);
+        setUid(null);
         setIsConnected(false);
       }
     } catch (e) {
@@ -1017,13 +1066,13 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       console.log('Adapter disconnect error:', e);
     }
   };
-
   const refreshWalletState = async () => {
     await checkConnection();
   };
 
   const value = {
     account,
+    uid,
     isConnected,
     isConnecting,
     connectWallet,

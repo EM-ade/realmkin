@@ -1,255 +1,118 @@
 rules_version = '2';
-
 service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Helper functions
-    function isAuthenticated() {
+  match /databases/{db}/documents {
+
+    function signedIn() {
       return request.auth != null;
     }
-    
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
     }
-    
-    function isAdmin() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true;
+
+    // -------- User profile --------
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(uid);
+      allow delete: if false;
     }
-    
-    function isValidUsername(username) {
-      return username is string && 
-             username.size() >= 3 && 
-             username.size() <= 20 &&
-             username.matches('^[a-zA-Z0-9_]+$');
-    }
-    
-    // Users collection - stores user profile data
-    match /users/{userId} {
-      // Anyone can read user profiles (for leaderboards, etc.)
-      allow read: if true;
-      
-      // Only the user themselves can create their profile
-      allow create: if isOwner(userId) && 
-                       isValidUsername(request.resource.data.username) &&
-                       request.resource.data.keys().hasAll(['username', 'email', 'walletAddress', 'createdAt']) &&
-                       request.resource.data.walletAddress is string;
-      
-      // Only the user themselves can update their profile
-      // Cannot change username, email, or walletAddress after creation
-      allow update: if isOwner(userId) &&
-                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['username', 'email', 'walletAddress', 'createdAt']));
-      
-      // Only admins can delete users
-      allow delete: if isAdmin();
-    }
-    
-    // Usernames collection - maps usernames to UIDs
+
+    // Map username -> uid (immutable)
     match /usernames/{username} {
-      // Anyone can read to check username availability
       allow read: if true;
-      
-      // Only authenticated users can create username mappings
-      allow create: if isAuthenticated() &&
-                       isValidUsername(username) &&
-                       request.resource.data.uid == request.auth.uid;
-      
-      // No updates or deletes allowed (usernames are permanent)
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
-    
-    // Wallets collection - maps wallet addresses to UIDs
-    match /wallets/{walletAddress} {
-      // Anyone can read wallet mappings (needed for getUserByWallet)
-      allow read: if true;
-      
-      // Only authenticated users can create wallet mappings for themselves
-      allow create: if isAuthenticated() &&
-                       request.resource.data.uid == request.auth.uid &&
-                       request.resource.data.keys().hasAll(['uid', 'username', 'createdAt']);
-      
-      // No updates or deletes allowed (wallet mappings are permanent)
+
+    // Map wallet -> uid (immutable)
+    match /wallets/{address} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
-    
-    // User rewards collection - stores MKIN balances and rewards data
-    match /userRewards/{userId} {
-      // Users can read their own rewards, admins can read all
-      allow read: if isOwner(userId) || isAdmin();
-      
-      // Only the rewards service (via authenticated user) can create/update rewards
-      // Users cannot directly modify their balance
-      allow create: if isOwner(userId) &&
-                       request.resource.data.totalRealmkin >= 0 &&
-                       request.resource.data.pendingRewards >= 0;
-      
-      allow update: if isOwner(userId) &&
-                       request.resource.data.totalRealmkin >= 0 &&
-                       request.resource.data.pendingRewards >= 0 &&
-                       // Prevent negative balances
-                       request.resource.data.totalRealmkin >= resource.data.totalRealmkin - 10000; // Allow decrease up to 10k MKIN per transaction
-      
-      // Only admins can delete reward records
-      allow delete: if isAdmin();
+
+    // -------- Staking --------
+    match /users/{uid}/stakes/{stakeId} {
+      allow read: if isOwner(uid);
+      allow write: if false; // backend / admin SDK only
     }
-    
-    // Claim records - stores history of reward claims
+
+    match /staking_records/{docId} {
+      allow read: if signedIn() && resource.data.wallet == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /userRewards/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
     match /claimRecords/{claimId} {
-      // Users can read their own claim records
-      allow read: if isAuthenticated() && 
-                     (resource.data.userId == request.auth.uid || isAdmin());
-      
-      // Only authenticated users can create claim records for themselves
-      allow create: if isAuthenticated() &&
-                       request.resource.data.userId == request.auth.uid &&
-                       request.resource.data.amount > 0;
-      
-      // No updates or deletes (claim history is immutable)
-      allow update, delete: if false;
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
     }
-    
-    // Transaction history - stores all transactions
-    match /transactionHistory/{transactionId} {
-      // Users can read their own transaction history
-      allow read: if isAuthenticated() &&
-                     (resource.data.userId == request.auth.uid || isAdmin());
-      
-      // Only authenticated users can create transactions for themselves
-      allow create: if isAuthenticated() &&
-                       request.resource.data.userId == request.auth.uid &&
-                       request.resource.data.type in ['claim', 'withdraw', 'transfer'];
-      
-      // No updates or deletes (transaction history is immutable)
-      allow update, delete: if false;
+
+    match /transactionHistory/{id} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
     }
-    
-    // Transfer records - stores peer-to-peer transfers
-    match /transferRecords/{transferId} {
-      // Users can read transfers they're involved in
-      allow read: if isAuthenticated() &&
-                     (resource.data.senderUserId == request.auth.uid ||
-                      resource.data.recipientUserId == request.auth.uid ||
-                      isAdmin());
-      
-      // Only the sender can create transfer records
-      allow create: if isAuthenticated() &&
-                       request.resource.data.senderUserId == request.auth.uid &&
-                       request.resource.data.amount > 0;
-      
-      // No updates or deletes (transfer history is immutable)
-      allow update, delete: if false;
+
+    match /transferRecords/{id} {
+      allow read: if signedIn() && (resource.data.senderUserId == request.auth.uid || resource.data.recipientUserId == request.auth.uid);
+      allow write: if false;
     }
-    
-    // Rate limits - prevents abuse
-    match /rateLimits/{userId} {
-      // Users can read their own rate limit status
-      allow read: if isOwner(userId);
-      
-      // Users can create/update their own rate limit records
-      allow create, update: if isOwner(userId);
-      
-      // No deletes (rate limits persist)
+
+    match /rateLimits/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // -------- Gameplay data --------
+    match /kingdoms/{kingdomId} {
+      allow read: if true;
+      allow create, update: if signedIn() && request.resource.data.owner == request.auth.uid;
       allow delete: if false;
     }
-    
-    // Contract bonus configs - stores NFT contract reward multipliers
-    match /contractBonusConfigs/{contractAddress} {
-      // Anyone can read contract configs (needed for reward calculations)
+
+    match /empires/{empireId} {
       allow read: if true;
-      
-      // Only admins can create/update/delete contract configs
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Contract welcome grants - tracks welcome bonuses per contract
-    match /contractWelcomeGrants/{grantId} {
-      // Users can read their own grants
-      allow read: if isAuthenticated() &&
-                     resource.data.userId == request.auth.uid;
-      
-      // Users can create/update their own grants
-      allow create, update: if isAuthenticated() &&
-                               request.resource.data.userId == request.auth.uid;
-      
-      // No deletes
+      allow create, update: if signedIn() && request.resource.data.owner == request.auth.uid;
       allow delete: if false;
     }
-    
-    // Leaderboard collections - stores monthly leaderboard data
-    match /leaderboards/current/metadata/info {
-      // Anyone can read metadata (for UI display)
+
+    // -------- Leaderboards & Meta (read-only) --------
+    match /leaderboards/{doc=**} {
       allow read: if true;
-      
-      // Only authenticated users can update metadata (for monthly reset)
-      allow create, update: if isAuthenticated();
-      
-      // No deletes
-      allow delete: if false;
+      allow write: if false;
     }
-    
-    match /leaderboards/current/totalScore/{userId} {
-      // Anyone can read leaderboard entries
+    match /monthlyArchive/{docId} {
       allow read: if true;
-      
-      // Only the user can write their own score
-      allow create, update: if isAuthenticated() && 
-                               request.auth.uid == userId &&
-                               request.resource.data.userId == userId &&
-                               request.resource.data.totalScore >= 0 &&
-                               request.resource.data.gamesPlayed >= 0;
-      
-      // No deletes (scores persist for the month)
-      allow delete: if false;
+      allow write: if false;
     }
-    
-    match /leaderboards/current/streak/{userId} {
-      // Anyone can read streak entries
+    match /meta/{doc} {
       allow read: if true;
-      
-      // Only the user can write their own streak
-      allow create, update: if isAuthenticated() && 
-                               request.auth.uid == userId &&
-                               request.resource.data.userId == userId &&
-                               request.resource.data.currentStreak >= 0;
-      
-      // No deletes (streaks persist for the month)
-      allow delete: if false;
+      allow write: if false;
     }
-    
-    // Monthly archive - stores past leaderboard winners
-    match /monthlyArchive/{monthId} {
-      // Anyone can read archived data
+
+    // -------- Admin / Config (locked) --------
+    match /adminConfig/{docId} {
+      allow read, write: if false;
+    }
+    match /adminUids/{docId} {
+      allow read, write: if false;
+    }
+
+    // -------- Contract bonus / welcome grants (public read) --------
+    match /contractBonusConfigs/{id} {
       allow read: if true;
-      
-      // Only authenticated users can create archives (for monthly reset)
-      allow create: if isAuthenticated();
-      
-      // No updates or deletes (archives are permanent)
-      allow update, delete: if false;
+      allow write: if false;
     }
-    
-    // User stats - stores individual player statistics
-    match /userStats/{userId} {
-      // Users can read their own stats, others can read for leaderboard purposes
+    match /contractWelcomeGrants/{id} {
       allow read: if true;
-      
-      // Only the user can update their own stats
-      allow create, update: if isAuthenticated() && 
-                               request.auth.uid == userId &&
-                               request.resource.data.totalGamesPlayed >= 0 &&
-                               request.resource.data.lifetimeScore >= 0 &&
-                               request.resource.data.currentStreak >= 0;
-      
-      // No deletes
-      allow delete: if false;
+      allow write: if false;
     }
-    
-    // Deny all other collections by default
+
+    // Deny any other collections by default
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-
-

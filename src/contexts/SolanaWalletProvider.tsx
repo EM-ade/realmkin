@@ -50,8 +50,19 @@ function WalletModalBridge() {
 
 export default function SolanaWalletProvider({ children }: Props) {
   // Allow RPC URL and network to be configured via env
-  const network = (process.env.NEXT_PUBLIC_SOLANA_NETWORK as WalletAdapterNetwork) || WalletAdapterNetwork.Mainnet;
+  const networkEnv = process.env.NEXT_PUBLIC_SOLANA_NETWORK?.toLowerCase() || "mainnet";
+  
+  // Map string to WalletAdapterNetwork enum
+  let network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
+  if (networkEnv === "devnet") {
+    network = WalletAdapterNetwork.Devnet;
+  } else if (networkEnv === "testnet") {
+    network = WalletAdapterNetwork.Testnet;
+  }
+  
   const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+  
+  console.log("[Realmkin] Wallet Network:", network, "Endpoint:", endpoint);
 
   // Memoize wallet adapter instances
   const wallets = useMemo(

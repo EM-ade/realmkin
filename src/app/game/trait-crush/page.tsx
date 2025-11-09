@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import DesktopNavigation from "@/components/DesktopNavigation";
+import withAuthGuard from "@/components/withAuthGuard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import SocialLinks from "@/components/SocialLinks";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +22,7 @@ const ConstellationBackground = dynamic(
   { ssr: false }
 );
 
-export default function TraitCrushPage() {
+function TraitCrushPage() {
   const { userData } = useAuth();
   const { connectWallet, disconnectWallet, account, isConnected, isConnecting } = useWeb3();
   const isMobile = useIsMobile();
@@ -158,3 +159,5 @@ export default function TraitCrushPage() {
     </div>
   );
 }
+
+export default withAuthGuard(TraitCrushPage);
