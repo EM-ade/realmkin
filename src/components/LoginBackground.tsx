@@ -22,6 +22,9 @@ export default function LoginBackground() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Detect mobile for performance optimization
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
     // Set canvas size
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
@@ -34,9 +37,9 @@ export default function LoginBackground() {
     let rotation = 0;
     let time = 0;
     
-    // Enhanced particle system
+    // Enhanced particle system - reduced on mobile for better performance
     const particles: Particle[] = [];
-    const maxParticles = 60; // Increased from 30
+    const maxParticles = isMobile ? 20 : 60; // Reduced from 60 on mobile
     
     // Initialize particles
     for (let i = 0; i < maxParticles; i++) {
@@ -78,27 +81,23 @@ export default function LoginBackground() {
       // Pulsing effect
       const pulse = Math.sin(time * 2) * 0.1 + 1;
 
-      // Draw 7 rings with varying properties
-      // Outermost ring (slowest)
-      drawRing(ctx, centerX, centerY, 380 * pulse, rotation * 0.15, 7, 45, 0.25);
-      
-      // Second outer ring
-      drawRing(ctx, centerX, centerY, 320 * pulse, -rotation * 0.22, 6, 40, 0.3);
-      
-      // Third ring
-      drawRing(ctx, centerX, centerY, 260 * pulse, rotation * 0.3, 5, 35, 0.4);
-      
-      // Middle ring
-      drawRing(ctx, centerX, centerY, 200 * pulse, -rotation * 0.38, 4, 30, 0.5);
-      
-      // Fourth ring
-      drawRing(ctx, centerX, centerY, 150 * pulse, rotation * 0.45, 3.5, 28, 0.6);
-      
-      // Fifth ring
-      drawRing(ctx, centerX, centerY, 110 * pulse, -rotation * 0.52, 3, 25, 0.7);
-      
-      // Innermost ring (fastest)
-      drawRing(ctx, centerX, centerY, 70 * pulse, rotation * 0.6, 2.5, 22, 0.8);
+      // Draw rings - reduced on mobile for better performance
+      if (isMobile) {
+        // Mobile: Draw only 4 rings instead of 7
+        drawRing(ctx, centerX, centerY, 320 * pulse, rotation * 0.15, 6, 30, 0.3);
+        drawRing(ctx, centerX, centerY, 220 * pulse, -rotation * 0.3, 4, 25, 0.5);
+        drawRing(ctx, centerX, centerY, 140 * pulse, rotation * 0.45, 3, 20, 0.7);
+        drawRing(ctx, centerX, centerY, 70 * pulse, -rotation * 0.6, 2, 15, 0.8);
+      } else {
+        // Desktop: Draw all 7 rings
+        drawRing(ctx, centerX, centerY, 380 * pulse, rotation * 0.15, 7, 45, 0.25);
+        drawRing(ctx, centerX, centerY, 320 * pulse, -rotation * 0.22, 6, 40, 0.3);
+        drawRing(ctx, centerX, centerY, 260 * pulse, rotation * 0.3, 5, 35, 0.4);
+        drawRing(ctx, centerX, centerY, 200 * pulse, -rotation * 0.38, 4, 30, 0.5);
+        drawRing(ctx, centerX, centerY, 150 * pulse, rotation * 0.45, 3.5, 28, 0.6);
+        drawRing(ctx, centerX, centerY, 110 * pulse, -rotation * 0.52, 3, 25, 0.7);
+        drawRing(ctx, centerX, centerY, 70 * pulse, rotation * 0.6, 2.5, 22, 0.8);
+      }
 
       // Draw particles
       particles.forEach((p, index) => {

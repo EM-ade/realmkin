@@ -42,6 +42,21 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
+/* Disable animations on mobile for better performance */
+@media (max-width: 767px) {
+  * {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+  
+  /* Except for essential transitions */
+  button, input, select, textarea {
+    transition-duration: 0.15s !important;
+  }
+}
+
 /* Prevent flash of unstyled content on initial load */
 html:not(.hydrated) body {
   opacity: 0;

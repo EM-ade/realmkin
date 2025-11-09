@@ -77,7 +77,14 @@ export default function SolanaWalletProvider({ children }: Props) {
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect onError={(error) => {
+        // Suppress "Invalid public key input" errors from wallet adapters
+        if (error?.message?.includes('Invalid public key')) {
+          console.debug('[Realmkin] Suppressed wallet adapter public key error');
+          return;
+        }
+        console.error('[Realmkin] Wallet adapter error:', error);
+      }}>
         <WalletModalProvider>
           <WalletModalBridge />
           {children}

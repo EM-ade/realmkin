@@ -9,12 +9,12 @@ export const STAKING_CONFIG = {
     "90": 90 * 86400,         // 90 days
   },
   
-  // APY rates (annual percentage yield) - INCREASED BY 300% FOR TESTING
+  // APY rates (annual percentage yield) - Multipliers applied to base APY
   APY_RATES: {
-    flexible: 20,             // 5% * 4 = 20% APY
-    "30": 48,                 // 12% * 4 = 48% APY
-    "60": 64,                 // 16% * 4 = 64% APY
-    "90": 100,                // 25% * 4 = 100% APY
+    flexible: 0.8,            // 0.8x multiplier
+    "30": 1.0,                // 1x multiplier (1 month)
+    "60": 1.5,                // 1.5x multiplier (3 months)
+    "90": 2.5,                // 2.5x multiplier (6 months)
   },
   
   // Weight configuration for Streamflow
