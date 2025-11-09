@@ -55,6 +55,14 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "stakes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "wallet", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -9,11 +9,11 @@ export const dynamic = "force-dynamic";
 function LinkedInner() {
   const sp = useSearchParams();
   const router = useRouter();
-  const status = sp.get("status");
-  const discordId = sp.get("discordId");
+  const status = sp?.get("status") ?? null;
+  const discordId = sp?.get("discordId") ?? null;
   // Note: username and discriminator are not used in UI currently
-  const reason = sp.get("reason");
-  const detail = sp.get("detail");
+  const reason = sp?.get("reason") ?? null;
+  const detail = sp?.get("detail") ?? null;
 
   const gatekeeperBase = useMemo(
     () => process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev",

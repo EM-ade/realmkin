@@ -23,19 +23,20 @@ export async function verifyTransaction(
   try {
     const connection = new Connection(RPC_URL, "confirmed");
     
-    // Wait a moment for transaction to be indexed
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Get transaction details with retries
-    let tx = null;
-    for (let i = 0; i < 3; i++) {
-      try {
-        tx = await connection.getParsedTransaction(txSignature, "finalized");
-        if (tx) break;
-      } catch (e) {
-        if (i < 2) await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
+    // Wait for confirmation via websocket (much faster than polling)
+    await new Promise<void>((resolve, reject) => {
+      connection.onSignature(
+        txSignature,
+        (sig, _ctx) => {
+          if (sig.err) reject(new Error("Transaction failed"));
+          else resolve();
+        },
+        "finalized"
+      );
+    });
+
+    // Once confirmed, fetch the parsed transaction
+    const tx = await connection.getParsedTransaction(txSignature, "finalized");
     
     if (!tx) {
       return {

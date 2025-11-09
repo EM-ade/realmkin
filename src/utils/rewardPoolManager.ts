@@ -17,7 +17,7 @@ import { STAKING_CONFIG } from "@/config/staking.config";
  */
 export async function topUpRewardPool(
   connection: Connection,
-  adminWallet: any,
+  adminWallet: { publicKey: PublicKey; sendTransaction: (tx: Transaction, conn: Connection) => Promise<string> },
   amount: number
 ): Promise<string> {
   const stakePoolAddress = process.env.NEXT_PUBLIC_STAKING_POOL_ADDRESS;

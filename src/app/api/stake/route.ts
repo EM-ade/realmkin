@@ -4,12 +4,12 @@ import { createStake, getUserStakes } from "@/services/firebaseStakingService";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { wallet, amount, lockPeriod, txSignature } = body;
+    const { uid, wallet, amount, lockPeriod, txSignature } = body;
 
     // Validate input
-    if (!wallet || !amount || !lockPeriod || !txSignature) {
+    if (!uid || !wallet || !amount || !lockPeriod || !txSignature) {
       return NextResponse.json(
-        { error: "Missing required fields: wallet, amount, lockPeriod, txSignature" },
+        { error: "Missing required fields: uid, wallet, amount, lockPeriod, txSignature" },
         { status: 400 }
       );
     }
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create stake
-    const stakeRecord = await createStake(wallet, amount, lockPeriod, txSignature);
+    const stakeRecord = await createStake(uid, wallet, amount, lockPeriod, txSignature);
 
     return NextResponse.json(
       {
@@ -52,21 +52,21 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const wallet = request.nextUrl.searchParams.get("wallet");
+    const uid = request.nextUrl.searchParams.get("uid");
 
-    if (!wallet) {
+    if (!uid) {
       return NextResponse.json(
-        { error: "Missing wallet parameter" },
+        { error: "Missing uid parameter" },
         { status: 400 }
       );
     }
 
-    const stakes = await getUserStakes(wallet);
+    const stakes = await getUserStakes(uid);
 
     return NextResponse.json(
       {
         success: true,
-        wallet,
+        uid,
         stakes,
         count: stakes.length,
       },

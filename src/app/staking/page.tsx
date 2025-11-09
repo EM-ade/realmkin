@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import withAuthGuard from "@/components/withAuthGuard";
 import Image from "next/image";
 import Link from "next/link";
 import { useWeb3 } from "@/contexts/Web3Context";
@@ -9,10 +10,13 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { formatAddress } from "@/utils/formatAddress";
 import DesktopNavigation from "@/components/DesktopNavigation";
 import { getAPYForLockPeriod, estimateRewards } from "@/config/staking.config";
+import { toast } from "react-hot-toast";
+import { StakingError, errorMessages } from "@/errors/StakingError";
 
-const LOCK_OPTIONS: Array<{ label: string; value: "flexible" | "30" | "90" }> = [
+const LOCK_OPTIONS: Array<{ label: string; value: "flexible" | "30" | "60" | "90" }> = [
   { label: "Flexible", value: "flexible" },
   { label: "30 Days", value: "30" },
+  { label: "60 Days", value: "60" },
   { label: "90 Days", value: "90" },
 ];
 
@@ -22,14 +26,8 @@ const BOOST_PRESETS = [
   { label: "100%", value: 1 },
 ];
 
-const NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "The Void", href: "#", disabled: true },
-  { label: "Fusion", href: "#", disabled: true },
-  { label: "Staking", href: "/staking", current: true },
-];
 
-export default function StakingPage() {
+function StakingPage() {
   const [amount, setAmount] = useState("");
   const [selectedLock, setSelectedLock] = useState<"flexible" | "30" | "60" | "90">("flexible");
   const [selectedBoost, setSelectedBoost] = useState(0);
@@ -44,6 +42,7 @@ export default function StakingPage() {
     isConnected,
     isConnecting,
     account,
+    uid,
   } = useWeb3();
   
   const {
@@ -53,9 +52,8 @@ export default function StakingPage() {
     walletBalance,
     globalTVL,
     totalStakers,
+    refreshAll,
     createStake,
-    unstake,
-    isLoading: stakingLoading,
   } = useStaking();
   
   const { setVisible: setWalletModalVisible } = useWalletModal();
@@ -128,28 +126,35 @@ export default function StakingPage() {
   const handleStake = async () => {
     if (!amount || isStaking) return;
     
+    let toastId: string | undefined;
     setIsStaking(true);
     try {
-      alert("⏳ Processing your stake...\n\nPlease wait while we send your tokens to the staking wallet.");
+      toastId = toast.loading("Processing stake…", { duration: Infinity }) as unknown as string;
       const result = await createStake(parseFloat(amount), selectedLock);
       console.log("Stake created:", result);
-      alert(`✅ Stake successful!\n\nTransaction ID: ${result.stakeEntry}\n\nYour ${selectedLock === "flexible" ? "flexible" : selectedLock + "-day"} stake of ${amount} $MKIN is now earning rewards!\n\nAPY: ${getAPYForLockPeriod(selectedLock)}%`);
+      if (toastId) {
+        toast.success(`Stake successful!\n\nTransaction ID: ${result.stakeEntry}\n\nYour ${selectedLock === "flexible" ? "flexible" : selectedLock + "-day"} stake of ${amount} $MKIN is now earning rewards!\n\nAPY: ${getAPYForLockPeriod(selectedLock)}%`, { id: toastId, duration: 5000 });
+      }
       setAmount("");
       setSelectedBoost(0);
     } catch (error) {
       console.error("Stake failed:", error);
-      alert(`❌ Staking failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      const msg = error instanceof StakingError ? errorMessages[error.code] : errorMessages.UNKNOWN;
+      toast.error(msg, toastId ? { id: toastId } : undefined);
     } finally {
       setIsStaking(false);
     }
   };
   // Handle unstake button click
   const handleUnstake = async (stakeEntry: string) => {
-    if (isUnstaking) return;
+    if (isUnstaking || !account || !uid) {
+      toast.error("Please ensure your wallet is connected and you are authenticated.");
+      return;
+    }
     
     const stakeToUnstake = stakes.find(s => s.stakeEntry === stakeEntry);
     if (!stakeToUnstake) {
-      alert("Stake not found");
+      toast.error("Stake not found");
       return;
     }
     
@@ -189,6 +194,7 @@ export default function StakingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          uid,
           wallet: account,
           stakeId: stakeEntry,
           action: "complete",
@@ -202,10 +208,10 @@ export default function StakingPage() {
       }
       
       // Immediate success feedback
-      alert(`✅ Unstake initiated!\n\nTx: ${data.txSignature.slice(0, 20)}...\n\nYou will receive:\n- ${data.amountReturned.toFixed(2)} $MKIN (principal)\n- ${data.rewardsReturned.toFixed(2)} $MKIN (rewards)\n\nTokens arriving in your wallet now!`);
+      toast.success(`Unstake initiated!\nTx: ${data.txSignature.slice(0,20)}…\n\nYou will receive:\n- ${data.amountReturned.toFixed(2)} $MKIN (principal)\n- ${data.rewardsReturned.toFixed(2)} $MKIN (rewards)\n\nTokens arriving in your wallet now!`);
     } catch (error) {
       console.error("Unstake failed:", error);
-      alert(`❌ Unstaking failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(`Unstaking failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsUnstaking(false);
     }
@@ -388,7 +394,15 @@ export default function StakingPage() {
             </button>
           </section>
 
-          <section className="staking-card staking-card--compact overflow-hidden">
+          <section className="staking-card staking-card--compact overflow-hidden relative">
+            {/* Refresh button */}
+            <button
+              onClick={refreshAll}
+              className="absolute right-5 top-5 flex items-center gap-2 rounded-lg border border-[#f4c752]/40 bg-black/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-[#f4c752] hover:bg-[#f4c752]/10"
+            >
+              <span className="h-3 w-3 rounded-full border-2 border-transparent border-t-[#f4c752] animate-spin" />
+              Refresh
+            </button>
             <div className="flex flex-col md:flex-row">
               <div className="staking-card-section">
                 <h2 className="staking-card-title">Wallet</h2>
@@ -425,7 +439,7 @@ export default function StakingPage() {
                   />
                   <select
                     value={selectedLock}
-                    onChange={(e) => setSelectedLock(e.target.value as any)}
+                    onChange={(e) => setSelectedLock(e.target.value as "flexible" | "30" | "60" | "90")}
                     className="rounded-xl bg-black/45 px-4 py-3 text-sm text-[#f7dca1] focus:outline-none focus:ring-2 focus:ring-[#f4c752]/60"
                   >
                     <option value="flexible">Flexible (20% APY)</option>
@@ -639,3 +653,5 @@ export default function StakingPage() {
     </div>
   );
 }
+
+export default withAuthGuard(StakingPage);

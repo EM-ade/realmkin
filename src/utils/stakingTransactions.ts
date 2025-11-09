@@ -27,7 +27,7 @@ export interface StakingTransactionResult {
  * Transfers tokens from user's wallet to the staking wallet
  */
 export async function createStakingTransaction(
-  userWallet: any,
+  userWallet: { publicKey: PublicKey; signTransaction: (tx: Transaction) => Promise<Transaction> },
   amount: number
 ): Promise<StakingTransactionResult> {
   try {
@@ -111,7 +111,7 @@ export async function createStakingTransaction(
  * Note: This requires the staking wallet to be controlled by the backend
  */
 export async function createUnstakingTransaction(
-  userWallet: any,
+  userWallet: { publicKey: PublicKey; signTransaction: (tx: Transaction) => Promise<Transaction> },
   amount: number
 ): Promise<StakingTransactionResult> {
   try {
@@ -144,9 +144,10 @@ export async function createUnstakingTransaction(
  * Record a stake in the backend
  */
 export async function recordStakeInBackend(
+  uid: string,
   wallet: string,
   amount: number,
-  lockPeriod: "flexible" | "30" | "90",
+  lockPeriod: "flexible" | "30" | "60" | "90",
   txSignature: string
 ): Promise<{ success: boolean; stakeId?: string; error?: string }> {
   try {
@@ -156,6 +157,7 @@ export async function recordStakeInBackend(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        uid,
         wallet,
         amount,
         lockPeriod,
@@ -186,6 +188,7 @@ export async function recordStakeInBackend(
  * Claim rewards for a stake
  */
 export async function claimRewardsFromBackend(
+  uid: string,
   wallet: string,
   stakeId: string
 ): Promise<{ success: boolean; rewardsClaimed?: number; error?: string }> {
@@ -196,6 +199,7 @@ export async function claimRewardsFromBackend(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        uid,
         wallet,
         stakeId,
       }),
@@ -224,6 +228,7 @@ export async function claimRewardsFromBackend(
  * Initiate unstaking request
  */
 export async function initiateUnstakingRequest(
+  uid: string,
   wallet: string,
   stakeId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -234,6 +239,7 @@ export async function initiateUnstakingRequest(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        uid,
         wallet,
         stakeId,
         action: "initiate",

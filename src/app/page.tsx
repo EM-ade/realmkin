@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
+import withAuthGuard from "@/components/withAuthGuard";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useNFT } from "@/contexts/NFTContext";
 import SocialLinks from "@/components/SocialLinks";
@@ -12,7 +13,6 @@ import QuickAccessCard from "@/components/QuickAccessCard";
 import DesktopNavigation from "@/components/DesktopNavigation";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
 
 // Lazy load background effects for better performance
@@ -30,7 +30,7 @@ const NFTCarousel = dynamic(() => import("@/components/NFTCarousel"), {
   ssr: false,
 });
 
-export default function Home() {
+function Home() {
   const router = useRouter();
   const { user, userData } = useAuth();
   const { connectWallet, account, isConnected, isConnecting } = useWeb3();
@@ -285,3 +285,5 @@ export default function Home() {
     </div>
   );
 }
+
+export default withAuthGuard(Home);

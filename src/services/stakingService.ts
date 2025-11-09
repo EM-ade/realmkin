@@ -1,4 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
+import { calculateStakeWeight } from "../config/staking.config";
+import { verifyTransaction } from "./transactionVerification";
 import {
   createStake as fbCreateStake,
   getUserStakes as fbGetUserStakes,
@@ -40,29 +42,39 @@ class StakingService {
   /**
    * Stake tokens - Creates a new stake in Firebase
    * 
-   * @param wallet - User's wallet
-   * @param amount - Amount to stake (in MKIN)
-   * @param lockPeriod - Lock period selection
-   * @param nonce - Unique nonce for this stake (used for tx signature generation)
-   * @returns Transaction ID and stake entry address
    */
   async stake(
-    wallet: any,
+    uid: string,
+    wallet: { publicKey?: { toString?: () => string } } | string,
     amount: number,
-    lockPeriod: "flexible" | "30" | "90",
-    nonce: number = 0
+    lockPeriod: "flexible" | "30" | "60" | "90",
+    txSignature: string
   ): Promise<{ txId: string; stakeEntry: string }> {
     try {
-      // In a real implementation, the frontend would:
-      // 1. Create a transaction to send tokens to the staking wallet
-      // 2. Sign and send it
-      // 3. Get the transaction signature
-      // 4. Pass it to the backend API
-      
-      // For now, we throw an error indicating the frontend needs to handle the transaction
-      throw new Error(
-        "Frontend must create and sign a transaction to send tokens to the staking wallet, then call POST /api/stake with the txSignature"
+      // 1. Verify the on-chain transfer really happened
+      const verification = await verifyTransaction(txSignature);
+      if (!verification.isValid) {
+        throw new Error(
+          `Invalid stake transaction: ${verification.error || "failed validation"}`
+        );
+      }
+
+      // 2. Persist stake record in Firestore
+      const walletAddress = typeof wallet === 'string' 
+        ? wallet 
+        : (wallet.publicKey?.toString?.() || '');
+      const stakeRecord = await fbCreateStake(
+        uid,
+        walletAddress,
+        amount,
+        lockPeriod,
+        txSignature
       );
+
+      return {
+        txId: txSignature,
+        stakeEntry: stakeRecord.id,
+      };
     } catch (error) {
       console.error("Staking service error:", error);
       throw error;
@@ -77,11 +89,12 @@ class StakingService {
    * @returns Transaction ID and rewards claimed
    */
   async claimRewards(
-    wallet: any,
+    uid: string,
+    wallet: { publicKey?: { toString?: () => string } } | string,
     stakeEntry: string
   ): Promise<{ txId: string; rewardsClaimed: number }> {
     try {
-      const rewardsClaimed = await claimStakeRewards(stakeEntry);
+      const rewardsClaimed = await claimStakeRewards(uid, stakeEntry);
       return {
         txId: `claim-${stakeEntry}-${Date.now()}`,
         rewardsClaimed,
@@ -100,14 +113,16 @@ class StakingService {
    * @returns Transaction ID and amount returned
    */
   async unstake(
-    wallet: any,
+    uid: string,
+    wallet: { publicKey?: { toString?: () => string } } | string,
     stakeEntry: string
   ): Promise<{ txId: string; amountReturned: number }> {
     try {
-      await initiateUnstake(stakeEntry);
+      await initiateUnstake(uid, stakeEntry);
       
       // Get the stake to return the amount
-      const stakes = await fbGetUserStakes(wallet.publicKey?.toString() || "");
+      const walletAddress = typeof wallet === 'string' ? wallet : (wallet.publicKey?.toString?.() || '');
+      const stakes = await fbGetUserStakes(walletAddress);
       const stake = stakes.find((s) => s.id === stakeEntry);
       
       return {
@@ -126,9 +141,9 @@ class StakingService {
    * @param walletAddress - User's wallet address
    * @returns Array of stake info
    */
-  async getUserStakes(walletAddress: string): Promise<StakeInfo[]> {
+  async getUserStakes(uid: string): Promise<StakeInfo[]> {
     try {
-      const fbStakes = await fbGetUserStakes(walletAddress);
+      const fbStakes = await fbGetUserStakes(uid);
       
       const now = Date.now() / 1000;
       return fbStakes.map((stake) => {
@@ -140,7 +155,7 @@ class StakingService {
           duration: stake.unlock_date.seconds - stake.start_date.seconds,
           stakeTimestamp: stake.start_date.seconds,
           unlockTime: stake.unlock_date.seconds,
-          weight: stake.lock_period === "flexible" ? 1.0 : stake.lock_period === "30" ? 1.5 : stake.lock_period === "60" ? 1.75 : 2.0,
+          weight: calculateStakeWeight(stake.unlock_date.seconds - stake.start_date.seconds),
           rewards: stake.rewards_earned + calculatePendingRewards(stake, now),
           nonce: 0,
           lockPeriod: stake.lock_period,

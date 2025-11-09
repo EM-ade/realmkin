@@ -8,11 +8,10 @@ import {
   where,
   getDocs,
   Timestamp,
-  writeBatch,
+  increment,
 } from "firebase/firestore";
 import { db } from "@/config/firebaseServer";
-import { verifyTransaction } from "./transactionVerification";
-import { getAPYForLockPeriod, getDurationForLockPeriod } from "@/config/staking.config";
+import { getAPYForLockPeriod, getDurationForLockPeriod, calculateStakeWeight } from "@/config/staking.config";
 
 export interface UserStakingData {
   wallet: string;
@@ -35,7 +34,7 @@ export interface StakeRecord {
   rewards_earned: number;
   last_reward_update: Timestamp;
   tx_signature: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -67,6 +66,7 @@ export async function initializeUser(walletAddress: string): Promise<UserStaking
  * Create a new stake record
  */
 export async function createStake(
+  uid: string,
   walletAddress: string,
   amount: number,
   lockPeriod: "flexible" | "30" | "60" | "90",
@@ -101,13 +101,13 @@ export async function createStake(
     tx_signature: txSignature,
   };
 
-  const stakeRef = doc(collection(db, "stakes"), stakeId);
+  const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   await setDoc(stakeRef, stakeRecord);
 
   // Update user totals
   const userRef = doc(collection(db, "users"), walletAddress);
   await updateDoc(userRef, {
-    total_staked: (await getDoc(userRef)).data()?.total_staked + amount || amount,
+    total_staked: increment(amount),
     updated_at: Timestamp.now(),
   });
 
@@ -117,10 +117,9 @@ export async function createStake(
 /**
  * Get user's stakes
  */
-export async function getUserStakes(walletAddress: string): Promise<StakeRecord[]> {
+export async function getUserStakes(uid: string): Promise<StakeRecord[]> {
   const stakesQuery = query(
-    collection(db, "stakes"),
-    where("wallet", "==", walletAddress),
+    collection(db, "users", uid, "stakes"),
     where("status", "!=", "completed")
   );
 
@@ -153,8 +152,7 @@ export function calculatePendingRewards(
 
   // Calculate weight multiplier based on lock period
   const durationSeconds = getDurationForLockPeriod(stake.lock_period);
-  const maxDuration = 90 * 86400; // 90 days in seconds
-  const weight = durationSeconds === 0 ? 1.0 : 1 + ((2.0 - 1) * durationSeconds / maxDuration);
+  const weight = calculateStakeWeight(durationSeconds);
 
   const pendingRewards = stake.amount * dailyRate * daysStaked * weight;
   return Math.max(0, pendingRewards - stake.rewards_earned);
@@ -163,8 +161,8 @@ export function calculatePendingRewards(
 /**
  * Update rewards for a stake
  */
-export async function updateStakeRewards(stakeId: string): Promise<number> {
-  const stakeRef = doc(collection(db, "stakes"), stakeId);
+export async function updateStakeRewards(uid: string, stakeId: string): Promise<number> {
+  const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   const stakeSnap = await getDoc(stakeRef);
 
   if (!stakeSnap.exists()) {
@@ -183,11 +181,9 @@ export async function updateStakeRewards(stakeId: string): Promise<number> {
 
   // Update user total rewards
   const userRef = doc(collection(db, "users"), stake.wallet);
-  const userSnap = await getDoc(userRef);
-  const userData = userSnap.data() as UserStakingData;
 
   await updateDoc(userRef, {
-    total_rewards: userData.total_rewards + pendingRewards,
+    total_rewards: increment(pendingRewards),
     updated_at: Timestamp.now(),
   });
 
@@ -197,8 +193,8 @@ export async function updateStakeRewards(stakeId: string): Promise<number> {
 /**
  * Claim rewards for a stake
  */
-export async function claimStakeRewards(stakeId: string): Promise<number> {
-  const stakeRef = doc(collection(db, "stakes"), stakeId);
+export async function claimStakeRewards(uid: string, stakeId: string): Promise<number> {
+  const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   const stakeSnap = await getDoc(stakeRef);
 
   if (!stakeSnap.exists()) {
@@ -221,11 +217,9 @@ export async function claimStakeRewards(stakeId: string): Promise<number> {
 
   // Update user
   const userRef = doc(collection(db, "users"), stake.wallet);
-  const userSnap = await getDoc(userRef);
-  const userData = userSnap.data() as UserStakingData;
 
   await updateDoc(userRef, {
-    total_rewards: userData.total_rewards + pendingRewards,
+    total_rewards: increment(pendingRewards),
     last_claimed: Timestamp.now(),
     updated_at: Timestamp.now(),
   });
@@ -236,8 +230,8 @@ export async function claimStakeRewards(stakeId: string): Promise<number> {
 /**
  * Initiate unstake request
  */
-export async function initiateUnstake(stakeId: string): Promise<void> {
-  const stakeRef = doc(collection(db, "stakes"), stakeId);
+export async function initiateUnstake(uid: string, stakeId: string): Promise<void> {
+  const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   const stakeSnap = await getDoc(stakeRef);
 
   if (!stakeSnap.exists()) {
@@ -253,7 +247,7 @@ export async function initiateUnstake(stakeId: string): Promise<void> {
   }
 
   // Update rewards before unstaking
-  await updateStakeRewards(stakeId);
+  await updateStakeRewards(uid, stakeId);
 
   // Mark as unstaking
   await updateDoc(stakeRef, {
@@ -265,8 +259,8 @@ export async function initiateUnstake(stakeId: string): Promise<void> {
 /**
  * Complete unstake (after withdrawal transaction)
  */
-export async function completeUnstake(stakeId: string, txSignature: string): Promise<void> {
-  const stakeRef = doc(collection(db, "stakes"), stakeId);
+export async function completeUnstake(uid: string, stakeId: string, txSignature: string): Promise<void> {
+  const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   const stakeSnap = await getDoc(stakeRef);
 
   if (!stakeSnap.exists()) {
@@ -287,11 +281,9 @@ export async function completeUnstake(stakeId: string, txSignature: string): Pro
 
   // Update user totals
   const userRef = doc(collection(db, "users"), stake.wallet);
-  const userSnap = await getDoc(userRef);
-  const userData = userSnap.data() as UserStakingData;
 
   await updateDoc(userRef, {
-    total_staked: Math.max(0, userData.total_staked - stake.amount),
+    total_staked: increment(-stake.amount),
     updated_at: Timestamp.now(),
   });
 }
@@ -304,21 +296,11 @@ export async function getGlobalMetrics(): Promise<{
   totalStakers: number;
   activeStakes: number;
 }> {
-  const usersQuery = query(collection(db, "users"), where("is_active", "==", true));
-  const usersSnap = await getDocs(usersQuery);
-
-  const stakesQuery = query(collection(db, "stakes"), where("status", "==", "active"));
-  const stakesSnap = await getDocs(stakesQuery);
-
-  let totalValueLocked = 0;
-  stakesSnap.docs.forEach((doc) => {
-    const stake = doc.data() as StakeRecord;
-    totalValueLocked += stake.amount;
-  });
-
-  return {
-    totalValueLocked,
-    totalStakers: usersSnap.size,
-    activeStakes: stakesSnap.size,
-  };
+  const statsRef = doc(db, "meta", "stats");
+  const statsSnap = await getDoc(statsRef);
+  if (statsSnap.exists()) {
+    return statsSnap.data() as { totalValueLocked: number; totalStakers: number; activeStakes: number };
+  }
+  // Fallback to zeros if stats doc missing
+  return { totalValueLocked: 0, totalStakers: 0, activeStakes: 0 };
 }

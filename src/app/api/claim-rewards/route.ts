@@ -4,18 +4,18 @@ import { claimStakeRewards, getUserStakingData, calculatePendingRewards, getUser
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { wallet, stakeId } = body;
+    const { uid, wallet, stakeId } = body;
 
     // Validate input
-    if (!wallet || !stakeId) {
+    if (!uid || !wallet || !stakeId) {
       return NextResponse.json(
-        { error: "Missing required fields: wallet, stakeId" },
+        { error: "Missing required fields: uid, wallet, stakeId" },
         { status: 400 }
       );
     }
 
     // Claim rewards
-    const rewardsClaimed = await claimStakeRewards(stakeId);
+    const rewardsClaimed = await claimStakeRewards(uid, stakeId);
 
     return NextResponse.json(
       {
@@ -38,18 +38,19 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const uid = request.nextUrl.searchParams.get("uid");
     const wallet = request.nextUrl.searchParams.get("wallet");
 
-    if (!wallet) {
+    if (!uid || !wallet) {
       return NextResponse.json(
-        { error: "Missing wallet parameter" },
+        { error: "Missing uid and/or wallet parameter" },
         { status: 400 }
       );
     }
 
     // Get user data and stakes
     const userData = await getUserStakingData(wallet);
-    const stakes = await getUserStakes(wallet);
+    const stakes = await getUserStakes(uid);
 
     // Calculate total pending rewards
     let totalPendingRewards = 0;

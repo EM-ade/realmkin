@@ -7,16 +7,16 @@ export interface UserStakingData {
   total_rewards_claimed: number;
   total_pending_rewards: number;
   total_rewards_all_time: number;
-  last_claimed: any;
-  created_at: any;
+  last_claimed: Date | null;
+  created_at: Date | null;
 }
 
 export interface StakeData {
   id: string;
   amount: number;
-  lock_period: "flexible" | "30" | "90";
-  start_date: any;
-  unlock_date: any;
+  lock_period: "flexible" | "30" | "60" | "90";
+  start_date: Date | null;
+  unlock_date: Date | null;
   status: "active" | "unstaking" | "completed";
   rewards_earned: number;
   pending_rewards: number;
@@ -121,7 +121,13 @@ export function useStakeRewards(stakeId: string | null) {
       }
 
       const result = await response.json();
-      const stakeReward = result.stakes.find((s: any) => s.stakeId === stakeId);
+      interface StakeReward {
+        stakeId: string;
+        pending: number;
+        earned: number;
+        total: number;
+      }
+      const stakeReward = (result.stakes as StakeReward[]).find((s) => s.stakeId === stakeId);
 
       if (stakeReward) {
         setRewards({

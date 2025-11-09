@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import DesktopNavigation from "@/components/DesktopNavigation";
+import withAuthGuard from "@/components/withAuthGuard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import SocialLinks from "@/components/SocialLinks";
 import GameCard, { type GameCardProps } from "@/components/GameCard";
@@ -33,7 +34,7 @@ type GameDefinition = {
   status?: GameCardProps["status"];
 };
 
-export default function GamePage() {
+function GamePage() {
   const { userData, user } = useAuth();
   const { connectWallet, disconnectWallet, account, isConnected, isConnecting } = useWeb3();
   const isMobile = useIsMobile();
@@ -374,3 +375,5 @@ export default function GamePage() {
     </div>
   );
 }
+
+export default withAuthGuard(GamePage);

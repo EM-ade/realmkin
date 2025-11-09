@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initiateUnstake, completeUnstake, getUserStakes } from "@/services/firebaseStakingService";
-import { Connection, PublicKey, Transaction, Keypair } from "@solana/web3.js";
-import { createTransferInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { initiateUnstake, completeUnstake, getUserStakes, calculatePendingRewards } from "@/services/firebaseStakingService";
+import { Connection, PublicKey, Transaction, Keypair, sendAndConfirmTransaction } from "@solana/web3.js";
+import { createTransferInstruction, getAssociatedTokenAddress, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { wallet, stakeId, txSignature, action } = body;
+    const { uid, wallet, stakeId, txSignature, action } = body;
 
     // Validate input
-    if (!wallet || !stakeId) {
+    if (!uid || !wallet || !stakeId) {
       return NextResponse.json(
-        { error: "Missing required fields: wallet, stakeId" },
+        { error: "Missing required fields: uid, wallet, stakeId" },
         { status: 400 }
       );
     }
 
     if (action === "initiate") {
       // Initiate unstake request
-      await initiateUnstake(stakeId);
+      await initiateUnstake(uid, stakeId);
 
       return NextResponse.json(
         {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     } else if (action === "complete") {
       try {
         // Get stake details
-        const stakes = await getUserStakes(wallet);
+        const stakes = await getUserStakes(uid);
         const stake = stakes.find((s) => s.id === stakeId);
 
         if (!stake) {
@@ -54,7 +54,11 @@ export async function POST(request: NextRequest) {
 
         const penalty = (stake.amount * penaltyPercent) / 100;
         const amountToReturn = stake.amount - penalty;
-        const rewardsToReturn = isUnlocked ? stake.rewards_earned : 0;
+        
+        // Calculate pending rewards that have accrued since last update
+        const pendingRewards = calculatePendingRewards(stake, now);
+        const totalRewardsEarned = stake.rewards_earned + pendingRewards;
+        const rewardsToReturn = isUnlocked ? totalRewardsEarned : 0;
 
         // Create transfer transaction from treasury wallet
         const connection = new Connection(
@@ -62,16 +66,49 @@ export async function POST(request: NextRequest) {
           "confirmed"
         );
 
-        const stakingWalletPublicKey = new PublicKey(process.env.NEXT_PUBLIC_STAKING_WALLET_ADDRESS!);
+        // Load treasury (staking) keypair from env and validate against configured public address
+        const treasuryPrivateKeyBase64 = process.env.TREASURY_PRIVATE_KEY;
+        if (!treasuryPrivateKeyBase64) {
+          throw new Error("TREASURY_PRIVATE_KEY not configured");
+        }
+        const secretKeyBytes = Buffer.from(treasuryPrivateKeyBase64, "base64");
+        const treasuryKeypair = Keypair.fromSecretKey(secretKeyBytes);
+
+        const configuredStakingPubkey = process.env.NEXT_PUBLIC_STAKING_WALLET_ADDRESS;
+        if (!configuredStakingPubkey) {
+          throw new Error("NEXT_PUBLIC_STAKING_WALLET_ADDRESS not configured");
+        }
+        const stakingWalletPublicKey = new PublicKey(configuredStakingPubkey);
+
+        // Ensure the private key corresponds to the configured public key to avoid invalid signatures
+        if (!treasuryKeypair.publicKey.equals(stakingWalletPublicKey)) {
+          throw new Error(
+            `Configured staking public key does not match TREASURY_PRIVATE_KEY. Expected ${stakingWalletPublicKey.toBase58()}, got ${treasuryKeypair.publicKey.toBase58()}`
+          );
+        }
+
         const userPublicKey = new PublicKey(wallet);
         const tokenMintPublicKey = new PublicKey(process.env.NEXT_PUBLIC_TOKEN_MINT!);
         const TOKEN_DECIMALS = parseInt(process.env.NEXT_PUBLIC_TOKEN_DECIMALS || "9");
 
-        // Get token accounts
-        const stakingTokenAccount = await getAssociatedTokenAddress(tokenMintPublicKey, stakingWalletPublicKey);
-        const userTokenAccount = await getAssociatedTokenAddress(tokenMintPublicKey, userPublicKey);
+        // Ensure source (funding) and destination (user) token accounts exist
+        // Staking (source) ATA – should exist; create if missing just in case
+        const stakingAta = await getOrCreateAssociatedTokenAccount(
+          connection,
+          treasuryKeypair,
+          tokenMintPublicKey,
+          treasuryKeypair.publicKey
+        );
 
-        // Create transaction
+        // User (destination) ATA – create if missing
+        const userAta = await getOrCreateAssociatedTokenAccount(
+          connection,
+          treasuryKeypair, // payer
+          tokenMintPublicKey,
+          userPublicKey
+        );
+
+        // Build transaction
         const transaction = new Transaction();
         const amountInSmallestUnit = Math.floor(amountToReturn * Math.pow(10, TOKEN_DECIMALS));
         const rewardsInSmallestUnit = Math.floor(rewardsToReturn * Math.pow(10, TOKEN_DECIMALS));
@@ -79,9 +116,9 @@ export async function POST(request: NextRequest) {
         // Transfer principal
         transaction.add(
           createTransferInstruction(
-            stakingTokenAccount,
-            userTokenAccount,
-            stakingWalletPublicKey,
+            stakingAta.address,
+            userAta.address,
+            treasuryKeypair.publicKey,
             amountInSmallestUnit,
             [],
             TOKEN_PROGRAM_ID
@@ -92,9 +129,9 @@ export async function POST(request: NextRequest) {
         if (rewardsInSmallestUnit > 0) {
           transaction.add(
             createTransferInstruction(
-              stakingTokenAccount,
-              userTokenAccount,
-              stakingWalletPublicKey,
+              stakingAta.address,
+              userAta.address,
+              treasuryKeypair.publicKey,
               rewardsInSmallestUnit,
               [],
               TOKEN_PROGRAM_ID
@@ -102,33 +139,43 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Get recent blockhash
-        const { blockhash } = await connection.getLatestBlockhash("confirmed");
+        // Set fee payer and recent blockhash
+        transaction.feePayer = treasuryKeypair.publicKey;
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
         transaction.recentBlockhash = blockhash;
-        transaction.feePayer = stakingWalletPublicKey;
 
-        // Sign with treasury keypair from environment
-        const treasuryPrivateKeyBase64 = process.env.TREASURY_PRIVATE_KEY;
-        if (!treasuryPrivateKeyBase64) {
-          throw new Error("TREASURY_PRIVATE_KEY not configured");
+        // Check treasury balance first
+        const treasuryBalance = await connection.getBalance(treasuryKeypair.publicKey);
+        console.log(`Treasury balance: ${treasuryBalance / 1e9} SOL`);
+        
+        if (treasuryBalance < 10000000) { // Less than 0.01 SOL
+          console.error(`Treasury wallet has insufficient SOL: ${treasuryBalance / 1e9} SOL`);
+          console.error(`Treasury address: ${treasuryKeypair.publicKey.toBase58()}`);
+          return NextResponse.json(
+            { 
+              error: "Treasury wallet has insufficient SOL for transaction fees",
+              treasuryAddress: treasuryKeypair.publicKey.toBase58(),
+              currentBalance: treasuryBalance / 1e9,
+              requiredBalance: 0.01
+            },
+            { status: 500 }
+          );
         }
 
-        const secretKeyBytes = Buffer.from(treasuryPrivateKeyBase64, "base64");
-        const treasuryKeypair = Keypair.fromSecretKey(secretKeyBytes);
-        transaction.sign(treasuryKeypair);
+        // Send and confirm (no skipPreflight) so we only return a valid, landed signature
+        const confirmedSig = await sendAndConfirmTransaction(connection, transaction, [treasuryKeypair], {
+          commitment: "confirmed",
+        });
 
-        // Send transaction immediately
-        const txSignature = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: true });
-        
-        // Mark as unstaked in Firebase immediately (don't wait for confirmation)
-        await completeUnstake(stakeId, txSignature);
+        // Mark as unstaked in Firebase after confirmation
+        await completeUnstake(uid, stakeId, confirmedSig);
 
         return NextResponse.json(
           {
             success: true,
-            message: "Unstake processing",
+            message: "Unstake completed",
             stakeId,
-            txSignature,
+            txSignature: confirmedSig,
             amountReturned: amountToReturn,
             rewardsReturned: rewardsToReturn,
           },

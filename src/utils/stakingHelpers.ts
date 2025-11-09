@@ -15,10 +15,10 @@ export function parseTokenAmount(amount: number, decimals: number = 6): number {
 /**
  * Format date to readable string
  */
-export function formatDate(timestamp: any): string {
+export function formatDate(timestamp: unknown): string {
   if (!timestamp) return "N/A";
   
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const date = (timestamp as { toDate?: () => Date }).toDate ? (timestamp as { toDate: () => Date }).toDate() : new Date(timestamp as string | number);
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -31,10 +31,10 @@ export function formatDate(timestamp: any): string {
 /**
  * Calculate days until unlock
  */
-export function daysUntilUnlock(unlockTimestamp: any): number {
+export function daysUntilUnlock(unlockTimestamp: unknown): number {
   if (!unlockTimestamp) return 0;
   
-  const unlockDate = unlockTimestamp.toDate ? unlockTimestamp.toDate() : new Date(unlockTimestamp);
+  const unlockDate = (unlockTimestamp as { toDate?: () => Date }).toDate ? (unlockTimestamp as { toDate: () => Date }).toDate() : new Date(unlockTimestamp as string | number);
   const now = new Date();
   const diffMs = unlockDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -45,7 +45,7 @@ export function daysUntilUnlock(unlockTimestamp: any): number {
 /**
  * Check if stake is locked
  */
-export function isStakeLocked(unlockTimestamp: any): boolean {
+export function isStakeLocked(unlockTimestamp: unknown): boolean {
   return daysUntilUnlock(unlockTimestamp) > 0;
 }
 

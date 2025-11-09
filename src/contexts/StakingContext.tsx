@@ -1,6 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import { Connection, PublicKey, AccountInfo as SolanaAccountInfo, Transaction } from "@solana/web3.js";
+import { StakingError } from "@/errors/StakingError";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { useWeb3 } from "./Web3Context";
 import { stakingService, StakeInfo, GlobalMetrics } from "@/services/stakingService";
 
@@ -21,6 +24,7 @@ interface StakingContextType {
   claimRewards: (stakeEntry: string) => Promise<{ txId: string }>;
   unstake: (stakeEntry: string) => Promise<{ txId: string }>;
   refreshStakes: () => Promise<void>;
+  refreshAll: () => Promise<void>;
   
   // State
   isLoading: boolean;
@@ -39,6 +43,7 @@ const StakingContext = createContext<StakingContextType>({
   claimRewards: async () => ({ txId: "" }),
   unstake: async () => ({ txId: "" }),
   refreshStakes: async () => {},
+  refreshAll: async () => {},
   isLoading: false,
   error: null,
 });
@@ -46,7 +51,7 @@ const StakingContext = createContext<StakingContextType>({
 export const useStaking = () => useContext(StakingContext);
 
 export function StakingProvider({ children }: { children: ReactNode }) {
-  const { account, isConnected } = useWeb3();
+  const { account, isConnected, uid } = useWeb3();
   const [stakes, setStakes] = useState<StakeInfo[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [globalMetrics, setGlobalMetrics] = useState<GlobalMetrics>({
@@ -69,25 +74,51 @@ export function StakingProvider({ children }: { children: ReactNode }) {
     }
   }, [isConnected, account]);
   
-  // Poll for real-time balance updates every 10 seconds
+  // Real-time wallet balance via websocket subscription
   useEffect(() => {
     if (!isConnected || !account) return;
-    
-    const interval = setInterval(() => {
-      loadWalletBalance();
-    }, 10000);
-    
-    return () => clearInterval(interval);
+
+    const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com", "confirmed");
+    let subId: number | null = null;
+
+    (async () => {
+      try {
+        const tokenMint = new PublicKey(process.env.NEXT_PUBLIC_TOKEN_MINT || "");
+        const ata = await getAssociatedTokenAddress(tokenMint, new PublicKey(account));
+        subId = connection.onAccountChange(
+          ata,
+          (info: SolanaAccountInfo<Buffer>) => {
+            try {
+              const data = info.data;
+              if (data && data.length >= 64) {
+                const uiAmount = Number(data.readBigUInt64LE(64)) / 1e6;
+                setWalletBalance(uiAmount);
+              }
+            } catch (err) {
+              console.error("Error parsing token account data:", err);
+            }
+          },
+          "confirmed"
+        );
+      } catch (err) {
+        console.error("Websocket balance listener error", err);
+      }
+    })();
+
+    // Cleanup on disconnect
+    return () => {
+      if (subId !== null) connection.removeAccountChangeListener(subId);
+    };
   }, [isConnected, account]);
   
   const refreshStakes = async () => {
-    if (!account) return;
+    if (!account || !uid) return;
     
     setIsLoading(true);
     setError(null);
     
     try {
-      const userStakes = await stakingService.getUserStakes(account);
+      const userStakes = await stakingService.getUserStakes(uid);
       setStakes(userStakes);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load stakes";
@@ -120,9 +151,9 @@ export function StakingProvider({ children }: { children: ReactNode }) {
   
   const createStake = async (
     amount: number, 
-    lockPeriod: "flexible" | "30" | "90"
+    lockPeriod: "flexible" | "30" | "60" | "90"
   ): Promise<{ txId: string; stakeEntry: string }> => {
-    if (!account) throw new Error("Wallet not connected");
+    if (!account || !uid) throw new StakingError("WALLET_NOT_CONNECTED");
     
     setIsLoading(true);
     setError(null);
@@ -132,7 +163,11 @@ export function StakingProvider({ children }: { children: ReactNode }) {
       const { createStakingTransaction, recordStakeInBackend } = await import("@/utils/stakingTransactions");
       
       // Get the wallet adapter
-      const wallet = (window as any).solana;
+      interface SolanaWallet {
+        publicKey: PublicKey;
+        signTransaction: (tx: Transaction) => Promise<Transaction>;
+      }
+      const wallet = (window as { solana?: SolanaWallet }).solana;
       if (!wallet) throw new Error("Wallet not found");
       
       // Step 1: Create and send the staking transaction
@@ -144,6 +179,7 @@ export function StakingProvider({ children }: { children: ReactNode }) {
       
       // Step 2: Record the stake in Firebase backend
       const stakeResult = await recordStakeInBackend(
+        uid,
         account,
         amount,
         lockPeriod,
@@ -172,7 +208,7 @@ export function StakingProvider({ children }: { children: ReactNode }) {
   };
   
   const claimRewards = async (stakeEntry: string): Promise<{ txId: string }> => {
-    if (!account) throw new Error("Wallet not connected");
+    if (!account || !uid) throw new StakingError("WALLET_NOT_CONNECTED");
     
     setIsLoading(true);
     setError(null);
@@ -180,7 +216,7 @@ export function StakingProvider({ children }: { children: ReactNode }) {
     try {
       const { claimRewardsFromBackend } = await import("@/utils/stakingTransactions");
       
-      const result = await claimRewardsFromBackend(account, stakeEntry);
+      const result = await claimRewardsFromBackend(uid, account, stakeEntry);
       
       if (!result.success) {
         throw new Error(result.error || "Failed to claim rewards");
@@ -200,25 +236,16 @@ export function StakingProvider({ children }: { children: ReactNode }) {
   };
   
   const unstake = async (stakeEntry: string): Promise<{ txId: string }> => {
-    if (!account) throw new Error("Wallet not connected");
-    
-    setIsLoading(true);
-    setError(null);
-    
+    if (!account || !uid) throw new StakingError("WALLET_NOT_CONNECTED");
+
     try {
-      const { initiateUnstakingRequest } = await import("@/utils/stakingTransactions");
-      
-      const result = await initiateUnstakingRequest(account, stakeEntry);
-      
-      if (!result.success) {
-        throw new Error(result.error || "Failed to initiate unstake");
-      }
-      
+      const result = await stakingService.unstake(uid, account, stakeEntry);
+
       // Refresh stakes and metrics
       await refreshStakes();
       await loadGlobalMetrics();
-      
-      return { txId: `unstake-${stakeEntry}-${Date.now()}` };
+
+      return { txId: result.txId };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to unstake";
       setError(errorMessage);
@@ -227,9 +254,23 @@ export function StakingProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   };
-  
+
   const totalStaked = stakes.reduce((sum, stake) => sum + stake.amount, 0);
   const totalRewards = stakes.reduce((sum, stake) => sum + stake.rewards, 0);
+
+  // Combined refresh helper
+  const refreshAll = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([refreshStakes(), loadGlobalMetrics(), loadWalletBalance()]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to refresh all";
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const value: StakingContextType = {
     stakes,
@@ -243,6 +284,7 @@ export function StakingProvider({ children }: { children: ReactNode }) {
     claimRewards,
     unstake,
     refreshStakes,
+    refreshAll,
     isLoading,
     error,
   };
