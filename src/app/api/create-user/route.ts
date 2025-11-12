@@ -1,26 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { adminDb } from "@/config/firebaseAdmin";
 
-// Initialize Firebase Admin SDK
-if (!getApps().length) {
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-    : undefined;
-
-  if (serviceAccountJson) {
-    initializeApp({
-      credential: cert(serviceAccountJson),
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    });
-  } else {
-    // Local dev / emulator: credential not required
-    initializeApp({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    });
-  }
-}
+// Firebase Admin SDK is initialized in firebaseAdmin.ts
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const auth = getAuth();
-    const db = getFirestore();
+    const db = adminDb;
 
     // Validate username
     const usernameDocRef = db.collection("usernames").doc(username.toLowerCase());
