@@ -1,5 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createStake, getUserStakes } from "@/services/firebaseStakingService";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
+
+// Initialize Firebase Admin SDK (shared with emulator-friendly init)
+if (!getApps().length) {
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+    : undefined;
+
+  if (serviceAccountJson) {
+    initializeApp({
+      credential: cert(serviceAccountJson),
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    });
+  } else {
+    initializeApp({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    });
+  }
+}
+
+const adminDb = getFirestore();
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,13 +49,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create stake
-    const stakeRecord = await createStake(uid, wallet, amount, lockPeriod, txSignature);
+    // Compose stake record (server timestamp via admin)
+    const now = Timestamp.now();
+    const idSuffix = Math.random().toString(36).slice(2, 11);
+    const stakeId = `${wallet}-${Date.now()}-${idSuffix}`;
+
+    // Determine unlock date
+    const durationDays = lockPeriod === "flexible" ? 0 : Number(lockPeriod);
+    const unlockSeconds = now.seconds + durationDays * 24 * 60 * 60;
+    const unlockDate = new Timestamp(unlockSeconds, now.nanoseconds);
+
+    const stakeRecord = {
+      id: stakeId,
+      wallet,
+      amount,
+      lock_period: lockPeriod as "flexible" | "30" | "60" | "90",
+      start_date: now,
+      unlock_date: unlockDate,
+      status: "active" as const,
+      rewards_earned: 0,
+      last_reward_update: now,
+      tx_signature: txSignature,
+    };
+
+    // Admin writes bypass rules
+    const batch = adminDb.batch();
+
+    // Ensure users/{wallet} doc exists with baseline counters
+    const userWalletRef = adminDb.collection("users").doc(wallet);
+    batch.set(
+      userWalletRef,
+      {
+        wallet,
+        total_staked: FieldValue.increment(amount),
+        total_rewards: FieldValue.increment(0),
+        last_claimed: null,
+        created_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp(),
+        is_active: true,
+      },
+      { merge: true }
+    );
+
+    // Create stake under users/{uid}/stakes/{stakeId}
+    const stakeRef = adminDb.collection("users").doc(uid).collection("stakes").doc(stakeId);
+    batch.set(stakeRef, stakeRecord);
+
+    await batch.commit();
 
     return NextResponse.json(
       {
         success: true,
-        stakeId: stakeRecord.id,
+        stakeId,
         message: "Stake recorded successfully",
         stake: stakeRecord,
       },
@@ -61,7 +127,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const stakes = await getUserStakes(uid);
+    // Read stakes via Admin SDK (no rules issues)
+    const snap = await adminDb.collection("users").doc(uid).collection("stakes").get();
+    const stakes = snap.docs.map((d) => d.data());
 
     return NextResponse.json(
       {

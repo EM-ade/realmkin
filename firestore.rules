@@ -8,12 +8,15 @@ service cloud.firestore {
     function isOwner(uid) {
       return signedIn() && request.auth.uid == uid;
     }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(db)/documents/adminUids/$(request.auth.uid));
+    }
 
     // -------- User profile --------
     match /users/{uid} {
-      allow read: if signedIn();
-      allow create, update: if isOwner(uid);
-      allow delete: if false;
+      allow read: if signedIn() || isAdmin();
+      allow create, update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Map username -> uid (immutable)
@@ -24,8 +27,8 @@ service cloud.firestore {
     }
 
     // Map wallet -> uid (immutable)
-    match /wallets/{address} {
-      allow read: if signedIn();
+  match /wallets/{address} {
+      allow read: if true;
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
@@ -33,36 +36,50 @@ service cloud.firestore {
     // -------- Staking --------
     match /users/{uid}/stakes/{stakeId} {
       allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid);
       allow write: if false; // backend / admin SDK only
     }
-
+    // Optional staking record mirror
     match /staking_records/{docId} {
-      allow read: if signedIn() && resource.data.wallet == request.auth.uid;
-      allow write: if false;
+      // read: owner or admin
+      allow read: if isAdmin() ||
+                  (signedIn() && resource.data.wallet == request.auth.uid);
+
+      // allow the owner (based on wallet in request) to create
+      allow create: if signedIn() &&
+                    request.resource.data.wallet == request.auth.uid;
+
+      // no updates / deletes from the client
+      allow update, delete: if false;
     }
 
+    // -------- Rewards & Records --------
     match /userRewards/{uid} {
-      allow read: if isOwner(uid);
-      allow write: if false;
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /claimRecords/{claimId} {
-      allow read: if signedIn() && resource.data.userId == request.auth.uid;
-      allow write: if false;
+      allow read: if isAdmin() || (signedIn() && (resource.data.userId == request.auth.uid || (resource.data.walletAddress != null && exists(/databases/$(db)/documents/wallets/$(resource.data.walletAddress)) && get(/databases/$(db)/documents/wallets/$(resource.data.walletAddress)).data.uid == request.auth.uid)));
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
     }
 
     match /transactionHistory/{id} {
-      allow read: if signedIn() && resource.data.userId == request.auth.uid;
-      allow write: if false;
+      allow read: if isAdmin() || (signedIn() && (resource.data.userId == request.auth.uid || (resource.data.walletAddress != null && exists(/databases/$(db)/documents/wallets/$(resource.data.walletAddress)) && get(/databases/$(db)/documents/wallets/$(resource.data.walletAddress)).data.uid == request.auth.uid)));
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
     }
 
     match /transferRecords/{id} {
-      allow read: if signedIn() && (resource.data.senderUserId == request.auth.uid || resource.data.recipientUserId == request.auth.uid);
-      allow write: if false;
+      allow read: if isAdmin() || (signedIn() && (resource.data.senderUserId == request.auth.uid || resource.data.recipientUserId == request.auth.uid));
+      allow create: if signedIn() && request.resource.data.senderUserId == request.auth.uid;
+      allow update, delete: if false;
     }
 
     match /rateLimits/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read, write: if isOwner(uid) || isAdmin();
     }
 
     // -------- Gameplay data --------
@@ -78,21 +95,39 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // -------- Leaderboards & Meta (read-only) --------
+    // -------- Leaderboards & Meta --------
+    match /leaderboards/current/totalScore/{userId} {
+      allow read: if true;
+      allow create, update: if isOwner(userId) || isAdmin();
+      allow delete: if false;
+    }
+    match /leaderboards/current/streak/{userId} {
+      allow read: if true;
+      allow create, update: if isOwner(userId) || isAdmin();
+      allow delete: if false;
+    }
+    match /leaderboards/current/metadata/{docId} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+    match /userStats/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isOwner(userId) || isAdmin();
+      allow delete: if false;
+    }
     match /leaderboards/{doc=**} {
       allow read: if true;
       allow write: if false;
     }
     match /monthlyArchive/{docId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if signedIn();
     }
     match /meta/{doc} {
       allow read: if true;
       allow write: if false;
     }
 
-    // -------- Admin / Config (locked) --------
     match /adminConfig/{docId} {
       allow read, write: if false;
     }
@@ -103,11 +138,12 @@ service cloud.firestore {
     // -------- Contract bonus / welcome grants (public read) --------
     match /contractBonusConfigs/{id} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /contractWelcomeGrants/{id} {
       allow read: if true;
-      allow write: if false;
+      allow create, update: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
     }
 
     // Deny any other collections by default

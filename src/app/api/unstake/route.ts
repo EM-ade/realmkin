@@ -1,12 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initiateUnstake, completeUnstake, getUserStakes, calculatePendingRewards } from "@/services/firebaseStakingService";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
 import { Connection, PublicKey, Transaction, Keypair, sendAndConfirmTransaction } from "@solana/web3.js";
-import { createTransferInstruction, getAssociatedTokenAddress, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { createTransferInstruction, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { getAPYForLockPeriod, getDurationForLockPeriod } from "@/config/staking.config";
+
+// Initialize Firebase Admin SDK (emulator-friendly)
+if (!getApps().length) {
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+    : undefined;
+
+  if (serviceAccountJson) {
+    initializeApp({
+      credential: cert(serviceAccountJson),
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    });
+  } else {
+    initializeApp({ projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID });
+  }
+}
+
+const adminDb = getFirestore();
+
+interface StakeData {
+  lock_period: "flexible" | "30" | "60" | "90";
+  start_date: { seconds: number };
+  unlock_date: { seconds: number };
+  amount: number;
+  rewards_earned?: number;
+  wallet: string;
+}
+
+function calcPendingRewards(stake: StakeData, nowSeconds: number): number {
+  const apy = getAPYForLockPeriod(stake.lock_period);
+  const dailyRate = apy / 365 / 100;
+  const secondsStaked = nowSeconds - stake.start_date.seconds;
+  const daysStaked = secondsStaked / 86400;
+  const weight = getDurationForLockPeriod(stake.lock_period) === 0
+    ? 1.0
+    : 1 + ((2.0 - 1) * getDurationForLockPeriod(stake.lock_period) / getDurationForLockPeriod("90"));
+  const accrued = stake.amount * dailyRate * daysStaked * weight;
+  return Math.max(0, accrued - (stake.rewards_earned || 0));
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { uid, wallet, stakeId, txSignature, action } = body;
+    const body = await request.json() as { uid: string; wallet: string; stakeId: string; txSignature?: string; action: string };
+    const { uid, wallet, stakeId, action } = body;
 
     // Validate input
     if (!uid || !wallet || !stakeId) {
@@ -17,8 +58,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "initiate") {
-      // Initiate unstake request
-      await initiateUnstake(uid, stakeId);
+      // Load stake via Admin SDK
+      const stakeRef = adminDb.collection("users").doc(uid).collection("stakes").doc(stakeId);
+      const stakeSnap = await stakeRef.get();
+      if (!stakeSnap.exists) {
+        return NextResponse.json({ error: "Stake not found" }, { status: 404 });
+      }
+      const stake = stakeSnap.data() as StakeData;
+      const now = Math.floor(Date.now() / 1000);
+      if (now < stake.unlock_date.seconds) {
+        return NextResponse.json({ error: "Stake is still locked" }, { status: 400 });
+      }
+
+      // Optional: update rewards before marking unstaking
+      const pending = calcPendingRewards(stake, now);
+      await stakeRef.update({
+        rewards_earned: (stake.rewards_earned || 0) + pending,
+        last_reward_update: Timestamp.now(),
+        status: "unstaking",
+      });
 
       return NextResponse.json(
         {
@@ -30,16 +88,13 @@ export async function POST(request: NextRequest) {
       );
     } else if (action === "complete") {
       try {
-        // Get stake details
-        const stakes = await getUserStakes(uid);
-        const stake = stakes.find((s) => s.id === stakeId);
-
-        if (!stake) {
-          return NextResponse.json(
-            { error: "Stake not found" },
-            { status: 404 }
-          );
+        // Load stake document directly
+        const stakeRef = adminDb.collection("users").doc(uid).collection("stakes").doc(stakeId);
+        const stakeSnap = await stakeRef.get();
+        if (!stakeSnap.exists) {
+          return NextResponse.json({ error: "Stake not found" }, { status: 404 });
         }
+        const stake = stakeSnap.data() as StakeData;
 
         // Calculate amounts to return
         const now = Math.floor(Date.now() / 1000);
@@ -56,8 +111,8 @@ export async function POST(request: NextRequest) {
         const amountToReturn = stake.amount - penalty;
         
         // Calculate pending rewards that have accrued since last update
-        const pendingRewards = calculatePendingRewards(stake, now);
-        const totalRewardsEarned = stake.rewards_earned + pendingRewards;
+        const pendingRewards = calcPendingRewards(stake, now);
+        const totalRewardsEarned = (stake.rewards_earned || 0) + pendingRewards;
         const rewardsToReturn = isUnlocked ? totalRewardsEarned : 0;
 
         // Create transfer transaction from treasury wallet
@@ -146,18 +201,10 @@ export async function POST(request: NextRequest) {
 
         // Check treasury balance first
         const treasuryBalance = await connection.getBalance(treasuryKeypair.publicKey);
-        console.log(`Treasury balance: ${treasuryBalance / 1e9} SOL`);
         
         if (treasuryBalance < 10000000) { // Less than 0.01 SOL
-          console.error(`Treasury wallet has insufficient SOL: ${treasuryBalance / 1e9} SOL`);
-          console.error(`Treasury address: ${treasuryKeypair.publicKey.toBase58()}`);
           return NextResponse.json(
-            { 
-              error: "Treasury wallet has insufficient SOL for transaction fees",
-              treasuryAddress: treasuryKeypair.publicKey.toBase58(),
-              currentBalance: treasuryBalance / 1e9,
-              requiredBalance: 0.01
-            },
+            { error: "Treasury wallet has insufficient SOL for transaction fees" },
             { status: 500 }
           );
         }
@@ -167,8 +214,20 @@ export async function POST(request: NextRequest) {
           commitment: "confirmed",
         });
 
-        // Mark as unstaked in Firebase after confirmation
-        await completeUnstake(uid, stakeId, confirmedSig);
+        // Mark as unstaked and update user totals via Admin SDK
+        await stakeRef.update({
+          status: "completed",
+          updated_at: Timestamp.now(),
+        });
+
+        const userWalletRef = adminDb.collection("users").doc(stake.wallet);
+        await userWalletRef.set(
+          {
+            total_staked: FieldValue.increment(-stake.amount),
+            updated_at: Timestamp.now(),
+          },
+          { merge: true }
+        );
 
         return NextResponse.json(
           {

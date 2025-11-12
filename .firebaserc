@@ -1,6 +1,7 @@
 {
   "projects": {
-    "staging": "realmkin"
+    "staging": "realmkin",
+    "default": "realmkin"
   },
   "targets": {},
   "etags": {}

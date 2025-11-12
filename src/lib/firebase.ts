@@ -1,8 +1,8 @@
 "use client";
 
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -20,4 +20,18 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
 export const db = getFirestore(app);
+
+// Connect to local emulators when enabled
+if (process.env.NEXT_PUBLIC_USE_EMULATORS === "true") {
+  try {
+    connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  } catch (e) {
+    // ignore if already connected
+  }
+  try {
+    connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  } catch (e) {
+    // ignore if already connected
+  }
+}
 export default app;

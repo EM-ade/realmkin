@@ -1,11 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/config/firebase";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+
+// Initialize Firebase Admin SDK
+if (!getApps().length) {
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+    : undefined;
+
+  if (serviceAccountJson) {
+    initializeApp({
+      credential: cert(serviceAccountJson),
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    });
+  } else {
+    // Local dev / emulator: credential not required
+    initializeApp({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    });
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, walletAddress } = await request.json();
+    const { username, walletAddress } = await request.json() as { username: string; walletAddress: string };
 
     if (!username || !walletAddress) {
       return NextResponse.json(
@@ -14,10 +33,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const auth = getAuth();
+    const db = getFirestore();
+
     // Validate username
-    const usernameDocRef = doc(db, "usernames", username.toLowerCase());
-    const usernameDoc = await getDoc(usernameDocRef);
-    if (usernameDoc.exists()) {
+    const usernameDocRef = db.collection("usernames").doc(username.toLowerCase());
+    const usernameDoc = await usernameDocRef.get();
+    if (usernameDoc.exists) {
       return NextResponse.json(
         { error: "Username is already taken" },
         { status: 409 }
@@ -26,44 +48,43 @@ export async function POST(request: NextRequest) {
 
     // Normalize wallet address
     const walletLower = walletAddress.toLowerCase();
-
-    // Create or retrieve Firebase Auth user
-    const auth = getAuth();
-    const tempEmail = `${walletLower}@wallet.realmkin.com`;
-    const tempPassword = walletAddress;
-    let uid: string;
+    
+    // Use wallet address as UID (consistent identifier)
+    const uid = walletLower;
 
     try {
-      // Try to sign in first to see if the user already exists
-      const userCredential = await signInWithEmailAndPassword(auth, tempEmail, tempPassword);
-      uid = userCredential.user.uid;
+      // Try to get existing user first
+      await auth.getUser(uid);
       console.log(`Found existing auth user: ${uid}`);
-    } catch (error: unknown) {
+    } catch (error) {
       const authError = error as { code?: string };
-      if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
-        // If user doesn't exist, create them
-        const userCredential = await createUserWithEmailAndPassword(auth, tempEmail, tempPassword);
-        uid = userCredential.user.uid;
+      if (authError.code === 'auth/user-not-found') {
+        // Create user with Admin SDK (bypasses security rules)
+        await auth.createUser({
+          uid,
+          email: `${walletLower}@wallet.realmkin.com`,
+          password: walletAddress, // temporary password
+        });
         console.log(`Created new auth user: ${uid}`);
       } else {
-        // Re-throw other auth errors
         throw error;
       }
     }
 
-    // Create user documents in Firestore
-    const userDocRef = doc(db, "users", uid);
-    const walletDocRef = doc(db, "wallets", walletLower);
-
-    await setDoc(userDocRef, {
+    // Create user documents in Firestore (Admin SDK bypasses rules)
+    const batch = db.batch();
+    
+    batch.set(db.collection("users").doc(uid), {
       username,
       walletAddress: walletLower,
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
+      createdAt: new Date(),
+      lastLogin: new Date(),
     });
 
-    await setDoc(usernameDocRef, { uid });
-    await setDoc(walletDocRef, { uid });
+    batch.set(db.collection("usernames").doc(username.toLowerCase()), { uid });
+    batch.set(db.collection("wallets").doc(walletLower), { uid });
+
+    await batch.commit();
 
     return NextResponse.json(
       {

@@ -61,8 +61,6 @@ export default function SolanaWalletProvider({ children }: Props) {
   }
   
   const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
-  
-  console.log("[Realmkin] Wallet Network:", network, "Endpoint:", endpoint);
 
   // Memoize wallet adapter instances
   const wallets = useMemo(
