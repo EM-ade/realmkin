@@ -9,7 +9,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useNFT } from "@/contexts/NFTContext";
 import NFTViewer3D from "@/components/NFTViewer3D";
-import DesktopNavigation from "@/components/DesktopNavigation";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import { NFTMetadata } from "@/services/nftService";
 import { getAuth } from "firebase/auth";
@@ -111,9 +110,10 @@ export default function MyNFTPage() {
     []
   );
   
-  // Merge test NFTs with real NFTs when test mode is enabled
-  const displayNFTs = useMemo(() => {
-    return testMode ? [...SAMPLE_NFTS, ...nfts] : nfts;
+  // Merge test NFTs with real NFTs when test mode is enabled (guard undefined)
+  const displayNFTs: NFTMetadata[] = useMemo(() => {
+    const safe = Array.isArray(nfts) ? nfts : [];
+    return testMode ? [...SAMPLE_NFTS, ...safe] : safe;
   }, [testMode, nfts]);
 
   const walletDisplayValue = useMemo(() => {
@@ -292,8 +292,6 @@ export default function MyNFTPage() {
           </div>
         </header>
 
-        {/* Desktop Navigation */}
-        <DesktopNavigation />
 
         {/* Mobile Menu Modal */}
         <MobileMenuOverlay

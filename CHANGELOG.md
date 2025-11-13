@@ -1,5 +1,44 @@
 # Changelog
 
+## [2025-11-13] - Marketplace UX, Navbar Layout, Lottie, Guards
+
+### Added
+- **Marketplace mobile header + menu**
+  - `src/app/marketplace/page.tsx`: Added mobile header (logo + ⋯) and wired `MobileMenuOverlay`.
+- **Lottie via DotLottieReact**
+  - `src/components/marketplace/FeeBurnBadge.tsx`: Switched to `@lottiefiles/dotlottie-react` using the provided `.lottie` URL.
+
+### Changed
+- **Hero (Marketplace)**
+  - `src/components/marketplace/HeroComingSoon.tsx`: Replaced 3D coin with a single rotating image plane for performance; tuned size/camera; simplified to “rotate only the image”.
+- **Feature highlights (Marketplace)**
+  - `src/components/marketplace/FeatureHighlights.tsx`: Mobile horizontal snap carousel; hide descriptions on mobile; grid retained on desktop.
+- **Info cards (Marketplace)**
+  - `src/components/marketplace/InfoCard.tsx`: Collapsible dropdowns on mobile (chevron toggles); always expanded on desktop.
+- **Interactive listing demo (Marketplace)**
+  - `src/components/marketplace/InteractiveListingDemo.tsx`: Hide right-hand explanatory copy on mobile; smaller demo note text.
+- **Navbar layout**
+  - `src/components/DesktopNavigation.tsx`: Reworked to 3‑zone layout (brand left, links centered, wallet controls right); removed desktop overflow that caused a horizontal scrollbar; hidden on mobile via `hidden lg:block`.
+  - Removed duplicate page-level navbars so only `src/app/layout.tsx` renders the desktop nav:
+    - `src/app/page.tsx`, `src/app/staking/page.tsx`, `src/app/my-nft/page.tsx`, `src/app/game/page.tsx`, `src/app/wallet/page.tsx`.
+- **Mobile text density trims**
+  - Clamped hero subtitle on mobile; hid long paragraphs on small screens (FeeBurnBadge/InfoCard) to reduce reading load.
+
+### Fixed
+- **Marketplace page syntax**
+  - `src/app/marketplace/page.tsx`: Fixed missing closing brace causing build error; corrected staking menu item path/icon.
+- **Protected route blank page**
+  - `src/components/ProtectedRoute.tsx`: Shows full-screen overlay (“Checking access / Redirecting…”) and uses `router.replace()` while redirecting instead of returning null.
+- **My NFT undefined guard**
+  - `src/app/my-nft/page.tsx`: Guarded `nfts` with a safe array for `displayNFTs` to prevent runtime errors/blank page if data is undefined.
+- **DesktopNavigation parse placeholders**
+  - Removed stray placeholders and closed tags correctly in `DesktopNavigation.tsx` button/logo blocks.
+
+### Dependency
+- Installed `@lottiefiles/dotlottie-react` (Fees → Burn animation component).
+
+---
+
 ## [2025-11-12] - Staking System & Security Improvements
 
 ### Added

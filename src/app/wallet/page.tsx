@@ -9,7 +9,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { formatAddress } from "@/utils/formatAddress";
 import NFTCard from "@/components/NFTCard";
-import DesktopNavigation from "@/components/DesktopNavigation";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import { useNFT } from "@/contexts/NFTContext";
 import { NFTMetadata, nftService } from "@/services/nftService";
@@ -521,8 +520,6 @@ const handleTransfer = useCallback(async () => {
           </div>
         </header>
 
-        {/* Desktop Navigation */}
-        <DesktopNavigation />
 
         {/* Mobile Menu Modal */}
         <MobileMenuOverlay
