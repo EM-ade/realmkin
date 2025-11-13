@@ -23,7 +23,7 @@ export default function DiscordRedirectPage() {
         <h1 className="text-2xl font-semibold">Join our Discord</h1>
         {url ? (
           <p className="mt-3 text-white/70">
-            Redirecting you now… If it doesn't work, <a className="text-cyan-300 underline" href={url}>click here</a>.
+            Redirecting you now&hellip; If it doesn&apos;t work, <a className="text-cyan-300 underline" href={url}>click here</a>.
           </p>
         ) : (
           <p className="mt-3 text-white/70">

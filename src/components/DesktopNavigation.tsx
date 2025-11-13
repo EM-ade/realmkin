@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { label: "Home", href: "/", icon: "/dashboard.png" },
   { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
   { label: "My NFTs", href: "/my-nft", icon: "/flex-model.png" },
+  // { label: "Marketplace", href: "/marketplace", icon: "/marketplace.png" },
   { label: "Staking", href: "/staking", icon: "/staking.png" },
   { label: "Game", href: "/game", icon: "/game.png" },
   { label: "Merches", href: "/merches", icon: "/merches.png" },
@@ -143,8 +144,8 @@ export default function DesktopNavigation() {
   }, [discordLinked]);
 
   return (
-    <nav className="hidden lg:block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40 border-b border-[#DA9C2F]/15">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 xl:px-10 py-3">
+    <nav className="block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40 border-b border-[#DA9C2F]/15">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 sm:px-6 xl:px-10 py-3 overflow-x-auto">
           {/* Left: Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-3">
