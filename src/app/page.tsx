@@ -10,7 +10,6 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import { useNFT } from "@/contexts/NFTContext";
 import SocialLinks from "@/components/SocialLinks";
 import QuickAccessCard from "@/components/QuickAccessCard";
-import DesktopNavigation from "@/components/DesktopNavigation";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
@@ -130,8 +129,6 @@ function Home() {
       {!isMobile && <EtherealParticles />}
       {!isMobile && <ConstellationBackground />}
 
-      {/* Desktop Navigation */}
-      <DesktopNavigation />
 
       {/* Mobile Header - Compact */}
       <header className="lg:hidden flex items-center justify-between px-4 py-3 relative z-20">

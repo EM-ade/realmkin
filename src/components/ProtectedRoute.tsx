@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,6 +15,7 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
   const { isConnected } = useWeb3();
   const router = useRouter();
   const pathname = usePathname();
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -22,7 +23,8 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
     // Require BOTH: authenticated user AND connected wallet
     if (!user || !isConnected) {
       const target = encodeURIComponent(pathname || '/');
-      router.push(`/login?redirect=${target}`);
+      setRedirecting(true);
+      router.replace(`/login?redirect=${target}`);
       return;
     }
 
@@ -48,7 +50,14 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
 
   // Block render if either is missing (router will redirect)
   if (!user || !isConnected) {
-    return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black text-[#DA9C2F]">
+        <div className="flex items-center gap-3 text-sm uppercase tracking-widest">
+          <span className="h-4 w-4 rounded-full border-2 border-transparent border-t-[#DA9C2F] animate-spin" />
+          {redirecting ? 'Redirecting…' : 'Checking access…'}
+        </div>
+      </div>
+    );
   }
 
   if (adminWallets && userData && !adminWallets.includes((userData.walletAddress ?? '').toLowerCase())) {

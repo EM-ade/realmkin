@@ -8,7 +8,6 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import { useStaking } from "@/contexts/StakingContext";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { formatAddress } from "@/utils/formatAddress";
-import DesktopNavigation from "@/components/DesktopNavigation";
 import { getAPYForLockPeriod, estimateRewards } from "@/config/staking.config";
 import { toast } from "react-hot-toast";
 import { StakingError, errorMessages } from "@/errors/StakingError";
@@ -275,8 +274,6 @@ function StakingPage() {
         </div>
       </header>
 
-      {/* Desktop Navigation */}
-      <DesktopNavigation />
 
       {/* Mobile Menu Modal */}
       {showMobileActions && (

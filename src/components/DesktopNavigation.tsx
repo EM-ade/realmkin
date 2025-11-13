@@ -139,15 +139,15 @@ export default function DesktopNavigation() {
 
   useEffect(() => {
     if (!discordLinked) {
-      setShowDiscordMenu(false);
     }
   }, [discordLinked]);
 
   return (
-    <nav className="block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40 border-b border-[#DA9C2F]/15">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 sm:px-6 xl:px-10 py-3 overflow-x-auto">
+    <nav className="hidden lg:block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40 border-b border-[#DA9C2F]/15">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 xl:px-10 py-3">
+        <div className="flex items-center gap-4">
           {/* Left: Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center flex-1 min-w-0">
             <Link href="/" className="flex items-center gap-3">
               <div className="w-12 h-10 xl:w-16 xl:h-12">
                 <Image
@@ -165,28 +165,30 @@ export default function DesktopNavigation() {
           </div>
 
           {/* Center: Navigation Links */}
-          <div className="flex items-center gap-2 xl:gap-4">
-            {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-xs uppercase tracking-[0.3em] xl:px-6 xl:text-sm ${
-                    isActive
-                      ? "bg-[#DA9C2F] text-black font-semibold"
-                      : "text-[#DA9C2F] hover:bg-[#DA9C2F]/10"
-                  }`}
-                >
-                  {/* <Image src={item.icon} alt={item.label} width={20} height={20} className="w-5 h-5" /> */}
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-center gap-2 xl:gap-4 overflow-x-auto md:overflow-visible">
+              {NAV_ITEMS.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-xs uppercase tracking-[0.3em] xl:px-6 xl:text-sm ${
+                      isActive
+                        ? "bg-[#DA9C2F] text-black font-semibold"
+                        : "text-[#DA9C2F] hover:bg-[#DA9C2F]/10"
+                    }`}
+                  >
+                    {/* <Image src={item.icon} alt={item.label} width={20} height={20} className="w-5 h-5" /> */}
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
           {/* Right: Wallet Controls */}
-          <div className="flex items-center gap-4 xl:gap-6">
+          <div className="flex items-center justify-end gap-4 xl:gap-6 flex-1 min-w-0">
             {isConnected && account && (
               <>
                 {/* Dynamic Connect Button with Dropdown */}
@@ -270,6 +272,7 @@ export default function DesktopNavigation() {
               </button>
             )}
           </div>
+        </div>
       </div>
     </nav>
   );

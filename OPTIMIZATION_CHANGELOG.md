@@ -1,15 +1,32 @@
 # Performance Optimization Changelog
-
-**Date**: November 9, 2025  
 **Status**: Phase 1 & 2 Complete, Phase 3 Pending
 
 ---
 
-## Overview
+## Update: November 13, 2025 — Marketplace, Navbar, Mobile UX
 
-Comprehensive performance optimization of the Realmkin login page, reducing load time by **66%** and bundle size by **38%**.
+### Highlights
+- **[Marketplace landing]** Added mobile header + `MobileMenuOverlay` and fixed staking link.
+- **[Hero visual]** Replaced heavy 3D coin with a performant rotating image plane in `HeroComingSoon.tsx` and tuned size/camera.
+- **[Lottie]** Switched Fee → Burn badge to `DotLottieReact` with provided hosted `.lottie` URL.
+- **[Feature highlights]** Mobile horizontal snap carousel; descriptions hidden on mobile.
+- **[Info cards]** Collapsible dropdowns on mobile; always expanded on desktop.
+- **[Navbar overhaul]** 3‑zone desktop layout (brand left, links center, connect right). Removed desktop overflow scroll. Desktop nav hidden on mobile.
+- **[Dupes removed]** Deleted page‑level navbars so only `layout.tsx` renders the desktop nav.
+- **[Route guard UX]** `ProtectedRoute` now shows an overlay while redirecting instead of rendering a blank screen.
+- **[Stability]** Guarded `my-nft` list against undefined data to prevent blank page.
 
----
+### Files Touched
+- `src/components/marketplace/HeroComingSoon.tsx` — rotating image hero, mobile padding/line‑clamp.
+- `src/components/marketplace/FeeBurnBadge.tsx` — `DotLottieReact` + mobile text trim.
+- `src/components/marketplace/FeatureHighlights.tsx` — mobile snap carousel, hide desc on mobile.
+- `src/components/marketplace/InfoCard.tsx` — collapsible sections on mobile with chevrons.
+- `src/components/marketplace/InteractiveListingDemo.tsx` — hide right copy on mobile; smaller note.
+- `src/app/marketplace/page.tsx` — mobile header + `MobileMenuOverlay`; fixed syntax and staking menu item.
+- `src/components/DesktopNavigation.tsx` — 3‑zone layout, no desktop overflow; `hidden lg:block` to hide on mobile; parse fixes.
+- Removed duplicate navbars from: `src/app/page.tsx`, `src/app/staking/page.tsx`, `src/app/my-nft/page.tsx`, `src/app/game/page.tsx`, `src/app/wallet/page.tsx`.
+- `src/components/ProtectedRoute.tsx` — overlay during redirect; `router.replace`.
+- `src/app/my-nft/page.tsx` — safe merge of NFTs to avoid undefined.
 
 ## Phase 1: Quick Wins ✅ COMPLETE
 
