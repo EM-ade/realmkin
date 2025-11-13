@@ -2,11 +2,13 @@
 
 import React from "react";
 import HeroComingSoon from "@/components/marketplace/HeroComingSoon";
+import InfoCard from "@/components/marketplace/InfoCard";
 
 export default function MarketplaceComingSoonPage() {
   return (
     <main className="min-h-screen bg-[#0a0b0d]">
       <HeroComingSoon />
+      <InfoCard />
     </main>
   );
 }

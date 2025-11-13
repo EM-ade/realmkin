@@ -8,6 +8,7 @@ import { NFTProvider } from "@/contexts/NFTContext";
 import { StakingProvider } from "@/contexts/StakingContext";
 import SolanaWalletProvider from "@/contexts/SolanaWalletProvider";
 import RouteTransition from "@/components/RouteTransition";
+import DesktopNavigation from "@/components/DesktopNavigation";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -106,7 +107,8 @@ export default function RootLayout({
             <Web3Provider>
               <StakingProvider>
                 <Toaster position="top-right" toastOptions={{className:'bg-[#101010] text-[#f4c752] font-medium border border-[#f4c752]/40'}} />
-                  <RouteTransition>
+                <DesktopNavigation />
+                <RouteTransition>
                   <NFTProvider>{children}</NFTProvider>
                 </RouteTransition>
               </StakingProvider>
