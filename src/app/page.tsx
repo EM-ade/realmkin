@@ -149,7 +149,7 @@ function Home() {
       { label: "Home", href: "/", icon: "/dashboard.png" },
       { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
       { label: "Staking", href: "/staking", icon: "/staking.png" },
-      { label: "Marketplace", href: "/marketplace", icon: "/dashboard.png" },
+      { label: "Marketplace", href: "/marketplace", icon: "/marketplace_logo.png" },
       { label: "Game", href: "/game", icon: "/game.png" },
       { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
       { label: "Merches", href: "/merches", icon: "/merches.png" },

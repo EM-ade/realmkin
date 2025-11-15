@@ -13,7 +13,7 @@ const NAV_ITEMS = [
   { label: "Home", href: "/", icon: "/dashboard.png" },
   { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
   { label: "My NFTs", href: "/my-nft", icon: "/flex-model.png" },
-  // { label: "Marketplace", href: "/marketplace", icon: "/marketplace.png" },
+  { label: "Marketplace", href: "/marketplace", icon: "/marketplace_logo.png" },
   { label: "Staking", href: "/staking", icon: "/staking.png" },
   { label: "Game", href: "/game", icon: "/game.png" },
   { label: "Merches", href: "/merches", icon: "/merches.png" },
