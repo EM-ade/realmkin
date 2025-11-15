@@ -13,7 +13,7 @@ export default function InteractiveListingDemo() {
           <div className="premium-card animated-border rounded-xl p-5 text-white">
             <div className="aspect-square w-full rounded-lg border border-[var(--border-color)] overflow-hidden relative interactive-element">
               <Image
-                src="/realmkin-3.webp"
+                src="/marketplace.jpeg"
                 alt="Realmkin preview"
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"

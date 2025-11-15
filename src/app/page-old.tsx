@@ -199,11 +199,8 @@ export default function Home() {
         muted
         playsInline
         preload="auto"
-        poster="/Loading-Screen-poster.jpg"
         style={{ objectFit: "cover" }}
       >
-        <source src="/Loading-Screen.webm" type="video/webm" />
-        <source src="/Loading-Screen.mp4" type="video/mp4" />
       </video>
       <div className="absolute inset-0 bg-[#865900] opacity-80"></div>
       <div

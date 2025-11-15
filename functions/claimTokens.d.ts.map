@@ -1,0 +1,1 @@
+{"version":3,"file":"claimTokens.d.ts","sourceRoot":"","sources":["src/claimTokens.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,SAAS,MAAM,oBAAoB,CAAC;AAiBhD,UAAU,aAAa;IACrB,OAAO,EAAE,OAAO,CAAC;IACjB,MAAM,CAAC,EAAE,MAAM,CAAC;IAChB,KAAK,CAAC,EAAE,MAAM,CAAC;CAChB;AAED,eAAO,MAAM,WAAW,wEAoHvB,CAAC;AAkDF,eAAO,MAAM,eAAe;;;;;;YAoC3B,CAAC"}

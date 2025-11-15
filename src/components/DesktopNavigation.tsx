@@ -31,6 +31,19 @@ export default function DesktopNavigation() {
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
+  const [hideDiscordNotice, setHideDiscordNotice] = useState(false);
+
+  useEffect(() => {
+    try {
+      const val = localStorage.getItem('realmkin_hide_discord_notice');
+      setHideDiscordNotice(val === '1');
+    } catch {}
+  }, []);
+
+  const dismissDiscordNotice = useCallback(() => {
+    setHideDiscordNotice(true);
+    try { localStorage.setItem('realmkin_hide_discord_notice', '1'); } catch {}
+  }, []);
 
   const walletDisplayValue = useMemo(() => {
     return userRewards ? userRewards.totalRealmkin : 0;
@@ -145,6 +158,30 @@ export default function DesktopNavigation() {
   return (
     <nav className="hidden lg:block w-full bg-[#0B0B09]/95 backdrop-blur-sm sticky top-0 z-40 border-b border-[#DA9C2F]/15">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 xl:px-10 py-3">
+        {/* Discord not linked notice */}
+        {isConnected && !discordLinked && !hideDiscordNotice && (
+          <div className="mb-2 flex items-center justify-between rounded-lg border border-[#DA9C2F]/30 bg-[#141414] px-3 py-2">
+            <span className="text-xs text-[#DA9C2F]">
+              Discord not connected — roles will not be assigned.
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDiscordConnect}
+                disabled={discordConnecting}
+                className="rounded bg-[#DA9C2F] px-2 py-1 text-[10px] font-semibold text-black hover:bg-[#ffbf00] disabled:opacity-60"
+              >
+                {discordConnecting ? 'CONNECTING…' : 'CONNECT DISCORD'}
+              </button>
+              <button
+                onClick={dismissDiscordNotice}
+                className="rounded px-2 py-1 text-[12px] text-[#DA9C2F]/80 hover:text-[#DA9C2F]"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center gap-4">
           {/* Left: Logo */}
           <div className="flex items-center flex-1 min-w-0">

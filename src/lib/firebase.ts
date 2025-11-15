@@ -3,6 +3,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,6 +22,8 @@ export const auth = getAuth(app);
 
 export const db = getFirestore(app);
 
+export const functions = getFunctions(app);
+
 // Connect to local emulators when enabled
 if (process.env.NEXT_PUBLIC_USE_EMULATORS === "true") {
   try {
@@ -30,6 +33,11 @@ if (process.env.NEXT_PUBLIC_USE_EMULATORS === "true") {
   }
   try {
     connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  } catch (e) {
+    // ignore if already connected
+  }
+  try {
+    connectFunctionsEmulator(functions, "127.0.0.1", 5001);
   } catch (e) {
     // ignore if already connected
   }

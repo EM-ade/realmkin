@@ -133,8 +133,7 @@ export default function ComingSoonTemplate({ current }: ComingSoonTemplateProps)
         </div>
       </header>
 
-      {/* Desktop Navigation */}
-      <DesktopNavigation />
+
 
       {/* Mobile Menu Modal */}
       {showMobileActions && (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { doc, updateDoc, increment, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db as firestore } from "@/lib/firebase";
 
@@ -27,6 +28,11 @@ const UserDetailsModal = ({
   const [amount, setAmount] = useState(0);
   const [newUsername, setNewUsername] = useState(user.username);
   const [isBusy, setIsBusy] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const getValidAmount = (): number => {
     const v = Math.trunc(Number(amount));
@@ -130,85 +136,112 @@ const UserDetailsModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-[#1a0f2e] border-2 border-[#d3b136] rounded-lg p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-glow">
-            Manage {user.username}
-          </h2>
+  if (!mounted) return null;
+
+  const modalContent = (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-[#DA9C2F]/30 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">
+              {user.username}
+            </h2>
+            <p className="text-white/60 text-xs">User Management</p>
+          </div>
           <button
             onClick={onClose}
-            className="text-white hover:text-gray-300 transition-colors"
+            className="text-white/60 hover:text-white text-2xl leading-none transition-colors"
           >
-            &times;
+            ×
           </button>
         </div>
-        <div className="mb-4">
-          <p className="text-sm text-gray-400">Wallet: {user.walletAddress}</p>
-          <p className="text-sm text-yellow-400 font-bold">
-            Realmkin: ₥{user.totalRealmkin}
-          </p>
+
+        {/* User Info */}
+        <div className="bg-[#0f0f0f] rounded-lg p-4 mb-6 border border-[#DA9C2F]/20">
+          <div className="space-y-2">
+            <div>
+              <p className="text-white/60 text-xs mb-1">Wallet Address</p>
+              <p className="text-white/80 text-xs font-mono break-all">{user.walletAddress}</p>
+            </div>
+            <div className="pt-2 border-t border-[#DA9C2F]/10">
+              <p className="text-white/60 text-xs mb-1">Current Balance</p>
+              <p className="text-[#DA9C2F] font-bold text-lg">₥{user.totalRealmkin.toLocaleString()}</p>
+            </div>
+          </div>
         </div>
-        <div className="mb-4">
-          <input
-            type="text"
-            value={newUsername}
-            onChange={(e) => setNewUsername(e.target.value)}
-            className="w-full p-3 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d3b136] mb-2"
-            placeholder="New username"
+
+        {/* Update Username Section */}
+        <div className="mb-6">
+          <label className="text-white/60 text-xs font-semibold block mb-2">Update Username</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              className="flex-1 p-2 bg-[#0B0B09] border border-[#DA9C2F]/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#DA9C2F] text-sm"
+              placeholder="New username"
             />
-          <button
-            onClick={handleUpdateUsername}
-            disabled={isBusy}
-            className={`w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-purple-500/30 mb-4`}
-          >
-            Update Username
-          </button>
+            <button
+              onClick={handleUpdateUsername}
+              disabled={isBusy}
+              className="px-4 py-2 bg-[#DA9C2F] text-black font-semibold rounded-lg hover:bg-[#ffbf00] transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save
+            </button>
+          </div>
         </div>
-        <div className="mb-4">
+
+        {/* Balance Management Section */}
+        <div className="mb-6">
+          <label className="text-white/60 text-xs font-semibold block mb-2">Manage Balance</label>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
-            className="w-full p-3 bg-[#2b1c3b] border-2 border-[#d3b136] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d3b136]"
+            placeholder="Enter amount"
+            className="w-full p-3 bg-[#0B0B09] border border-[#DA9C2F]/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#DA9C2F] mb-3 text-sm"
           />
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={handleAddRealmkin}
+              disabled={isBusy}
+              className="px-3 py-2 bg-green-500/20 text-green-400 border border-green-500/30 font-semibold rounded-lg hover:bg-green-500/30 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              + Add
+            </button>
+            <button
+              onClick={handleSubtractRealmkin}
+              disabled={isBusy}
+              className="px-3 py-2 bg-orange-500/20 text-orange-400 border border-orange-500/30 font-semibold rounded-lg hover:bg-orange-500/30 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              − Subtract
+            </button>
+            <button
+              onClick={handleSetRealmkin}
+              disabled={isBusy}
+              className="px-3 py-2 bg-[#DA9C2F]/20 text-[#DA9C2F] border border-[#DA9C2F]/30 font-semibold rounded-lg hover:bg-[#DA9C2F]/30 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              = Set
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <button
-            onClick={handleAddRealmkin}
-            disabled={isBusy}
-            className={`bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-green-500/30`}
-          >
-            Add Realmkin
-          </button>
-          <button
-            onClick={handleSubtractRealmkin}
-            disabled={isBusy}
-            className={`bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-red-500/30`}
-          >
-            Subtract Realmkin
-          </button>
-          <button
-            onClick={handleSetRealmkin}
-            disabled={isBusy}
-            className={`bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-blue-500/30`}
-          >
-            Set Realmkin
-          </button>
-        </div>
-        <div className="mt-6">
+
+        {/* Delete User Section */}
+        <div className="pt-4 border-t border-[#DA9C2F]/10">
           <button
             onClick={handleDeleteUser}
             disabled={isBusy}
-            className={`w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${isBusy ? 'opacity-50 cursor-not-allowed' : 'transform hover:scale-105'} shadow-lg shadow-red-500/30`}
+            className="w-full px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 font-semibold rounded-lg hover:bg-red-500/30 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Delete User
+            🗑️ Delete User
           </button>
         </div>
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default UserDetailsModal;

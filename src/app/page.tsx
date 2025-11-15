@@ -11,17 +11,25 @@ import { useNFT } from "@/contexts/NFTContext";
 import SocialLinks from "@/components/SocialLinks";
 import QuickAccessCard from "@/components/QuickAccessCard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
+import FeatureShowcase from "@/components/FeatureShowcase";
+import QuickStartGuide from "@/components/QuickStartGuide";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(
-  () => import("@/components/MagicalAnimations").then(mod => mod.EtherealParticles),
-  { ssr: false }
+  () =>
+    import("@/components/MagicalAnimations").then(
+      (mod) => mod.EtherealParticles,
+    ),
+  { ssr: false },
 );
 const ConstellationBackground = dynamic(
-  () => import("@/components/MagicalAnimations").then(mod => mod.ConstellationBackground),
-  { ssr: false }
+  () =>
+    import("@/components/MagicalAnimations").then(
+      (mod) => mod.ConstellationBackground,
+    ),
+  { ssr: false },
 );
 
 // Lazy load carousel
@@ -32,7 +40,7 @@ const NFTCarousel = dynamic(() => import("@/components/NFTCarousel"), {
 function Home() {
   const router = useRouter();
   const { user, userData } = useAuth();
-  const { connectWallet, account, isConnected, isConnecting } = useWeb3();
+  const { connectWallet, disconnectWallet, account, isConnected, isConnecting } = useWeb3();
   const { nfts } = useNFT();
   const isMobile = useIsMobile();
 
@@ -41,7 +49,8 @@ function Home() {
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const [discordConnecting, setDiscordConnecting] = useState(false);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
-  const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+  const gatekeeperBase =
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
 
   // Fetch user rewards from Firebase
   useEffect(() => {
@@ -54,7 +63,7 @@ function Home() {
         const rewards = await rewardsService.getUserRewards(user.uid);
         setUserRewards(rewards);
       } catch (error) {
-        console.error('Error fetching user rewards:', error);
+        console.error("Error fetching user rewards:", error);
         setUserRewards(null);
       }
     }
@@ -66,7 +75,9 @@ function Home() {
     async function checkDiscordLink() {
       if (user?.uid) {
         try {
-          const response = await fetch(`${gatekeeperBase}/api/discord/status/${user.uid}`);
+          const response = await fetch(
+            `${gatekeeperBase}/api/discord/status/${user.uid}`,
+          );
           if (response.ok) {
             const data = await response.json();
             setDiscordLinked(data.linked || false);
@@ -83,30 +94,55 @@ function Home() {
   const handleDiscordConnect = useCallback(() => {
     if (!user?.uid) return;
     setDiscordConnecting(true);
-    const authUrl = `${gatekeeperBase}/api/discord/auth?userId=${user.uid}`;
-    window.location.href = authUrl;
-  }, [user?.uid, gatekeeperBase]);
+    // Open OAuth flow in a new tab to avoid navigating away from the app
+    const win = window.open("/api/discord/login", "_blank", "noopener,noreferrer");
+    if (!win) {
+      // Fallback if pop-up blocked
+      window.location.href = "/api/discord/login";
+    }
+  }, [user?.uid]);
 
   const handleDiscordDisconnect = useCallback(async () => {
     if (!user?.uid) return;
     setDiscordUnlinking(true);
     try {
-      const response = await fetch(`${gatekeeperBase}/api/discord/unlink/${user.uid}`, {
-        method: "POST",
+      // Acquire Firebase ID token for authenticated DELETE call
+      const token = await user.getIdToken();
+      const response = await fetch(`${gatekeeperBase}/api/link/discord`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (response.ok) {
-        setDiscordLinked(false);
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(`Failed to disconnect (${response.status}) ${text}`);
       }
+      setDiscordLinked(false);
     } catch (error) {
       console.error("Error unlinking Discord:", error);
     } finally {
       setDiscordUnlinking(false);
     }
-  }, [user?.uid, gatekeeperBase]);
+  }, [user, gatekeeperBase]);
+  
+  // When wallet is disconnected, keep Discord linked
+  const handleWalletDisconnect = useCallback(async () => {
+    try {
+      await disconnectWallet();
+      // Don't unlink Discord - keep it linked for reconnection
+    } catch (error) {
+      console.error("Wallet disconnect error:", error);
+    }
+  }, [disconnectWallet]);
+
+  
 
   // Calculate stats
   const nftCount = nfts?.length || 0;
-  const balanceDisplay = userRewards ? userRewards.totalRealmkin.toFixed(2) : "0.00";
+  const balanceDisplay = userRewards
+    ? userRewards.totalRealmkin.toFixed(2)
+    : "0.00";
 
   // Mobile menu items
   const mobileMenuItems = useMemo(
@@ -118,17 +154,22 @@ function Home() {
       { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
       { label: "Merches", href: "/merches", icon: "/merches.png" },
     ],
-    []
+    [],
   );
 
   return (
     <div className="min-h-screen bg-[#050302] relative overflow-hidden">
       {/* Background Effects - Desktop only */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(244,199,82,0.15),rgba(5,3,2,0.95))]" aria-hidden="true" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#050302]/30 via-transparent to-[#050302]" aria-hidden="true" />
+      <div
+        className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(244,199,82,0.15),rgba(5,3,2,0.95))]"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-[#050302]/30 via-transparent to-[#050302]"
+        aria-hidden="true"
+      />
       {!isMobile && <EtherealParticles />}
       {!isMobile && <ConstellationBackground />}
-
 
       {/* Mobile Header - Compact */}
       <header className="lg:hidden flex items-center justify-between px-4 py-3 relative z-20">
@@ -153,7 +194,11 @@ function Home() {
           aria-expanded={showMobileActions}
           aria-haspopup="true"
         >
-          <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
+          <span
+            className={`text-xs transition-transform ${showMobileActions ? "rotate-180" : ""}`}
+          >
+            ⋯
+          </span>
         </button>
       </header>
 
@@ -181,7 +226,7 @@ function Home() {
             </button>
           ) : (
             <button
-              onClick={() => router.push('/wallet')}
+              onClick={() => router.push("/wallet")}
               className="w-full bg-[#DA9C2F] text-black font-bold py-4 rounded-xl uppercase tracking-wider hover:bg-[#f0b94a] transition-all duration-300 shadow-lg shadow-[#DA9C2F]/30"
             >
               ⚡ Enter Dashboard
@@ -241,6 +286,12 @@ function Home() {
           </div>
         </section>
 
+        {/* Quick Start Guide */}
+        <QuickStartGuide />
+
+        {/* Feature Showcase */}
+        <FeatureShowcase />
+
         {/* Featured NFT Carousel */}
         <section className="mb-6">
           <h3 className="text-[#DA9C2F] text-sm font-bold uppercase tracking-wider mb-3">
@@ -252,13 +303,16 @@ function Home() {
         </section>
 
         {/* Social Links */}
-        <section className="text-center flex flex-col items-center">
+        <section className="text-center flex flex-col items-center mb-20 lg:mb-6">
           <div className="flex flex-row items-center justify-between w-full max-w-md mb-2">
-          <h4 className="text-white/50 text-xs uppercase tracking-wider">
-            Join Our Community
-          </h4>
+            <h4 className="text-white/50 text-xs uppercase tracking-wider">
+              Join Our Community
+            </h4>
           </div>
-          <SocialLinks variant="light" className="flex-row justify-between w-full max-w-md" />
+          <SocialLinks
+            variant="light"
+            className="flex-row justify-between w-full max-w-md"
+          />
         </section>
       </main>
 
@@ -277,7 +331,7 @@ function Home() {
         onDiscordConnect={handleDiscordConnect}
         onDiscordDisconnect={handleDiscordDisconnect}
         onConnectWallet={connectWallet}
-        onDisconnectWallet={() => {}}
+        onDisconnectWallet={handleWalletDisconnect}
       />
     </div>
   );

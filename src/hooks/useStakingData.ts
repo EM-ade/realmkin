@@ -78,6 +78,7 @@ export function useStakingData() {
     const interval = setInterval(fetchStakingData, 30000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, isConnected]);
 
   return {
@@ -152,6 +153,7 @@ export function useStakeRewards(stakeId: string | null) {
     const interval = setInterval(fetchRewards, 30000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, isConnected, stakeId]);
 
   return {
