@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useOnboarding } from "@/contexts/OnboardingContext";
+import { useDiscord } from "@/contexts/DiscordContext";
 
 const STEPS = [
   {
@@ -49,11 +50,21 @@ const STEPS = [
 ];
 
 export default function QuickStartGuide() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { isConnected } = useWeb3();
   const { isNewUser } = useOnboarding();
+  const { discordLinked } = useDiscord();
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
   const [isSkipped, setIsSkipped] = useState(false);
+
+  // Determine which steps are completed
+  const completedSteps = {
+    1: true, // Welcome is always done
+    2: isConnected && !!userData?.walletAddress,
+    3: !!userData?.username,
+    4: discordLinked,
+    5: isConnected && !!userData?.username && discordLinked,
+  };
 
   // Load expanded step and skip state from localStorage on mount
   useEffect(() => {
@@ -118,33 +129,47 @@ export default function QuickStartGuide() {
         </div>
 
         <div className="space-y-3">
-          {STEPS.map((step, index) => (
+          {STEPS.map((step, index) => {
+            const isCompleted = completedSteps[step.number as keyof typeof completedSteps];
+            return (
             <div
               key={step.number}
-              className="group rounded-xl border border-[#DA9C2F]/20 bg-[#0f0f0f]/50 hover:border-[#DA9C2F]/50 transition-all cursor-pointer overflow-hidden"
+              className={`group rounded-xl border transition-all cursor-pointer overflow-hidden ${
+                isCompleted
+                  ? "border-[#DA9C2F]/10 bg-[#0f0f0f]/30 opacity-60"
+                  : "border-[#DA9C2F]/20 bg-[#0f0f0f]/50 hover:border-[#DA9C2F]/50"
+              }`}
               onClick={() =>
                 setExpandedStep(expandedStep === step.number ? null : step.number)
               }
             >
               <div className="p-4 flex items-center gap-4">
-                {/* Step number */}
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#DA9C2F]/20 flex items-center justify-center">
-                  <span className="text-2xl">{step.icon}</span>
+                {/* Step number or checkmark */}
+                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                  isCompleted
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-[#DA9C2F]/20 text-[#DA9C2F]"
+                }`}>
+                  {isCompleted ? "✓" : <span className="text-2xl">{step.icon}</span>}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1">
-                  <h3 className="font-bold text-[#DA9C2F] mb-1">
+                  <h3 className={`font-bold mb-1 ${
+                    isCompleted ? "text-white/50" : "text-[#DA9C2F]"
+                  }`}>
                     Step {step.number}: {step.title}
                   </h3>
-                  <p className="text-sm text-white/60">{step.description}</p>
+                  <p className={`text-sm ${
+                    isCompleted ? "text-white/40" : "text-white/60"
+                  }`}>{step.description}</p>
                 </div>
 
                 {/* Chevron */}
                 <div
-                  className={`flex-shrink-0 text-[#DA9C2F] transition-transform ${
-                    expandedStep === step.number ? "rotate-180" : ""
-                  }`}
+                  className={`flex-shrink-0 transition-transform ${
+                    isCompleted ? "text-white/40" : "text-[#DA9C2F]"
+                  } ${expandedStep === step.number ? "rotate-180" : ""}`}
                 >
                   ▼
                 </div>
@@ -178,7 +203,8 @@ export default function QuickStartGuide() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Progress indicator */}
