@@ -12,7 +12,6 @@ import SocialLinks from "@/components/SocialLinks";
 import QuickAccessCard from "@/components/QuickAccessCard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import FeatureShowcase from "@/components/FeatureShowcase";
-import QuickStartGuide from "@/components/QuickStartGuide";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
 
@@ -285,9 +284,6 @@ function Home() {
             <div className="h-[100px]"></div>
           </div>
         </section>
-
-        {/* Quick Start Guide */}
-        <QuickStartGuide />
 
         {/* Feature Showcase */}
         <FeatureShowcase />
