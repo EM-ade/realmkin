@@ -603,7 +603,7 @@ const handleTransfer = useCallback(async () => {
                   <p className="text-white font-bold text-xl mt-1">
                     {userRewards && rewardsCalculation
                       ? rewardsService.formatMKIN(
-                          (rewardsCalculation.weeklyRate || 0) * 7
+                          (rewardsCalculation.weeklyRate || 0)
                         )
                       : "₥0"}{" "}
                     <span className="text-sm text-white/60">MKIN/week</span>
@@ -642,7 +642,7 @@ const handleTransfer = useCallback(async () => {
                         {rewardsCalculation.totalNFTs > 0 ? "✓" : "○"}
                       </span>
                       <span className={rewardsCalculation.totalNFTs > 0 ? "text-green-400" : "text-white/40"}>
-                        Earning {rewardsService.formatMKIN(rewardsCalculation.weeklyRate)} MKIN/day
+                        Earning {rewardsService.formatMKIN(rewardsCalculation.weeklyRate)} MKIN/week
                       </span>
                     </div>
                   </div>
