@@ -21,6 +21,7 @@ export default function OnboardingWizard() {
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDiscordConnecting, setIsDiscordConnecting] = useState(false);
 
   const handleNextStep = () => {
     const currentIndex = STEPS.indexOf(currentStep);
@@ -70,6 +71,7 @@ export default function OnboardingWizard() {
       return;
     }
     try {
+      setIsDiscordConnecting(true);
       // Cast user to the expected type for connectDiscord
       const firebaseUser = user as { uid: string; getIdToken: () => Promise<string> };
       await connectDiscord(firebaseUser);
@@ -78,6 +80,7 @@ export default function OnboardingWizard() {
     } catch (error) {
       console.error("Discord connect error:", error);
       toast.error("Failed to connect Discord");
+      setIsDiscordConnecting(false);
     }
   };
 
@@ -236,10 +239,17 @@ export default function OnboardingWizard() {
         <div className="flex flex-col gap-3">
           <button
             onClick={content.action}
-            disabled={isSubmitting || (currentStep === "username" && (username.length < 3 || !!usernameError))}
+            disabled={isSubmitting || isDiscordConnecting || (currentStep === "username" && (username.length < 3 || !!usernameError))}
             className="w-full rounded-xl py-3 font-semibold transition-all bg-[#DA9C2F] text-black hover:bg-[#ffbf00] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#DA9C2F]"
           >
-            {isSubmitting ? "Processing..." : content.actionLabel}
+            {isSubmitting || isDiscordConnecting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
+                {currentStep === "discord" ? "Connecting..." : "Processing..."}
+              </span>
+            ) : (
+              content.actionLabel
+            )}
           </button>
           
           {currentStep !== "complete" && (
