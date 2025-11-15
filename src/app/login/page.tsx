@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  Suspense,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,19 +16,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 // import AnimatedRoadmap from "@/components/AnimatedRoadmap";
 import SocialLinks from "@/components/SocialLinks";
-import DesktopNavigation from "@/components/DesktopNavigation";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
 import React from "react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
-// import NFTCarousel from "@/components/NFTCarousel";
 
-// Lazy load heavy background component
-const LoginBackground = dynamic(
-  () => import("@/components/LoginBackground"),
-  { ssr: false }
-);
+// Lazy load heavy background component with loading fallback
+const LoginBackground = dynamic(() => import("@/components/LoginBackground"), {
+  ssr: false,
+  loading: () => <div className="absolute inset-0 bg-[#050302]" />,
+});
 
 function LoginPageContent() {
   // Simplified flow toggle - set to false to re-enable full email auth
@@ -46,17 +51,18 @@ function LoginPageContent() {
     discordUnlinking: false,
     checkingUser: false,
   });
-  
+
   // UI state - consolidated
   const [uiState, setUiState] = useState({
     showForm: false,
     showMobileActions: false,
     showDiscordMenu: false,
   });
-  
+
   // Discord link status
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
-  const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+  const gatekeeperBase =
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
   const mobileActionsRef = useRef<HTMLDivElement | null>(null);
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   // const [showRoadmap, setShowRoadmap] = useState(false);
@@ -67,7 +73,14 @@ function LoginPageContent() {
   const [walletConnected, setWalletConnected] = useState(false);
 
   const router = useRouter();
-  const { login, signup, checkUsernameAvailability, getUserByWallet, user, userData } = useAuth();
+  const {
+    login,
+    signup,
+    checkUsernameAvailability,
+    getUserByWallet,
+    user,
+    userData,
+  } = useAuth();
   const {
     connectWallet,
     account: walletAddress,
@@ -88,15 +101,20 @@ function LoginPageContent() {
 
   // Animation trigger
   useEffect(() => {
-    const timer = setTimeout(() => setUiState(prev => ({ ...prev, showForm: true })), 500);
+    const timer = setTimeout(
+      () => setUiState((prev) => ({ ...prev, showForm: true })),
+      500,
+    );
     return () => clearTimeout(timer);
   }, []);
 
-
-
   useEffect(() => {
     if (!walletConnected) {
-      setUiState(prev => ({ ...prev, showMobileActions: false, showDiscordMenu: false }));
+      setUiState((prev) => ({
+        ...prev,
+        showMobileActions: false,
+        showDiscordMenu: false,
+      }));
     }
   }, [walletConnected]);
 
@@ -105,13 +123,13 @@ function LoginPageContent() {
 
     function handlePointer(event: MouseEvent) {
       if (!mobileActionsRef.current?.contains(event.target as Node)) {
-        setUiState(prev => ({ ...prev, showMobileActions: false }));
+        setUiState((prev) => ({ ...prev, showMobileActions: false }));
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setUiState(prev => ({ ...prev, showMobileActions: false }));
+        setUiState((prev) => ({ ...prev, showMobileActions: false }));
       }
     }
 
@@ -126,25 +144,25 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (!discordLinked) {
-      setUiState(prev => ({ ...prev, showDiscordMenu: false }));
+      setUiState((prev) => ({ ...prev, showDiscordMenu: false }));
     }
   }, [discordLinked]);
 
   useEffect(() => {
     if (!isConnected) {
-      setUiState(prev => ({ ...prev, showMobileActions: false }));
+      setUiState((prev) => ({ ...prev, showMobileActions: false }));
     }
   }, [isConnected]);
 
   // Prevent body scroll when username modal is open
   useEffect(() => {
     if (!asyncState.checkingUser && isNewUser && walletConnected) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [asyncState.checkingUser, isNewUser, walletConnected]);
 
@@ -157,7 +175,7 @@ function LoginPageContent() {
       { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
       { label: "Merches", href: "/merches", icon: "/merches.png" },
     ],
-    []
+    [],
   );
 
   const walletDisplayValue = useMemo(() => {
@@ -166,12 +184,12 @@ function LoginPageContent() {
 
   const formattedWalletBalance = useMemo(
     () => `${rewardsService.formatMKIN(walletDisplayValue)} MKIN`,
-    [walletDisplayValue]
+    [walletDisplayValue],
   );
 
   const handleDiscordConnect = useCallback(() => {
     if (discordLinked || asyncState.discordConnecting) return;
-    setAsyncState(prev => ({ ...prev, discordConnecting: true }));
+    setAsyncState((prev) => ({ ...prev, discordConnecting: true }));
     if (typeof window !== "undefined") {
       window.location.assign("/api/discord/login");
     }
@@ -180,28 +198,32 @@ function LoginPageContent() {
   const handleDiscordDisconnect = useCallback(async (): Promise<boolean> => {
     if (asyncState.discordUnlinking) return false;
     try {
-      setAsyncState(prev => ({ ...prev, discordUnlinking: true }));
+      setAsyncState((prev) => ({ ...prev, discordUnlinking: true }));
       const auth = getAuth();
       if (!auth.currentUser) {
         return false;
       }
       const token = await auth.currentUser.getIdToken();
       const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to disconnect');
+      if (!res.ok) throw new Error("Failed to disconnect");
       setDiscordLinked(false);
-      setUiState(prev => ({ ...prev, showDiscordMenu: false, showMobileActions: false }));
+      setUiState((prev) => ({
+        ...prev,
+        showDiscordMenu: false,
+        showMobileActions: false,
+      }));
       try {
-        localStorage.removeItem('realmkin_discord_linked');
+        localStorage.removeItem("realmkin_discord_linked");
       } catch {}
       return true;
     } catch (error) {
       console.error(error);
       return false;
     } finally {
-      setAsyncState(prev => ({ ...prev, discordUnlinking: false }));
+      setAsyncState((prev) => ({ ...prev, discordUnlinking: false }));
     }
   }, [asyncState.discordUnlinking, gatekeeperBase]);
 
@@ -209,18 +231,22 @@ function LoginPageContent() {
   const checkExistingUser = useCallback(
     async (address: string) => {
       try {
-        setAsyncState(prev => ({ ...prev, checkingUser: true }));
+        setAsyncState((prev) => ({ ...prev, checkingUser: true }));
         console.log("🔍 Checking if user exists for wallet:", address);
 
         // Check localStorage first for instant response
-        const cachedUser = localStorage.getItem(`realmkin_user_${address.toLowerCase()}`);
+        const cachedUser = localStorage.getItem(
+          `realmkin_user_${address.toLowerCase()}`,
+        );
         if (cachedUser) {
           try {
             const userData = JSON.parse(cachedUser);
             if (userData.hasAccount && userData.username) {
-              console.log("✅ Found cached user data, treating as existing user");
+              console.log(
+                "✅ Found cached user data, treating as existing user",
+              );
               setIsNewUser(false);
-              setAsyncState(prev => ({ ...prev, checkingUser: false }));
+              setAsyncState((prev) => ({ ...prev, checkingUser: false }));
               return;
             }
           } catch (parseError) {
@@ -230,10 +256,10 @@ function LoginPageContent() {
 
         // Check Firebase wallet mapping
         const existingUser = await getUserByWallet(address);
-        
+
         if (existingUser) {
           console.log("✅ Existing user found:", existingUser.username);
-          
+
           // Store user data in local storage for faster future logins
           localStorage.setItem(
             `realmkin_user_${address.toLowerCase()}`,
@@ -242,11 +268,11 @@ function LoginPageContent() {
               username: existingUser.username,
               lastLogin: new Date().toISOString(),
               hasAccount: true,
-            })
+            }),
           );
 
           setIsNewUser(false);
-          setAsyncState(prev => ({ ...prev, checkingUser: false }));
+          setAsyncState((prev) => ({ ...prev, checkingUser: false }));
           return;
         }
 
@@ -256,29 +282,33 @@ function LoginPageContent() {
         setIsNewUser(true);
       } catch (error) {
         console.error("Error checking user:", error);
-        
+
         // On error, check localStorage as fallback
-        const cachedUser = localStorage.getItem(`realmkin_user_${address.toLowerCase()}`);
+        const cachedUser = localStorage.getItem(
+          `realmkin_user_${address.toLowerCase()}`,
+        );
         if (cachedUser) {
           try {
             const userData = JSON.parse(cachedUser);
             if (userData.hasAccount && userData.username) {
-              console.log("✅ Found cached user data on error, treating as existing user");
+              console.log(
+                "✅ Found cached user data on error, treating as existing user",
+              );
               setIsNewUser(false);
-              setAsyncState(prev => ({ ...prev, checkingUser: false }));
+              setAsyncState((prev) => ({ ...prev, checkingUser: false }));
               return;
             }
           } catch (parseError) {
             console.error("Failed to parse cached user data:", parseError);
           }
         }
-        
+
         setIsNewUser(true);
       } finally {
-        setAsyncState(prev => ({ ...prev, checkingUser: false }));
+        setAsyncState((prev) => ({ ...prev, checkingUser: false }));
       }
     },
-    [getUserByWallet]
+    [getUserByWallet],
   );
 
   // Check if wallet is connected and handle user state
@@ -302,8 +332,8 @@ function LoginPageContent() {
   // Handle wallet connection (memoized)
   const handleWalletConnect = useCallback(async () => {
     try {
-      setAsyncState(prev => ({ ...prev, loading: true }));
-      setFormState(prev => ({ ...prev, error: "" }));
+      setAsyncState((prev) => ({ ...prev, loading: true }));
+      setFormState((prev) => ({ ...prev, error: "" }));
       console.log("🔗 Initiating wallet connection...");
 
       // Open the official wallet modal via adapter context
@@ -330,60 +360,85 @@ function LoginPageContent() {
       console.log("✅ Wallet connection completed");
     } catch (error: unknown) {
       console.error("❌ Wallet connection failed:", error);
-      setFormState(prev => ({
+      setFormState((prev) => ({
         ...prev,
-        error: error instanceof Error ? error.message : "Failed to connect wallet"
+        error:
+          error instanceof Error ? error.message : "Failed to connect wallet",
       }));
     } finally {
-      setAsyncState(prev => ({ ...prev, loading: false }));
+      setAsyncState((prev) => ({ ...prev, loading: false }));
     }
   }, [setWalletModalVisible, walletConnected, connectWallet]);
 
   useEffect(() => {
-    if (walletConnected && !asyncState.checkingUser && !isNewUser && !asyncState.loading) {
-      console.log("🚀 Existing wallet user detected, navigating", redirectTarget);
+    if (
+      walletConnected &&
+      !asyncState.checkingUser &&
+      !isNewUser &&
+      !asyncState.loading
+    ) {
+      console.log(
+        "🚀 Existing wallet user detected, navigating",
+        redirectTarget,
+      );
       router.push(redirectTarget);
     }
-  }, [walletConnected, asyncState.checkingUser, isNewUser, asyncState.loading, router, redirectTarget]);
+  }, [
+    walletConnected,
+    asyncState.checkingUser,
+    isNewUser,
+    asyncState.loading,
+    router,
+    redirectTarget,
+  ]);
 
   // Handle simplified signup with just username (memoized)
   const handleSimplifiedSignup = useCallback(async () => {
     const walletForSignup = walletAddress || searchParams?.get("wallet");
     if (!walletForSignup) {
-      setFormState(prev => ({ ...prev, error: "Please connect your wallet first" }));
+      setFormState((prev) => ({
+        ...prev,
+        error: "Please connect your wallet first",
+      }));
       return;
     }
 
     if (!formState.username.trim()) {
-      setFormState(prev => ({ ...prev, error: "Please enter a username" }));
+      setFormState((prev) => ({ ...prev, error: "Please enter a username" }));
       return;
     }
 
     if (formState.usernameError) {
-      setFormState(prev => ({ ...prev, error: "Please fix username errors" }));
+      setFormState((prev) => ({
+        ...prev,
+        error: "Please fix username errors",
+      }));
       return;
     }
 
     try {
-      setAsyncState(prev => ({ ...prev, loading: true }));
-      setFormState(prev => ({ ...prev, error: "" }));
+      setAsyncState((prev) => ({ ...prev, loading: true }));
+      setFormState((prev) => ({ ...prev, error: "" }));
       // Create a temporary email based on wallet address for Firebase Auth
       const tempEmail = `${walletForSignup.toLowerCase()}@wallet.realmkin.com`;
       const tempPassword = walletForSignup; // Use wallet address as password
 
       // Call the new API route to create the user
-      const response = await fetch('/api/create-user', {
-        method: 'POST',
+      const response = await fetch("/api/create-user", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username: formState.username, walletAddress: walletForSignup }),
+        body: JSON.stringify({
+          username: formState.username,
+          walletAddress: walletForSignup,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create account');
+        throw new Error(data.error || "Failed to create account");
       }
 
       // After successful creation, log the user in to establish a session
@@ -397,7 +452,7 @@ function LoginPageContent() {
           username: formState.username,
           lastLogin: new Date().toISOString(),
           hasAccount: true,
-        })
+        }),
       );
 
       console.log("✅ New user account created and stored");
@@ -405,22 +460,37 @@ function LoginPageContent() {
       // Redirect to intended page
       router.push(redirectTarget);
     } catch (error: unknown) {
-      setFormState(prev => ({ ...prev, error: error instanceof Error ? error.message : "Failed to create account" }));
+      setFormState((prev) => ({
+        ...prev,
+        error:
+          error instanceof Error ? error.message : "Failed to create account",
+      }));
     } finally {
-      setAsyncState(prev => ({ ...prev, loading: false }));
+      setAsyncState((prev) => ({ ...prev, loading: false }));
     }
-  }, [walletAddress, searchParams, formState.username, formState.usernameError, login, router, redirectTarget]);
+  }, [
+    walletAddress,
+    searchParams,
+    formState.username,
+    formState.usernameError,
+    login,
+    router,
+    redirectTarget,
+  ]);
 
   // Handle login for existing users (memoized)
   const handleExistingUserLogin = useCallback(async () => {
     if (!walletAddress) {
-      setFormState(prev => ({ ...prev, error: "Please connect your wallet first" }));
+      setFormState((prev) => ({
+        ...prev,
+        error: "Please connect your wallet first",
+      }));
       return;
     }
 
     try {
-      setAsyncState(prev => ({ ...prev, loading: true }));
-      setFormState(prev => ({ ...prev, error: "" }));
+      setAsyncState((prev) => ({ ...prev, loading: true }));
+      setFormState((prev) => ({ ...prev, error: "" }));
 
       // Create a temporary email based on wallet address for Firebase Auth
       const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
@@ -435,17 +505,24 @@ function LoginPageContent() {
       router.push("/");
     } catch (error: unknown) {
       console.error("Login failed for existing user:", error);
-      
+
       // If login fails, try to recreate the account
       try {
-        const cachedUser = localStorage.getItem(`realmkin_user_${walletAddress.toLowerCase()}`);
+        const cachedUser = localStorage.getItem(
+          `realmkin_user_${walletAddress.toLowerCase()}`,
+        );
         if (cachedUser) {
           const userData = JSON.parse(cachedUser);
           if (userData.username) {
             console.log("Attempting to recreate Firebase Auth account");
             const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
             const tempPassword = walletAddress;
-            await signup(tempEmail, tempPassword, userData.username, walletAddress);
+            await signup(
+              tempEmail,
+              tempPassword,
+              userData.username,
+              walletAddress,
+            );
             console.log("✅ Recreated Firebase Auth account for existing user");
             router.push(redirectTarget);
             return;
@@ -454,58 +531,86 @@ function LoginPageContent() {
       } catch (signupError) {
         console.error("Failed to recreate account:", signupError);
       }
-      
-      setFormState(prev => ({ 
-        ...prev, 
-        error: error instanceof Error ? error.message : "Failed to log in. Please try again."
+
+      setFormState((prev) => ({
+        ...prev,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to log in. Please try again.",
       }));
     } finally {
-      setAsyncState(prev => ({ ...prev, loading: false }));
+      setAsyncState((prev) => ({ ...prev, loading: false }));
     }
   }, [walletAddress, login, signup, router, redirectTarget]);
 
   // Form validation
   const validateForm = () => {
-    const { email, password, confirmPassword, username, isSignup, usernameError } = formState;
-    
+    const {
+      email,
+      password,
+      confirmPassword,
+      username,
+      isSignup,
+      usernameError,
+    } = formState;
+
     if (!email || !password) {
-      setFormState(prev => ({ ...prev, error: "Email and password are required" }));
+      setFormState((prev) => ({
+        ...prev,
+        error: "Email and password are required",
+      }));
       return false;
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setFormState(prev => ({ ...prev, error: "Please enter a valid email address" }));
+      setFormState((prev) => ({
+        ...prev,
+        error: "Please enter a valid email address",
+      }));
       return false;
     }
 
     if (password.length < 6) {
-      setFormState(prev => ({ ...prev, error: "Password must be at least 6 characters long" }));
+      setFormState((prev) => ({
+        ...prev,
+        error: "Password must be at least 6 characters long",
+      }));
       return false;
     }
 
     if (isSignup) {
       if (!username) {
-        setFormState(prev => ({ ...prev, error: "Username is required" }));
+        setFormState((prev) => ({ ...prev, error: "Username is required" }));
         return false;
       }
 
       if (username.length < 3) {
-        setFormState(prev => ({ ...prev, error: "Username must be at least 3 characters long" }));
+        setFormState((prev) => ({
+          ...prev,
+          error: "Username must be at least 3 characters long",
+        }));
         return false;
       }
 
       if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-        setFormState(prev => ({ ...prev, error: "Username can only contain letters, numbers, and underscores" }));
+        setFormState((prev) => ({
+          ...prev,
+          error: "Username can only contain letters, numbers, and underscores",
+        }));
         return false;
       }
 
       if (password !== confirmPassword) {
-        setFormState(prev => ({ ...prev, error: "Passwords do not match" }));
+        setFormState((prev) => ({ ...prev, error: "Passwords do not match" }));
         return false;
       }
 
       if (usernameError) {
-        setFormState(prev => ({ ...prev, error: "Please choose a different username" }));
+        setFormState((prev) => ({
+          ...prev,
+          error: "Please choose a different username",
+        }));
         return false;
       }
     }
@@ -515,19 +620,22 @@ function LoginPageContent() {
 
   // Check username availability
   const handleUsernameChange = async (value: string) => {
-    setFormState(prev => ({ ...prev, username: value, usernameError: "" }));
+    setFormState((prev) => ({ ...prev, username: value, usernameError: "" }));
 
     if (value.length >= 3) {
-      setAsyncState(prev => ({ ...prev, usernameChecking: true }));
+      setAsyncState((prev) => ({ ...prev, usernameChecking: true }));
       try {
         const isAvailable = await checkUsernameAvailability(value);
         if (!isAvailable) {
-          setFormState(prev => ({ ...prev, usernameError: "Username is already taken" }));
+          setFormState((prev) => ({
+            ...prev,
+            usernameError: "Username is already taken",
+          }));
         }
       } catch (error) {
         console.error("Error checking username:", error);
       } finally {
-        setAsyncState(prev => ({ ...prev, usernameChecking: false }));
+        setAsyncState((prev) => ({ ...prev, usernameChecking: false }));
       }
     }
   };
@@ -537,8 +645,8 @@ function LoginPageContent() {
 
     if (!validateForm()) return;
 
-    setAsyncState(prev => ({ ...prev, loading: true }));
-    setFormState(prev => ({ ...prev, error: "" }));
+    setAsyncState((prev) => ({ ...prev, loading: true }));
+    setFormState((prev) => ({ ...prev, error: "" }));
 
     try {
       const { isSignup, email, password, username } = formState;
@@ -553,11 +661,11 @@ function LoginPageContent() {
         error instanceof Error
           ? error.message
           : formState.isSignup
-          ? "Signup failed"
-          : "Login failed";
-      setFormState(prev => ({ ...prev, error: errorMessage }));
+            ? "Signup failed"
+            : "Login failed";
+      setFormState((prev) => ({ ...prev, error: errorMessage }));
     } finally {
-      setAsyncState(prev => ({ ...prev, loading: false }));
+      setAsyncState((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -576,8 +684,8 @@ function LoginPageContent() {
   return (
     <div className="min-h-screen min-h-[100dvh] relative overflow-hidden bg-black">
       {/* Mystical Background Animation */}
-      <LoginBackground />
-      
+      {/* <LoginBackground /> */}
+
       {/* Golden overlay */}
       <div className="absolute inset-0 bg-[#865900] opacity-60 pointer-events-none"></div>
       <div
@@ -588,7 +696,7 @@ function LoginPageContent() {
         }}
       ></div>
 
-        {/* Mobile Header */}
+      {/* Mobile Header */}
       <header className="lg:hidden relative z-10 flex flex-row justify-between items-center gap-3 p-6 text-black">
         <div className="flex items-center space-x-3">
           <div className="w-14 h-14 animate-float">
@@ -601,7 +709,10 @@ function LoginPageContent() {
               priority
             />
           </div>
-          <h1 className="font-bold text-lg uppercase tracking-wider text-black" style={{ fontFamily: "var(--font-amnestia)" }}>
+          <h1
+            className="font-bold text-lg uppercase tracking-wider text-black"
+            style={{ fontFamily: "var(--font-amnestia)" }}
+          >
             THE REALMKIN
           </h1>
         </div>
@@ -609,32 +720,42 @@ function LoginPageContent() {
         {/* Mobile menu button - always visible */}
         <div className="w-auto flex-shrink-0">
           <button
-            onClick={() => setUiState(prev => ({ ...prev, showMobileActions: !prev.showMobileActions }))}
+            onClick={() =>
+              setUiState((prev) => ({
+                ...prev,
+                showMobileActions: !prev.showMobileActions,
+              }))
+            }
             className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
             aria-expanded={uiState.showMobileActions}
             aria-haspopup="true"
           >
-            <span className={`text-xs transition-transform ${uiState.showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
+            <span
+              className={`text-xs transition-transform ${uiState.showMobileActions ? "rotate-180" : ""}`}
+            >
+              ⋯
+            </span>
           </button>
         </div>
       </header>
 
       {/* Desktop Navigation */}
-      <DesktopNavigation />
+      
 
       {/* Mobile Menu Modal */}
       {uiState.showMobileActions && (
         <>
           <div
             className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
-            onClick={() => setUiState(prev => ({ ...prev, showMobileActions: false }))}
+            onClick={() =>
+              setUiState((prev) => ({ ...prev, showMobileActions: false }))
+            }
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <div
               ref={mobileActionsRef}
               className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
             >
-
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
@@ -648,11 +769,18 @@ function LoginPageContent() {
                     />
                   </div>
                   <div className="text-left">
-                    <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">Realmkin</div>
+                    <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">
+                      Realmkin
+                    </div>
                   </div>
                 </div>
                 <button
-                  onClick={() => setUiState(prev => ({ ...prev, showMobileActions: false }))}
+                  onClick={() =>
+                    setUiState((prev) => ({
+                      ...prev,
+                      showMobileActions: false,
+                    }))
+                  }
                   className="text-[#DA9C2F] text-xl font-bold"
                   aria-label="Close menu"
                 >
@@ -665,7 +793,12 @@ function LoginPageContent() {
                   <Link
                     key={item.label}
                     href={item.href}
-                    onClick={() => setUiState(prev => ({ ...prev, showMobileActions: false }))}
+                    onClick={() =>
+                      setUiState((prev) => ({
+                        ...prev,
+                        showMobileActions: false,
+                      }))
+                    }
                     className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
                   >
                     <span className="flex h-10 w-10 items-center justify-center">
@@ -686,7 +819,12 @@ function LoginPageContent() {
                 {userData?.admin && (
                   <Link
                     href="/admin"
-                    onClick={() => setUiState(prev => ({ ...prev, showMobileActions: false }))}
+                    onClick={() =>
+                      setUiState((prev) => ({
+                        ...prev,
+                        showMobileActions: false,
+                      }))
+                    }
                     className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
                   >
                     <span className="flex h-10 w-10 items-center justify-center">
@@ -715,28 +853,45 @@ function LoginPageContent() {
                           handleDiscordConnect();
                           return;
                         }
-                        setUiState(prev => ({ ...prev, showDiscordMenu: false }));
+                        setUiState((prev) => ({
+                          ...prev,
+                          showDiscordMenu: false,
+                        }));
                         handleDiscordDisconnect();
                       }}
-                      disabled={asyncState.discordConnecting || asyncState.discordUnlinking}
+                      disabled={
+                        asyncState.discordConnecting ||
+                        asyncState.discordUnlinking
+                      }
                       className="flex-1 flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-black px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#1a1a1a] disabled:opacity-70"
                     >
-                      <span>{discordLinked ? 'Disconnect Discord' : asyncState.discordConnecting ? 'Connecting…' : 'Connect Discord'}</span>
-                      <span className="text-xs text-[#DA9C2F] opacity-70">{discordLinked ? 'Linked' : 'Secure'}</span>
+                      <span>
+                        {discordLinked
+                          ? "Disconnect Discord"
+                          : asyncState.discordConnecting
+                            ? "Connecting…"
+                            : "Connect Discord"}
+                      </span>
+                      <span className="text-xs text-[#DA9C2F] opacity-70">
+                        {discordLinked ? "Linked" : "Secure"}
+                      </span>
                     </button>
 
                     <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
                       <div
-                        className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected ? 'border-[#DA9C2F] bg-[#DA9C2F]' : 'border-[#DA9C2F] bg-[#0B0B09]'}`}
+                        className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected ? "border-[#DA9C2F] bg-[#DA9C2F]" : "border-[#DA9C2F] bg-[#0B0B09]"}`}
                         aria-hidden="true"
                       >
                         <div
-                          className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? 'right-1' : 'left-1'}`}
+                          className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? "right-1" : "left-1"}`}
                         />
                       </div>
                       <button
                         onClick={() => {
-                          setUiState(prev => ({ ...prev, showMobileActions: false }));
+                          setUiState((prev) => ({
+                            ...prev,
+                            showMobileActions: false,
+                          }));
                           if (isConnected) {
                             disconnectWallet();
                           } else {
@@ -746,10 +901,27 @@ function LoginPageContent() {
                         disabled={isConnecting}
                         className="basis-[70%] flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
                       >
-                        <span>{isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Connect Wallet'}</span>
+                        <span>
+                          {isConnected
+                            ? "Connected"
+                            : isConnecting
+                              ? "Connecting…"
+                              : "Connect Wallet"}
+                        </span>
                         <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
-                          <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" loading="lazy" />
-                          {isConnecting ? 'Loading…' : isConnected ? 'Synced' : 'Secure'}
+                          <Image
+                            src="/wallet.png"
+                            alt="Wallet connect"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4"
+                            loading="lazy"
+                          />
+                          {isConnecting
+                            ? "Loading…"
+                            : isConnected
+                              ? "Synced"
+                              : "Secure"}
                         </span>
                       </button>
                     </div>
@@ -771,7 +943,9 @@ function LoginPageContent() {
         </div>
 
         {/* Main Content */}
-        <main className={`relative z-10 flex-1 flex flex-col items-center justify-center px-6 lg:px-12 xl:px-16 py-12 transition-opacity duration-300 ${uiState.showMobileActions ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <main
+          className={`relative z-10 flex-1 flex flex-col items-center justify-center px-6 lg:px-12 xl:px-16 py-12 transition-opacity duration-300 ${uiState.showMobileActions ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        >
           <div className="text-center text-black mb-12 space-y-3 max-w-3xl">
             <h2
               className="home-heading text-5xl sm:text-5xl lg:text-6xl font-extrabold tracking-[0.1em]"
@@ -795,7 +969,9 @@ function LoginPageContent() {
             <div className="home-card grid gap-8 bg-[#1b1205]/95 border border-black/40 rounded-2xl shadow-[0_35px_80px_rgba(0,0,0,0.45)] px-6 lg:px-12 py-12 text-left">
               <div className="space-y-6 text-[#f7dca1] lg:pl-4">
                 <p className="text-lg lg:text-xl leading-relaxed font-semibold">
-                  Battle in The Void — a nonstop PvE arena. Train your warriors to Fight, Fuse, and Revive. Earn XP, Kill Coins, and ₥KIN. Level up, claim rewards, and rise on the leaderboard.
+                  Battle in The Void — a nonstop PvE arena. Train your warriors
+                  to Fight, Fuse, and Revive. Earn XP, Kill Coins, and ₥KIN.
+                  Level up, claim rewards, and rise on the leaderboard.
                 </p>
                 {walletConnected && !asyncState.checkingUser ? (
                   <div className="space-y-2">
@@ -815,10 +991,11 @@ function LoginPageContent() {
               {asyncState.checkingUser && (
                 <div className="space-y-3">
                   <SkeletonLoader />
-                  <p className="text-sm text-[#f7dca1] text-center">Checking your account status...</p>
+                  <p className="text-sm text-[#f7dca1] text-center">
+                    Checking your account status...
+                  </p>
                 </div>
               )}
-
 
               {!asyncState.checkingUser && !isNewUser && (
                 <div className="space-y-4">
@@ -835,7 +1012,13 @@ function LoginPageContent() {
                     className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-4 rounded-xl border border-[#DA9C2F] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-70"
                     style={{ fontFamily: "var(--font-amnestia)" }}
                   >
-                    {walletConnected ? (asyncState.loading ? "LOADING..." : "SUMMON WARDENKIN") : asyncState.loading ? "CONNECTING..." : "CONNECT WALLET"}
+                    {walletConnected
+                      ? asyncState.loading
+                        ? "LOADING..."
+                        : "SUMMON WARDENKIN"
+                      : asyncState.loading
+                        ? "CONNECTING..."
+                        : "CONNECT WALLET"}
                   </button>
                 </div>
               )}
@@ -844,111 +1027,12 @@ function LoginPageContent() {
         </main>
 
         {/* Footer - Social Links */}
-        <footer className={`relative z-10 text-center p-6 lg:p-8 transition-opacity duration-300 ${uiState.showMobileActions ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <footer
+          className={`relative z-10 text-center p-6 lg:p-8 transition-opacity duration-300 ${uiState.showMobileActions ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        >
           <SocialLinks />
         </footer>
 
-        {/* Username Modal for New Users */}
-        {!asyncState.checkingUser && isNewUser && walletConnected && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/80 backdrop-blur-md animate-fade-in">
-            <div className="w-full max-w-md rounded-3xl bg-[#1b1205]/95 border-2 border-[#DA9C2F] shadow-2xl overflow-hidden animate-fade-in-up">
-              {/* Header */}
-              <div className="px-6 py-5 border-b border-[#DA9C2F]/30 bg-gradient-to-r from-[#DA9C2F]/10 to-transparent">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-[#DA9C2F]/20 flex items-center justify-center">
-                    <Image
-                      src="/realmkin-logo.png"
-                      alt="Realmkin"
-                      width={36}
-                      height={36}
-                      className="w-9 h-9 object-contain"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-[#DA9C2F] uppercase tracking-wider" style={{ fontFamily: "var(--font-amnestia)" }}>
-                      Welcome, Wardenkin
-                    </h2>
-                    <p className="text-sm text-[#f7dca1]">Choose your identity</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="px-6 py-6 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-[#DA9C2F] uppercase tracking-wide">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter your username"
-                    value={formState.username}
-                    onChange={(e) => handleUsernameChange(e.target.value)}
-                    className={`w-full bg-black/70 border-2 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
-                      formState.usernameError
-                        ? "border-red-500 focus:border-red-400"
-                        : "border-[#DA9C2F]/60 focus:border-[#DA9C2F]"
-                    }`}
-                    autoFocus
-                  />
-                  {formState.usernameError && (
-                    <p className="text-red-400 text-sm flex items-center gap-1">
-                      <span>⚠</span> {formState.usernameError}
-                    </p>
-                  )}
-                  {asyncState.usernameChecking && (
-                    <p className="text-[#DA9C2F] text-sm flex items-center gap-2">
-                      <span className="inline-block w-3 h-3 border-2 border-[#DA9C2F] border-t-transparent rounded-full animate-spin"></span>
-                      Checking availability...
-                    </p>
-                  )}
-                  {!formState.usernameError && !asyncState.usernameChecking && formState.username.trim() && (
-                    <p className="text-green-400 text-sm flex items-center gap-1">
-                      <span>✓</span> Username available
-                    </p>
-                  )}
-                </div>
-
-                {formState.error && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
-                    <p className="text-red-400 text-sm">{formState.error}</p>
-                  </div>
-                )}
-
-                <div className="bg-[#DA9C2F]/10 border border-[#DA9C2F]/30 rounded-lg px-4 py-3">
-                  <p className="text-xs text-[#f7dca1]">
-                    <strong className="text-[#DA9C2F]">Note:</strong> Your username will be visible to other players in The Realm. Choose wisely!
-                  </p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="px-6 py-5 border-t border-[#DA9C2F]/30 bg-gradient-to-r from-transparent to-[#DA9C2F]/10">
-                <button
-                  onClick={handleSimplifiedSignup}
-                  disabled={
-                    asyncState.loading ||
-                    asyncState.usernameChecking ||
-                    !formState.username.trim() ||
-                    !!formState.usernameError
-                  }
-                  className="w-full uppercase tracking-widest bg-[#DA9C2F] text-black font-bold py-3 rounded-xl border border-[#DA9C2F] transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-[#DA9C2F]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                  style={{ fontFamily: "var(--font-amnestia)" }}
-                >
-                  {asyncState.loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
-                      CREATING ACCOUNT...
-                    </span>
-                  ) : (
-                    "SUMMON WARDENKIN"
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* AnimatedRoadmap and AnimatedWhitepaper temporarily disabled */}
       </div>
@@ -967,27 +1051,40 @@ function LoginPageContent() {
         }
 
         .aurora-one {
-          background: radial-gradient(circle, rgba(255,212,121,0.55) 0%, rgba(134,89,0,0) 70%);
+          background: radial-gradient(
+            circle,
+            rgba(255, 212, 121, 0.55) 0%,
+            rgba(134, 89, 0, 0) 70%
+          );
           top: -15%;
           left: -10%;
         }
 
         .aurora-two {
-          background: radial-gradient(circle, rgba(255,242,191,0.5) 0%, rgba(134,89,0,0) 70%);
+          background: radial-gradient(
+            circle,
+            rgba(255, 242, 191, 0.5) 0%,
+            rgba(134, 89, 0, 0) 70%
+          );
           bottom: -20%;
           right: -15%;
           animation-delay: 4s;
         }
 
         .aurora-three {
-          background: radial-gradient(circle, rgba(255,175,64,0.45) 0%, rgba(134,89,0,0) 70%);
+          background: radial-gradient(
+            circle,
+            rgba(255, 175, 64, 0.45) 0%,
+            rgba(134, 89, 0, 0) 70%
+          );
           top: 30%;
           right: -25%;
           animation-delay: 8s;
         }
 
         @keyframes auroraMove {
-          0%, 100% {
+          0%,
+          100% {
             transform: translate3d(0, 0, 0) scale(1);
           }
           50% {
@@ -1029,14 +1126,19 @@ function LoginPageContent() {
           position: absolute;
           inset: 0;
           border-radius: inherit;
-          background: linear-gradient(135deg, rgba(255, 221, 128, 0.2), rgba(255, 165, 0, 0.05));
+          background: linear-gradient(
+            135deg,
+            rgba(255, 221, 128, 0.2),
+            rgba(255, 165, 0, 0.05)
+          );
           opacity: 0;
           pointer-events: none;
           animation: cardAura 6s ease-in-out infinite;
         }
 
         @keyframes cardGlow {
-          0%, 100% {
+          0%,
+          100% {
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
           }
           50% {
@@ -1045,7 +1147,8 @@ function LoginPageContent() {
         }
 
         @keyframes cardAura {
-          0%, 100% {
+          0%,
+          100% {
             opacity: 0.08;
           }
           50% {
@@ -1059,14 +1162,16 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-black text-[#DA9C2F]">
-        <div className="flex items-center gap-3 text-sm uppercase tracking-widest">
-          <span className="h-4 w-4 rounded-full border-2 border-transparent border-t-[#DA9C2F] animate-spin" />
-          Loading…
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-black text-[#DA9C2F]">
+          <div className="flex items-center gap-3 text-sm uppercase tracking-widest">
+            <span className="h-4 w-4 rounded-full border-2 border-transparent border-t-[#DA9C2F] animate-spin" />
+            Loading…
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <LoginPageContent />
     </Suspense>
   );

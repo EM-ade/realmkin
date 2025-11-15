@@ -6,9 +6,12 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Web3Provider } from "@/contexts/Web3Context";
 import { NFTProvider } from "@/contexts/NFTContext";
 import { StakingProvider } from "@/contexts/StakingContext";
+import { DiscordProvider } from "@/contexts/DiscordContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import SolanaWalletProvider from "@/contexts/SolanaWalletProvider";
 import RouteTransition from "@/components/RouteTransition";
-import DesktopNavigation from "@/components/DesktopNavigation";
+import GlobalNavigation from "@/components/GlobalNavigation";
+import OnboardingWizard from "@/components/OnboardingWizard";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -105,13 +108,44 @@ export default function RootLayout({
         <AuthProvider>
           <SolanaWalletProvider>
             <Web3Provider>
-              <StakingProvider>
-                <Toaster position="top-right" toastOptions={{className:'bg-[#101010] text-[#f4c752] font-medium border border-[#f4c752]/40'}} />
-                <DesktopNavigation />
-                <RouteTransition>
-                  <NFTProvider>{children}</NFTProvider>
-                </RouteTransition>
-              </StakingProvider>
+              <DiscordProvider>
+                <OnboardingProvider>
+                  <StakingProvider>
+                    <Toaster 
+                      position="top-right" 
+                      toastOptions={{
+                        className: 'bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]',
+                        success: {
+                          className: 'bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]',
+                          iconTheme: {
+                            primary: '#DA9C2F',
+                            secondary: '#000000',
+                          },
+                        },
+                        error: {
+                          className: 'bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]',
+                          iconTheme: {
+                            primary: '#DA9C2F',
+                            secondary: '#000000',
+                          },
+                        },
+                        loading: {
+                          className: 'bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]',
+                          iconTheme: {
+                            primary: '#DA9C2F',
+                            secondary: '#000000',
+                          },
+                        },
+                      }} 
+                    />
+                    <GlobalNavigation />
+                    <OnboardingWizard />
+                    <RouteTransition>
+                      <NFTProvider>{children}</NFTProvider>
+                    </RouteTransition>
+                  </StakingProvider>
+                </OnboardingProvider>
+              </DiscordProvider>
             </Web3Provider>
           </SolanaWalletProvider>
         </AuthProvider>

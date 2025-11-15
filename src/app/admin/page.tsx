@@ -8,95 +8,146 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Link from "next/link";
 
 const AdminPage = () => {
+  const [activeTab, setActiveTab] = useState<"users" | "contracts" | "leaderboard">("users");
   const [showContractsPanel, setShowContractsPanel] = useState(false);
+
+  const tabs = [
+    { id: "users", label: "👥 Users", icon: "👥" },
+    { id: "contracts", label: "📋 Contracts", icon: "📋" },
+    { id: "leaderboard", label: "🏆 Leaderboard", icon: "🏆" },
+  ];
 
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <div className="min-h-screen bg-[#080806] p-3 sm:p-4 md:p-6 lg:p-8 xl:px-16 2xl:px-20 relative overflow-hidden">
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <header className="flex flex-col sm:flex-row justify-between items-center mb-6">
-              <h1
-                className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-widest gold-gradient-text"
-                style={{ fontFamily: "var(--font-hertical-sans)" }}
-              >
-                ADMIN DASHBOARD
-              </h1>
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/"
-                  className="bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
-                >
-                  Home
-                </Link>
-                <button
-                  onClick={() => setShowContractsPanel(true)}
-                  className="bg-[#DA9C2F] text-black px-3 py-2 rounded-lg font-semibold text-sm hover:bg-[#C4A962] transition-colors"
-                >
-                  Manage Contract Bonuses
-                </button>
+        <div className="min-h-screen bg-[#080806] relative overflow-hidden">
+          {/* Header */}
+          <header className="sticky top-0 z-40 bg-gradient-to-b from-[#050302]/95 to-[#050302]/80 backdrop-blur-md border-b border-[#DA9C2F]/10 p-4 md:p-6">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-widest gold-gradient-text">
+                  ADMIN DASHBOARD
+                </h1>
+                <p className="text-white/60 text-sm mt-1">Manage users, contracts, and leaderboards</p>
               </div>
-            </header>
+              <Link
+                href="/"
+                className="px-4 py-2 rounded-lg border border-[#DA9C2F]/30 text-[#DA9C2F] font-medium hover:bg-[#DA9C2F]/10 transition-colors text-sm"
+              >
+                ← Back to Home
+              </Link>
+            </div>
+          </header>
 
-            {/* Grid Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Leaderboard Management Card */}
-              <section className="card premium-card interactive-element">
-                <h2 className="text-label mb-2">LEADERBOARD MANAGEMENT</h2>
-                <p className="text-sm text-[#C4A962] mb-3">
-                  View current rankings, manage monthly winners, and export leaderboard data.
-                </p>
-                <ul className="list-disc list-inside text-sm text-gray-300 space-y-1 mb-4">
-                  <li>View current month top 100 players</li>
-                  <li>Browse archived monthly winners</li>
-                  <li>Export leaderboard data to CSV</li>
-                  <li>Manual monthly reset (emergency)</li>
-                </ul>
-                <div className="flex gap-2">
-                  <Link
-                    href="/admin/leaderboard"
-                    className="btn-primary text-sm"
-                  >
-                    Open Leaderboard Admin
-                  </Link>
-                </div>
-              </section>
-
-              {/* Contracts Overview Card */}
-              <section className="card premium-card interactive-element">
-                <h2 className="text-label mb-2">CONTRACT BONUSES</h2>
-                <p className="text-sm text-[#C4A962] mb-3">
-                  Configure contracts that boost weekly mining and award one-time/new-purchase bonuses.
-                </p>
-                <ul className="list-disc list-inside text-sm text-gray-300 space-y-1 mb-4">
-                  <li>Add contract address and collection name</li>
-                  <li>Set per-NFT Weekly Mining increase (MKIN)</li>
-                  <li>Set Welcome Bonus (first-time or new-purchase)</li>
-                  <li>Activate/Deactivate collections anytime</li>
-                </ul>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowContractsPanel(true)}
-                    className="btn-primary text-sm"
-                  >
-                    Open Bonuses Manager
-                  </button>
-                </div>
-              </section>
-
-              {/* User Management Card */}
-              <section className="card premium-card interactive-element">
-                <h2 className="text-label mb-2">USER MANAGEMENT</h2>
-                <p className="text-sm text-[#C4A962] mb-3">
-                  Review user accounts, roles, and balances.
-                </p>
-                <div className="mt-4">
-                  <UserManagementDashboard />
-                </div>
-              </section>
+          {/* Tab Navigation */}
+          <div className="border-b border-[#DA9C2F]/10 bg-[#0f0f0f]/50 sticky top-[80px] z-30">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 flex overflow-x-auto gap-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  className={`px-4 py-3 font-semibold text-sm md:text-base whitespace-nowrap transition-all border-b-2 ${
+                    activeTab === tab.id
+                      ? "border-[#DA9C2F] text-[#DA9C2F]"
+                      : "border-transparent text-white/60 hover:text-white"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Content Area */}
+          <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+            {/* Users Tab */}
+            {activeTab === "users" && (
+              <div className="space-y-4">
+                <div className="card premium-card interactive-element p-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">User Management</h2>
+                      <p className="text-white/60 text-sm">Search, view, and manage user accounts</p>
+                    </div>
+                  </div>
+                  <UserManagementDashboard />
+                </div>
+              </div>
+            )}
+
+            {/* Contracts Tab */}
+            {activeTab === "contracts" && (
+              <div className="space-y-4">
+                <div className="card premium-card interactive-element p-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">Contract Bonuses</h2>
+                      <p className="text-white/60 text-sm">Configure NFT collections and mining bonuses</p>
+                    </div>
+                    <button
+                      onClick={() => setShowContractsPanel(true)}
+                      className="px-6 py-2 bg-[#DA9C2F] text-black font-semibold rounded-lg hover:bg-[#ffbf00] transition-colors text-sm whitespace-nowrap"
+                    >
+                      + Add/Edit Contract
+                    </button>
+                  </div>
+                  <div className="bg-[#0f0f0f] rounded-lg p-6 text-center text-white/60">
+                    <p className="mb-4">📋 Contract management panel</p>
+                    <button
+                      onClick={() => setShowContractsPanel(true)}
+                      className="px-4 py-2 border border-[#DA9C2F]/30 text-[#DA9C2F] rounded-lg hover:bg-[#DA9C2F]/10 transition-colors text-sm"
+                    >
+                      Open Manager
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Leaderboard Tab */}
+            {activeTab === "leaderboard" && (
+              <div className="space-y-4">
+                <div className="card premium-card interactive-element p-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">Leaderboard Management</h2>
+                      <p className="text-white/60 text-sm">View rankings, manage winners, and export data</p>
+                    </div>
+                    <Link
+                      href="/admin/leaderboard"
+                      className="px-6 py-2 bg-[#DA9C2F] text-black font-semibold rounded-lg hover:bg-[#ffbf00] transition-colors text-sm whitespace-nowrap"
+                    >
+                      Open Leaderboard
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-[#0f0f0f] rounded-lg p-4 border border-[#DA9C2F]/20">
+                      <p className="text-white/60 text-sm mb-2">Current Month</p>
+                      <p className="text-2xl font-bold text-[#DA9C2F]">Top 100</p>
+                      <p className="text-white/40 text-xs mt-1">Active players</p>
+                    </div>
+                    <div className="bg-[#0f0f0f] rounded-lg p-4 border border-[#DA9C2F]/20">
+                      <p className="text-white/60 text-sm mb-2">Features</p>
+                      <ul className="text-sm text-white/60 space-y-1">
+                        <li>• View rankings</li>
+                        <li>• Export CSV</li>
+                        <li>• Manual reset</li>
+                      </ul>
+                    </div>
+                    <div className="bg-[#0f0f0f] rounded-lg p-4 border border-[#DA9C2F]/20">
+                      <p className="text-white/60 text-sm mb-2">Actions</p>
+                      <Link
+                        href="/admin/leaderboard"
+                        className="block px-3 py-2 bg-[#DA9C2F]/20 text-[#DA9C2F] rounded text-sm text-center hover:bg-[#DA9C2F]/30 transition-colors"
+                      >
+                        Manage →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
 
           {/* Modal: Contract Bonuses Manager */}
           <ContractManagementPanel

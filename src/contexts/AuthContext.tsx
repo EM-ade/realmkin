@@ -284,9 +284,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Check if wallet mapping exists
-      const walletDoc = await getDoc(
-        doc(db, "wallets", walletAddress.toLowerCase())
-      );
+      let walletDoc;
+      try {
+        walletDoc = await getDoc(
+          doc(db, "wallets", walletAddress.toLowerCase())
+        );
+      } catch (error) {
+        console.error("❌ Error reading wallet document:", error);
+        // If we can't read from Firestore, assume user doesn't exist
+        return null;
+      }
 
       if (!walletDoc.exists()) {
         console.log("❌ No wallet mapping found");
@@ -318,10 +325,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       const walletData = walletDoc.data();
-      const uid = walletData.uid;
+      const uid = walletData?.uid;
+
+      if (!uid) {
+        console.error("❌ No UID found in wallet document");
+        return null;
+      }
 
       // Get user data using the UID
-      const userDoc = await getDoc(doc(db, "users", uid));
+      let userDoc;
+      try {
+        userDoc = await getDoc(doc(db, "users", uid));
+      } catch (error) {
+        console.error("❌ Error reading user document:", error);
+        return null;
+      }
 
       if (!userDoc.exists()) {
         console.log("❌ User document not found for UID:", uid);

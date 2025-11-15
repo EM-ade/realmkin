@@ -31,7 +31,7 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
     if (adminWallets && userData && !adminWallets.includes((userData.walletAddress ?? '').toLowerCase())) {
       router.push('/');
     }
-  }, [user, userData, loading, isConnected, router, adminWallets]);
+  }, [user, userData, loading, isConnected, router, adminWallets, pathname]);
 
   if (loading) {
     return (

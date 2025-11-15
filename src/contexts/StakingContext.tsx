@@ -72,6 +72,7 @@ export function StakingProvider({ children }: { children: ReactNode }) {
       setStakes([]);
       setWalletBalance(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, account]);
   
   // Real-time wallet balance via websocket subscription

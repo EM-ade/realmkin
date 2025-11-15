@@ -24,6 +24,9 @@ import SocialLinks from "@/components/SocialLinks";
 import RewardsDashboard from "@/components/RewardsDashboard";
 import WithdrawalConfirmationModal from "@/components/WithdrawalConfirmationModal";
 import TransferConfirmationModal from "@/components/TransferConfirmationModal";
+import QuickStartGuide from "@/components/QuickStartGuide";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(
@@ -165,6 +168,10 @@ export default function WalletPage() {
   // Initialize auto-claiming
   useAutoClaim();
 
+  // Claim state
+  const [showMiningRateDetails, setShowMiningRateDetails] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
   // NFT state
   const [nfts, setNfts] = useState<NFTMetadata[]>([]);
   const [nftLoading, setNftLoading] = useState(false);
@@ -242,20 +249,13 @@ export default function WalletPage() {
   }, [account, user]);
 
 
-  // Handle withdrawal
+  // Handle withdrawal (now claims to wallet)
   const handleWithdraw = useCallback(async () => {
-    if (!user || !account || !withdrawAmount) return;
+    if (!user || !account) return;
 
-    const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setWithdrawError("Please enter a valid amount");
-      return;
-    }
-
-    // Check if user has sufficient balance
-    const userBalance = userRewards?.totalRealmkin || 0;
-    if (amount > userBalance) {
-      setWithdrawError("Insufficient funds for withdrawal");
+    const totalClaimable = userRewards?.totalRealmkin || 0;
+    if (totalClaimable <= 0) {
+      setWithdrawError("No MKIN available to claim");
       return;
     }
 
@@ -263,62 +263,53 @@ export default function WalletPage() {
     setWithdrawError(null);
 
     try {
-      // Simulate withdrawal process (replace with actual blockchain transaction)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Mirror to unified ledger (debit)
-      try {
-        const auth = getAuth();
-        const token = await auth.currentUser!.getIdToken();
-        const refId = `withdraw:${user.uid}:${Date.now()}`;
-        await fetch(`${gatekeeperBase}/api/ledger`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ delta: -Math.trunc(amount), reason: 'withdrawal', refId }),
-        });
-      } catch (e) {
-        console.warn('Failed to mirror withdrawal to ledger:', e);
-      }
-
-      // Show withdrawal confirmation
-      setLastClaimAmount(amount);
-      setLastClaimWallet(account);
-      setShowWithdrawalConfirmation(true);
-
-      // Save to transaction history in Firestore
-      await rewardsService.saveTransactionHistory({
-        userId: user.uid,
+      // Call Cloud Function directly
+      const claimTokensFunction = httpsCallable(functions, "claimTokens");
+      const result = await claimTokensFunction({
+        amount: Math.floor(totalClaimable),
         walletAddress: account,
-        type: "withdraw",
-        amount: amount,
-        description: `Withdrawn ${rewardsService.formatMKIN(amount)}`,
+        claimType: "withdraw",
       });
 
-      // Add to local state
-      setTransactionHistory((prev) => [
-        {
-          type: "withdraw",
-          amount: amount,
-          description: `Withdrawn ${rewardsService.formatMKIN(amount)}`,
-          date: new Date(),
-        },
-        ...prev.slice(0, 9), // Keep only last 10 transactions
-      ]);
+      const data = result.data as { success: boolean; txHash?: string };
 
-      // Clear input field
-      setWithdrawAmount("");
+      if (data.success) {
+        // Show withdrawal confirmation
+        setLastClaimAmount(totalClaimable);
+        setLastClaimWallet(account);
+        setShowWithdrawalConfirmation(true);
+
+        // Save to transaction history in Firestore
+        await rewardsService.saveTransactionHistory({
+          userId: user.uid,
+          walletAddress: account,
+          type: "withdraw",
+          amount: totalClaimable,
+          description: `Claimed ${rewardsService.formatMKIN(totalClaimable)} to wallet`,
+        });
+
+        // Add to local state
+        setTransactionHistory((prev) => [
+          {
+            type: "withdraw",
+            amount: totalClaimable,
+            description: `Claimed ${rewardsService.formatMKIN(totalClaimable)} to wallet`,
+            date: new Date(),
+          },
+          ...prev.slice(0, 9), // Keep only last 10 transactions
+        ]);
+      } else {
+        setWithdrawError("Failed to claim tokens");
+      }
     } catch (error) {
-      console.error("Error processing withdrawal:", error);
+      console.error("Error processing claim:", error);
       setWithdrawError(
-        error instanceof Error ? error.message : "Failed to process withdrawal"
+        error instanceof Error ? error.message : "Failed to claim tokens"
       );
     } finally {
       setWithdrawLoading(false);
     }
-  }, [user, account, withdrawAmount, userRewards, gatekeeperBase]);
+  }, [user, account, userRewards]);
 
   // Handle transfer
 const handleTransfer = useCallback(async () => {
@@ -508,7 +499,14 @@ const handleTransfer = useCallback(async () => {
           </div>
 
           {/* Mobile menu button - always visible */}
-          <div className="w-auto flex-shrink-0">
+          <div className="w-auto flex-shrink-0 flex items-center gap-2">
+            <button
+              onClick={() => setShowTutorial(true)}
+              className="flex items-center gap-1 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+              title="Show tutorial"
+            >
+              <span>?</span>
+            </button>
             <button
               onClick={() => setShowMobileActions((v) => !v)}
               className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
@@ -541,50 +539,124 @@ const handleTransfer = useCallback(async () => {
 
         {/* Admin Dashboard Section removed in favor of dedicated /admin page */}
 
+        {/* Tutorial Modal */}
+        {showTutorial && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowTutorial(false)}>
+            <div className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-[#DA9C2F]/30 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-[#DA9C2F]">Quick Start Guide</h2>
+                  <button onClick={() => setShowTutorial(false)} className="text-white/60 hover:text-white text-2xl">×</button>
+                </div>
+                <QuickStartGuide />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Content Container */}
         <div className="p-4 md:mx-[10%] lg:mx-[15%]">
         {/* Reward Section */}
         <section className="card mb-6 premium-card interactive-element">
-          <h2 className="text-label mb-2">REWARD</h2>
-          <div className="text-left">
-            {/* <h1 className="text-3xl font-bold text-[#DA9C2F] tracking-wider">
-              REALMKIN
-            </h1>
-            <p className="text-[#C4A962] text-sm">
-              Web3 Gaming Ecosystem • Multi-Contract Support
-            </p> */}
-            <div className="flex justify-between items-center">
-              <div className="text-white font-bold text-2xl">
-                Claimable:{" "}
-                <span className="">
+          <h2 className="text-label mb-4">REWARD</h2>
+          <div className="text-left space-y-4">
+            {/* Total Claimable */}
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-white/60 text-sm mb-1">Total Claimable</p>
+                <div className="text-white font-bold text-3xl">
                   {userRewards
-                    ? rewardsService.formatMKIN(userRewards.pendingRewards)
+                    ? rewardsService.formatMKIN(userRewards.totalRealmkin)
                     : "₥0"}{" "}
-                  MKIN
-                </span>
+                  <span className="text-lg text-[#DA9C2F]">MKIN</span>
+                </div>
               </div>
 
               {/* Wallet Balance - Right aligned */}
               {isConnected && (
-                <div className="flex items-center gap-2 text-[#DA9C2F] font-medium text-sm">
-                  <Image
-                    src="/wallet.jpeg"
-                    alt="Wallet"
-                    width={20}
-                    height={20}
-                    className="w-5 h-5 object-contain"
-                  />
-                  <span className="whitespace-nowrap">{formattedWalletBalance}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <p className="text-white/60 text-xs">Wallet Balance</p>
+                  <div className="flex items-center gap-2 text-[#DA9C2F] font-medium">
+                    <Image
+                      src="/wallet.jpeg"
+                      alt="Wallet"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 object-contain"
+                    />
+                    <span className="whitespace-nowrap">{formattedWalletBalance}</span>
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="flex flex-col items-center space-y-3 w-full">
+            {/* Mining Rate Per Week - Collapsible */}
+            <div className="rounded-lg bg-[#DA9C2F]/10 border border-[#DA9C2F]/20 overflow-hidden">
+              <button
+                onClick={() => setShowMiningRateDetails(!showMiningRateDetails)}
+                className="w-full p-3 flex justify-between items-center hover:bg-[#DA9C2F]/20 transition-colors"
+              >
+                <div className="text-left">
+                  <p className="text-[#DA9C2F] font-semibold text-sm">
+                    ⛏️ Mining Rate / Week
+                  </p>
+                  <p className="text-white font-bold text-xl mt-1">
+                    {userRewards && rewardsCalculation
+                      ? rewardsService.formatMKIN(
+                          (rewardsCalculation.weeklyRate || 0) * 7
+                        )
+                      : "₥0"}{" "}
+                    <span className="text-sm text-white/60">MKIN/week</span>
+                  </p>
+                </div>
+                <span className={`text-[#DA9C2F] text-lg transition-transform ${showMiningRateDetails ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+
+              {/* Conditions Breakdown - Collapsible Content */}
+              {showMiningRateDetails && rewardsCalculation && (
+                <div className="p-3 border-t border-[#DA9C2F]/20 bg-[#0f0f0f]/50">
+                  <p className="text-white/60 text-xs font-semibold mb-2 uppercase">
+                    Earning Conditions
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 text-xs">
+                      <span className={nfts.length > 0 ? "text-green-400" : "text-white/40"}>
+                        {nfts.length > 0 ? "✓" : "○"}
+                      </span>
+                      <span className={nfts.length > 0 ? "text-green-400" : "text-white/40"}>
+                        Hold {nfts.length} Realmkin NFT{nfts.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs">
+                      <span className={isConnected ? "text-green-400" : "text-white/40"}>
+                        {isConnected ? "✓" : "○"}
+                      </span>
+                      <span className={isConnected ? "text-green-400" : "text-white/40"}>
+                        Wallet Connected
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs">
+                      <span className={rewardsCalculation.totalNFTs > 0 ? "text-green-400" : "text-white/40"}>
+                        {rewardsCalculation.totalNFTs > 0 ? "✓" : "○"}
+                      </span>
+                      <span className={rewardsCalculation.totalNFTs > 0 ? "text-green-400" : "text-white/40"}>
+                        Earning {rewardsService.formatMKIN(rewardsCalculation.weeklyRate)} MKIN/day
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col items-center space-y-3 w-full pt-2">
               {rewardsCalculation &&
                 !rewardsCalculation.canClaim &&
                 rewardsCalculation.nextClaimDate && (
-                  <div className="text-xs text-center w-1/2 text-[#DA9C2F]">
-                    Available in{" "}
+                  <div className="text-xs text-center w-full text-[#DA9C2F]">
+                    Next claim available in{" "}
                     {rewardsService.getTimeUntilNextClaim(
                       rewardsCalculation.nextClaimDate
                     )}

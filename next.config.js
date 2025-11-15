@@ -1,14 +1,3 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '*', // Allow all HTTPS domains
-      },
-    ],
-    dangerouslyAllowSVG: true,
-  },
-};
-
-module.exports = nextConfig;
+// This file is deprecated. Use next.config.ts instead.
+// Kept for backwards compatibility during migration.
+module.exports = {};

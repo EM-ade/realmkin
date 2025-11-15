@@ -11,7 +11,7 @@ import {
 import { isValidSolanaAddress } from "@/utils/formatAddress";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import { useRouter } from 'next/navigation';
@@ -156,6 +156,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
       console.log(`🔐 Authenticating wallet: ${walletAddress}`);
       
+      // Check if we're in onboarding - if so, don't navigate
+      const isOnboarding = localStorage.getItem('onboarding_active') === 'true';
+      
       try {
         const userCredential = await signInWithEmailAndPassword(auth, tempEmail, tempPassword);
         setUid(userCredential.user.uid);
@@ -194,10 +197,34 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       } catch (error: unknown) {
         const authError = error as { code?: string };
         if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
-          console.log('ℹ️ No account found. Redirecting to create profile.');
-          // Only redirect if we're not already on the login page
-          if (!window.location.pathname.includes('/login')) {
-            router.push(`/login?wallet=${walletAddress}`);
+          console.log('ℹ️ No account found. Attempting to create profile...');
+          try {
+            // Try to create a new account instead of redirecting
+            const newUserCredential = await createUserWithEmailAndPassword(auth, tempEmail, tempPassword);
+            setUid(newUserCredential.user.uid);
+            
+            // Create wallet mapping
+            const walletLower = walletAddress.toLowerCase();
+            const walletDocRef = doc(db, "wallets", walletLower);
+            await setDoc(walletDocRef, { 
+              uid: newUserCredential.user.uid,
+              createdAt: new Date()
+            });
+            
+            // Create user profile
+            const userDocRef = doc(db, "users", newUserCredential.user.uid);
+            await setDoc(userDocRef, {
+              walletAddress: walletLower,
+              createdAt: new Date(),
+            });
+            
+            console.log('✅ New account created successfully');
+          } catch (createErr) {
+            console.error('🚨 Failed to create account:', createErr);
+            // Only redirect if we're not already on the login page and not during onboarding
+            if (!window.location.pathname.includes('/login') && !isOnboarding) {
+              router.push(`/login?wallet=${walletAddress}`);
+            }
           }
         } else {
           console.error('🚨 Firebase sign-in error:', error);
@@ -225,7 +252,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             timestamp: Date.now(),
           }));
 
-          // Auto-authenticate with Firebase
+          // Auto-authenticate with Firebase (always authenticate, but don't redirect during onboarding)
           autoAuthenticateFirebase(address);
         }
       } else {
@@ -236,7 +263,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     } catch (e) {
       console.log('Wallet adapter sync error:', e);
     }
-  }, [publicKey, connected, connecting]);
+  }, [publicKey, connected, connecting, autoAuthenticateFirebase]);
 
   // Prevent multiple simultaneous connection attempts
   const acquireConnectionLock = () => {
