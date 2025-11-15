@@ -14,7 +14,7 @@ service cloud.firestore {
 
     // -------- User profile --------
     match /users/{uid} {
-      allow read: if signedIn() || isAdmin();
+      allow read: if true;
       allow create, update: if isOwner(uid) || isAdmin();
       allow delete: if isAdmin();
     }
@@ -22,7 +22,7 @@ service cloud.firestore {
     // Map username -> uid (immutable)
     match /usernames/{username} {
       allow read: if true;
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if signedIn();
       allow update, delete: if false;
     }
 

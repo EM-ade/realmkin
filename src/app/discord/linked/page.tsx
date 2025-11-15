@@ -107,7 +107,7 @@ function DiscordLinkedContent() {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json",
                   },
-                  body: JSON.stringify({}),
+                  body: JSON.stringify({ discordId }),
                 });
                 const vJson = await vRes.json().catch(() => ({} as Record<string, unknown>));
                 console.log("[discord:linked] verification response:", vRes.status, vJson);
@@ -139,7 +139,7 @@ function DiscordLinkedContent() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({}),
+            body: JSON.stringify({ discordId }),
           });
           const vJson = await vRes.json().catch(() => ({} as Record<string, unknown>));
           console.log("[discord:linked] verification response:", vRes.status, vJson);

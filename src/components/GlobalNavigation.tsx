@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
   { label: "My NFTs", href: "/my-nft", icon: "/flex-model.png" },
   { label: "Staking", href: "/staking", icon: "/staking.png" },
+  { label: "Marketplace", href: "/marketplace", icon: "/marketplace.png" },
   { label: "Game", href: "/game", icon: "/game.png" },
   { label: "Merches", href: "/merches", icon: "/merches.png" },
 ];
