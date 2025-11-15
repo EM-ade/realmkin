@@ -93,7 +93,7 @@ function LoginPageContent() {
 
   // Determine safe redirect target (defaults to "/")
   const redirectTarget = useMemo(() => {
-    const r = searchParams?.get("redirect") || "/";
+    const r = searchParams?.get("redirect") || searchParams?.get("return") || "/";
     // Only allow internal absolute paths
     if (typeof r === "string" && r.startsWith("/")) return r;
     return "/";

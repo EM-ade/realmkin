@@ -166,6 +166,16 @@ function DiscordLinkedContent() {
     run();
     }, [status, discordId, gatekeeperBase, signedIn]);
 
+  // Redirect to home after successful linking
+  useEffect(() => {
+    if (phase === "linked") {
+      const timer = setTimeout(() => {
+        router.push("/");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, router]);
+
   const title = useMemo(() => {
     if (status === "error") return "Discord Linking Error";
     return "Discord Linking";
@@ -239,7 +249,8 @@ function DiscordLinkedContent() {
             )}
             {phase === "linked" && (
               <div className="rounded-lg border border-[#2E7D32] bg-[#0f1a12] p-4 text-emerald-400">
-                ✅ Discord linked. You can close this tab and return to the app.
+                <p className="mb-3">✅ Discord linked successfully!</p>
+                <p className="text-sm">Redirecting to dashboard in 3 seconds...</p>
               </div>
             )}
             {phase === "error" && (
