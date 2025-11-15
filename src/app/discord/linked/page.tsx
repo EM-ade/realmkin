@@ -58,7 +58,8 @@ function DiscordLinkedContent() {
     async function run() {
       try {
         setPhase("linking");
-        console.log("[discord:linked] Start for discordId=", discordId);
+        console.log("[discord:linked] ===== START DISCORD LINK =====");
+        console.log("[discord:linked] discordId=", discordId);
 
         const auth = getAuth();
         if (!auth.currentUser) {
@@ -67,6 +68,8 @@ function DiscordLinkedContent() {
         }
         const token = await auth.currentUser.getIdToken(true); // Force refresh token
         console.log("[discord:linked] Got Firebase ID token");
+        console.log("[discord:linked] Current user UID:", auth.currentUser.uid);
+        console.log("[discord:linked] ========================");
 
         // Link Discord
         console.log("[discord:linked] POST /api/link/discord", gatekeeperBase);
