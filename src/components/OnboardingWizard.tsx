@@ -20,6 +20,7 @@ export default function OnboardingWizard() {
   const [isVisible, setIsVisible] = useState(false);
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleNextStep = () => {
     const currentIndex = STEPS.indexOf(currentStep);
@@ -97,6 +98,7 @@ export default function OnboardingWizard() {
       return;
     }
     
+    setIsSubmitting(true);
     try {
       // Get current Firebase user directly
       const auth = getAuth();
@@ -105,12 +107,13 @@ export default function OnboardingWizard() {
       if (!currentUser) {
         console.error("❌ No current user in Firebase auth");
         toast.error("User not authenticated");
+        setIsSubmitting(false);
         return;
       }
 
       console.log("💾 Saving username for user:", currentUser.uid);
 
-      // Save username to user profile in Firestore
+      // Save username to user profile in Firestore (use setDoc with merge to create if doesn't exist)
       const userDocRef = doc(db, "users", currentUser.uid);
       try {
         await setDoc(userDocRef, {
@@ -137,11 +140,13 @@ export default function OnboardingWizard() {
       }
       console.log("✅ Username saved successfully:", username);
       toast.success("Username set!");
+      setIsSubmitting(false);
       completeStep("username");
     } catch (error) {
       console.error("❌ Failed to save username:", error);
       const errorMsg = error instanceof Error ? error.message : "Failed to save username";
       toast.error(errorMsg);
+      setIsSubmitting(false);
     }
   };
 
@@ -229,26 +234,19 @@ export default function OnboardingWizard() {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3">
-          <div className="flex gap-2">
-            <button
-              onClick={content.action}
-              className="flex-1 rounded-xl py-3 font-semibold transition-all bg-[#DA9C2F] text-black hover:bg-[#ffbf00] active:scale-95"
-            >
-              {content.actionLabel}
-            </button>
-            {currentStep !== "complete" && STEPS.indexOf(currentStep) < STEPS.length - 1 && (
-              <button
-                onClick={handleNextStep}
-                className="px-4 py-3 rounded-xl bg-[#DA9C2F]/20 text-[#DA9C2F] font-semibold border border-[#DA9C2F]/30 hover:bg-[#DA9C2F]/30 transition-all"
-              >
-                Next →
-              </button>
-            )}
-          </div>
+          <button
+            onClick={content.action}
+            disabled={isSubmitting || (currentStep === "username" && (username.length < 3 || !!usernameError))}
+            className="w-full rounded-xl py-3 font-semibold transition-all bg-[#DA9C2F] text-black hover:bg-[#ffbf00] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#DA9C2F]"
+          >
+            {isSubmitting ? "Processing..." : content.actionLabel}
+          </button>
+          
           {currentStep !== "complete" && (
             <button
               onClick={skipOnboarding}
-              className="w-full rounded-xl border border-[#DA9C2F]/30 py-3 font-semibold text-[#DA9C2F] transition-all hover:bg-[#DA9C2F]/10"
+              className="w-full rounded-xl border border-[#DA9C2F]/30 py-3 font-semibold text-[#DA9C2F] transition-all hover:bg-[#DA9C2F]/10 disabled:opacity-50"
+              disabled={isSubmitting}
             >
               Skip for now
             </button>
