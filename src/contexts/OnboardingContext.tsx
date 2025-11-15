@@ -15,6 +15,7 @@ interface OnboardingContextType {
   resetOnboarding: () => void;
   getProgress: () => number;
   setIsNewUser: (isNew: boolean) => void;
+  setStartingStep: (step: OnboardingStep) => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
@@ -34,30 +35,89 @@ interface OnboardingProviderProps {
 }
 
 export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>("welcome");
   const [isOnboarding, setIsOnboarding] = useState(true);
   const [isNewUser, setIsNewUserState] = useState(false);
+  const [startingStep, setStartingStepState] = useState<OnboardingStep>("welcome");
+  const [discordLinked, setDiscordLinked] = useState(false);
 
-  // Load saved onboarding progress on mount
+  // Check Discord link status
+  useEffect(() => {
+    async function checkDiscordLink() {
+      if (user?.uid) {
+        try {
+          const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+          const response = await fetch(`${gatekeeperBase}/api/discord/status/${user.uid}`);
+          if (response.ok) {
+            const data = await response.json();
+            setDiscordLinked(data.linked || false);
+          }
+        } catch (error) {
+          console.error("Error checking Discord status:", error);
+        }
+      }
+    }
+    checkDiscordLink();
+  }, [user?.uid]);
+
+  // Determine if user should see onboarding and which step to start at
   useEffect(() => {
     try {
       if (user?.uid) {
         const progressKey = `onboarding_progress_${user.uid}`;
         const savedStep = localStorage.getItem(progressKey);
-        if (savedStep && STEPS.includes(savedStep as OnboardingStep)) {
-          const step = savedStep as OnboardingStep;
-          setCurrentStep(step);
-          // If saved step is "complete", don't show onboarding
-          if (step === "complete") {
-            setIsOnboarding(false);
-          }
+        
+        // If already completed, don't show onboarding
+        if (savedStep === "complete") {
+          setIsOnboarding(false);
+          setCurrentStep("complete");
+          return;
         }
+
+        // New user: show full onboarding from welcome
+        if (isNewUser) {
+          setIsOnboarding(true);
+          setCurrentStep("welcome");
+          setStartingStepState("welcome");
+          return;
+        }
+
+        // Old user logic
+        const hasWallet = !!userData?.walletAddress;
+        const hasUsername = !!userData?.username;
+
+        // Old user with everything done: don't show onboarding
+        if (hasWallet && hasUsername && discordLinked) {
+          setIsOnboarding(false);
+          setCurrentStep("complete");
+          return;
+        }
+
+        // Old user missing Discord: show only Discord step
+        if (hasWallet && hasUsername && !discordLinked) {
+          setIsOnboarding(true);
+          setCurrentStep("discord");
+          setStartingStepState("discord");
+          return;
+        }
+
+        // Old user missing wallet or username: show from wallet step
+        if (!hasWallet || !hasUsername) {
+          setIsOnboarding(true);
+          setCurrentStep("wallet");
+          setStartingStepState("wallet");
+          return;
+        }
+
+        // Default: don't show onboarding
+        setIsOnboarding(false);
+        setCurrentStep("complete");
       }
     } catch (e) {
       // localStorage not available
     }
-  }, [user?.uid]);
+  }, [user?.uid, isNewUser, userData?.walletAddress, userData?.username, discordLinked]);
 
   // Save progress whenever step changes
   useEffect(() => {
@@ -111,6 +171,10 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
     setIsNewUserState(isNew);
   }, []);
 
+  const setStartingStep = useCallback((step: OnboardingStep) => {
+    setStartingStepState(step);
+  }, []);
+
   return (
     <OnboardingContext.Provider
       value={{
@@ -123,6 +187,7 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
         resetOnboarding,
         getProgress,
         setIsNewUser,
+        setStartingStep,
       }}
     >
       {children}

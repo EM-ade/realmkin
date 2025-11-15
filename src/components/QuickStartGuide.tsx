@@ -58,16 +58,6 @@ export default function QuickStartGuide() {
   // Load expanded step and skip state from localStorage on mount
   useEffect(() => {
     try {
-      // For old users, auto-hide onboarding on first load
-      if (!isNewUser) {
-        const skipped = localStorage.getItem("quickstart_skipped");
-        if (!skipped) {
-          // First time old user sees this, auto-skip it
-          setIsSkipped(true);
-          localStorage.setItem("quickstart_skipped", "true");
-        }
-      }
-      
       const saved = localStorage.getItem("quickstart_expanded_step");
       if (saved) {
         setExpandedStep(parseInt(saved, 10));
@@ -79,7 +69,7 @@ export default function QuickStartGuide() {
     } catch (e) {
       // localStorage not available
     }
-  }, [isNewUser]);
+  }, []);
 
   // Save expanded step to localStorage when it changes
   useEffect(() => {

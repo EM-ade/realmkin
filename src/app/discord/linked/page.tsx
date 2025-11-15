@@ -42,6 +42,10 @@ function DiscordLinkedContent() {
     if (status !== "ok" || !discordId) return;
     if (signedIn) return;
     const ret = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/discord/linked';
+    // Store the return URL in sessionStorage so it persists across redirects
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('discord_return_url', ret);
+    }
     const t = setTimeout(() => {
       router.push(`/login?return=${encodeURIComponent(ret)}`);
     }, 800);
@@ -57,8 +61,11 @@ function DiscordLinkedContent() {
         console.log("[discord:linked] Start for discordId=", discordId);
 
         const auth = getAuth();
-        if (!auth.currentUser) return; // guarded by signedIn check
-        const token = await auth.currentUser.getIdToken();
+        if (!auth.currentUser) {
+          console.warn("[discord:linked] No current user, waiting for auth...");
+          return;
+        }
+        const token = await auth.currentUser.getIdToken(true); // Force refresh token
         console.log("[discord:linked] Got Firebase ID token");
 
         // Link Discord
