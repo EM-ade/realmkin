@@ -151,6 +151,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         }
       }
 
+      // Use lowercase for email only, keep original case for wallet address
       const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
       const tempPassword = walletAddress;
 
@@ -163,15 +164,17 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         const userCredential = await signInWithEmailAndPassword(auth, tempEmail, tempPassword);
         setUid(userCredential.user.uid);
 
+        // Store wallet address in original case (Solana addresses are case-sensitive)
         const walletLower = walletAddress.toLowerCase();
 
-        // Ensure wallet mapping exists (lowercased key)
+        // Ensure wallet mapping exists (lowercased key for lookup, but store original case)
         const walletDocRef = doc(db, "wallets", walletLower);
         const walletDoc = await getDoc(walletDocRef);
         if (!walletDoc.exists()) {
           console.log('📝 Creating missing wallet mapping...');
           await setDoc(walletDocRef, { 
             uid: userCredential.user.uid,
+            walletAddress: walletAddress, // Store in original case
             createdAt: new Date()
           });
           console.log('✅ Wallet mapping created');
@@ -184,7 +187,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           if (!userDoc.exists()) {
             console.log('📝 Creating missing user profile...');
             await setDoc(userDocRef, {
-              walletAddress: walletLower,
+              walletAddress: walletAddress, // Store in original case
               createdAt: new Date(),
             });
             console.log('✅ User profile created');
@@ -203,18 +206,19 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             const newUserCredential = await createUserWithEmailAndPassword(auth, tempEmail, tempPassword);
             setUid(newUserCredential.user.uid);
             
-            // Create wallet mapping
+            // Create wallet mapping (lowercased key for lookup, but store original case)
             const walletLower = walletAddress.toLowerCase();
             const walletDocRef = doc(db, "wallets", walletLower);
             await setDoc(walletDocRef, { 
               uid: newUserCredential.user.uid,
+              walletAddress: walletAddress, // Store in original case
               createdAt: new Date()
             });
             
             // Create user profile
             const userDocRef = doc(db, "users", newUserCredential.user.uid);
             await setDoc(userDocRef, {
-              walletAddress: walletLower,
+              walletAddress: walletAddress, // Store in original case
               createdAt: new Date(),
             });
             

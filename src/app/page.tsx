@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import withAuthGuard from "@/components/withAuthGuard";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useNFT } from "@/contexts/NFTContext";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 import SocialLinks from "@/components/SocialLinks";
 import QuickAccessCard from "@/components/QuickAccessCard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
@@ -41,6 +42,7 @@ function Home() {
   const { user, userData } = useAuth();
   const { connectWallet, disconnectWallet, account, isConnected, isConnecting } = useWeb3();
   const { nfts } = useNFT();
+  const { setIsNewUser, startOnboarding, setStartingStep } = useOnboarding();
   const isMobile = useIsMobile();
 
   const [showMobileActions, setShowMobileActions] = useState(false);
@@ -50,6 +52,23 @@ function Home() {
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const gatekeeperBase =
     process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+
+  // Handle wallet connection with onboarding fallback
+  const handleConnectWallet = useCallback(async () => {
+    // Check if user is new (no username set)
+    // userData is fetched from Firestore, so this is the source of truth
+    if (userData && !userData.username) {
+      // Trigger onboarding for new users via context (no localStorage)
+      setIsNewUser(true);
+      setStartingStep('username'); // Skip wallet step since they're already connected
+      startOnboarding();
+      router.push('/onboarding');
+      return;
+    }
+    
+    // Otherwise proceed with normal wallet connection
+    await connectWallet();
+  }, [userData, connectWallet, router, setIsNewUser, setStartingStep, startOnboarding]);
 
   // Fetch user rewards from Firebase
   useEffect(() => {
@@ -218,7 +237,7 @@ function Home() {
         <section className="mb-6">
           {!isConnected ? (
             <button
-              onClick={connectWallet}
+              onClick={handleConnectWallet}
               disabled={isConnecting}
               className="w-full bg-[#DA9C2F] text-black font-bold py-4 rounded-xl uppercase tracking-wider hover:bg-[#f0b94a] transition-all duration-300 shadow-lg shadow-[#DA9C2F]/30"
             >
