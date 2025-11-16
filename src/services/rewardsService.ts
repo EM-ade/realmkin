@@ -64,13 +64,23 @@ export interface TransactionHistory {
 
 class RewardsService {
   // Default base rates (used when a contract has no explicit config)
-  private readonly WEEKLY_RATE_PER_NFT = 200;
+  private readonly WEEKLY_RATE_PER_NFT = 0;
   private readonly MILLISECONDS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
   private readonly MIN_CLAIM_AMOUNT = 1;
   private readonly NEW_NFT_BONUS = 200; // default welcome bonus when no config exists
   private readonly MAX_CLAIM_AMOUNT = 100000;
   private readonly RATE_LIMIT_WINDOW = 60 * 1000;
   private readonly MAX_CLAIMS_PER_WINDOW = 3;
+
+  /**
+   * Force reload contract configs from Firestore (clears cache)
+   */
+  async reloadContractConfigs(): Promise<void> {
+    console.log("🔄 Force reloading contract configs...");
+    this.contractConfigCache = null;
+    await this.loadContractConfigs(true);
+    console.log("✅ Contract configs reloaded");
+  }
 
   // Mirror a delta to the unified ledger via Gatekeeper API (client-side only)
   private async postLedger(
@@ -240,6 +250,10 @@ class RewardsService {
         is_active: boolean;
       }
     >();
+
+    console.log("🔧 Loading contract configs from Firestore...");
+    console.log(`   Found ${snap.size} documents`);
+
     type ContractDoc = {
       weekly_rate?: unknown;
       tiers?: unknown;
@@ -248,6 +262,9 @@ class RewardsService {
     };
     snap.forEach((d) => {
       const v = d.data() as ContractDoc;
+
+      console.log(`\n📄 Document ID: ${d.id}`);
+      console.log(`   Raw data:`, v);
 
       // Parse tiers if they exist (new format)
       let tiers:
@@ -270,7 +287,7 @@ class RewardsService {
           .filter((t) => t.minNFTs > 0 && t.maxNFTs > 0 && t.weeklyRate > 0);
       }
 
-      map.set(d.id, {
+      const parsedConfig = {
         weekly_rate:
           v.weekly_rate !== undefined ? Number(v.weekly_rate) || 0 : undefined,
         tiers: tiers && tiers.length > 0 ? tiers : undefined,
@@ -279,8 +296,15 @@ class RewardsService {
           typeof v.is_active === "boolean"
             ? v.is_active
             : Boolean(v.is_active ?? true),
-      });
+      };
+
+      console.log(`   Parsed config:`, parsedConfig);
+
+      map.set(d.id, parsedConfig);
     });
+
+    console.log(`\n✅ Loaded ${map.size} contract configs into cache\n`);
+
     this.contractConfigCache = { loadedAt: now, map };
     return map;
   }
@@ -300,13 +324,31 @@ class RewardsService {
       nftsByContract.set(addr, (nftsByContract.get(addr) || 0) + 1);
     }
 
+    console.log("🔍 Rewards Calculation Debug:");
+    console.log("NFTs by contract:", Object.fromEntries(nftsByContract));
+
     // Calculate rewards for each contract
     for (const [addr, count] of nftsByContract.entries()) {
       const cfg = configs.get(addr);
 
+      console.log(`\n📦 Contract: ${addr.substring(0, 8)}...`);
+      console.log(`   NFT Count: ${count}`);
+      console.log(
+        `   Config:`,
+        cfg
+          ? {
+              has_tiers: !!cfg.tiers,
+              tiers: cfg.tiers,
+              weekly_rate: cfg.weekly_rate,
+              is_active: cfg.is_active,
+            }
+          : "No config found",
+      );
+
       if (cfg && cfg.is_active) {
-        // New tier-based format
+        // New tier-based format - PRIORITY CHECK
         if (cfg.tiers && cfg.tiers.length > 0) {
+          console.log(`   ✓ Using TIER-BASED calculation`);
           // Find the matching tier for this NFT count
           const matchingTier = cfg.tiers.find(
             (tier) => count >= tier.minNFTs && count <= tier.maxNFTs,
@@ -314,34 +356,57 @@ class RewardsService {
 
           if (matchingTier) {
             // Tier-based: weeklyRate is the total rate for the tier range, not per NFT
+            console.log(
+              `   ✓ Matched tier: ${matchingTier.minNFTs}-${matchingTier.maxNFTs} NFTs = ${matchingTier.weeklyRate} MKIN/week`,
+            );
             totalWeeklyRewards += matchingTier.weeklyRate;
           } else {
             // If no tier matches, use the highest tier's rate as fallback
             const highestTier = cfg.tiers.reduce((max, tier) =>
               tier.maxNFTs > max.maxNFTs ? tier : max,
             );
+            console.log(
+              `   ⚠️ No matching tier, using highest: ${highestTier.weeklyRate} MKIN/week`,
+            );
             totalWeeklyRewards += highestTier.weeklyRate;
           }
         }
-        // Legacy weekly_rate format (per NFT)
+        // Legacy weekly_rate format (per NFT) - ONLY if no tiers
         else if (cfg.weekly_rate !== undefined) {
-          totalWeeklyRewards += Math.max(0, cfg.weekly_rate) * count;
+          const reward = Math.max(0, cfg.weekly_rate) * count;
+          console.log(
+            `   ✓ Using LEGACY calculation: ${cfg.weekly_rate} MKIN × ${count} NFTs = ${reward} MKIN/week`,
+          );
+          totalWeeklyRewards += reward;
         }
         // No config for this contract, use default
         else {
-          totalWeeklyRewards += this.WEEKLY_RATE_PER_NFT * count;
+          const reward = this.WEEKLY_RATE_PER_NFT * count;
+          console.log(
+            `   ℹ️ Using DEFAULT rate: ${this.WEEKLY_RATE_PER_NFT} MKIN × ${count} NFTs = ${reward} MKIN/week`,
+          );
+          totalWeeklyRewards += reward;
         }
       } else {
         // Default base rate (applies to unconfigured or inactive contracts)
-        totalWeeklyRewards += this.WEEKLY_RATE_PER_NFT * count;
+        const reward = this.WEEKLY_RATE_PER_NFT * count;
+        console.log(
+          `   ⚠️ Contract not active/configured, using DEFAULT: ${reward} MKIN/week`,
+        );
+        totalWeeklyRewards += reward;
       }
     }
 
     // Add user-specific bonus if exists
     if (userId) {
       const bonusRate = await this.getUserBonusRate(userId);
+      if (bonusRate > 0) {
+        console.log(`\n💎 User bonus: +${bonusRate} MKIN/week`);
+      }
       totalWeeklyRewards += bonusRate;
     }
+
+    console.log(`\n💰 TOTAL Weekly Rewards: ${totalWeeklyRewards} MKIN/week\n`);
 
     return totalWeeklyRewards;
   }

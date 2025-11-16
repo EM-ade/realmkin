@@ -79,6 +79,22 @@ const SAMPLE_NFTS: NFTMetadata[] = [
       { trait_type: "Rarity", value: "Rare" },
     ],
   },
+  {
+    id: "test-nft-4",
+    name: "Test NFT - GZv3n Contract",
+    description:
+      "Test NFT from GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb contract",
+    image: "/realmkin-1.webp",
+    contractAddress: "GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
+    tokenId: "TEST001",
+    rarity: "LEGENDARY",
+    power: 1000,
+    attributes: [
+      { trait_type: "Class", value: "Test" },
+      { trait_type: "Contract", value: "GZv3n" },
+      { trait_type: "Purpose", value: "Rewards Testing" },
+    ],
+  },
 ];
 
 export default function MyNFTPage() {
@@ -103,7 +119,8 @@ export default function MyNFTPage() {
   const [autoRotate, setAutoRotate] = useState(true);
   const [showGallery, setShowGallery] = useState(true);
 
-  // Test mode state
+  // Test mode state (only available in development)
+  const isDevelopment = process.env.NODE_ENV === "development";
   const [testMode, setTestMode] = useState(false);
 
   // Discord and mobile menu states
@@ -131,8 +148,8 @@ export default function MyNFTPage() {
   // Merge test NFTs with real NFTs when test mode is enabled (guard undefined)
   const displayNFTs: NFTMetadata[] = useMemo(() => {
     const safe = Array.isArray(nfts) ? nfts : [];
-    return testMode ? [...SAMPLE_NFTS, ...safe] : safe;
-  }, [testMode, nfts]);
+    return isDevelopment && testMode ? [...SAMPLE_NFTS, ...safe] : safe;
+  }, [testMode, nfts, isDevelopment]);
 
   const walletDisplayValue = useMemo(() => {
     return userRewards ? userRewards.totalRealmkin : 0;
@@ -361,7 +378,7 @@ export default function MyNFTPage() {
                 {displayNFTs.length}
               </span>{" "}
               {displayNFTs.length === 1 ? "NFT" : "NFTs"} owned
-              {testMode && (
+              {isDevelopment && testMode && (
                 <span className="ml-2 text-xs bg-[#f4c752] text-black px-2 py-1 rounded-full font-bold">
                   TEST MODE
                 </span>
@@ -381,17 +398,19 @@ export default function MyNFTPage() {
                     Your NFTs
                   </h3>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setTestMode(!testMode)}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        testMode
-                          ? "bg-[#f4c752] text-black shadow-md"
-                          : "bg-[#2a1f0a] text-[#f4c752] border border-[#f4c752]/30 hover:bg-[#3a2f1a]"
-                      }`}
-                      title="Toggle test NFTs"
-                    >
-                      {testMode ? "🧪 Test ON" : "🧪 Test"}
-                    </button>
+                    {isDevelopment && (
+                      <button
+                        onClick={() => setTestMode(!testMode)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                          testMode
+                            ? "bg-[#f4c752] text-black shadow-md"
+                            : "bg-[#2a1f0a] text-[#f4c752] border border-[#f4c752]/30 hover:bg-[#3a2f1a]"
+                        }`}
+                        title="Toggle test NFTs"
+                      >
+                        {testMode ? "🧪 Test ON" : "🧪 Test"}
+                      </button>
+                    )}
                     <button
                       onClick={refreshNFTs}
                       className="text-[#f4c752] hover:text-[#ffe9b5] transition-all hover:scale-110"

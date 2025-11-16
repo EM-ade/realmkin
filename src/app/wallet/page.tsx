@@ -180,6 +180,11 @@ export default function WalletPage() {
   const [showMiningRateDetails, setShowMiningRateDetails] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
 
+  // Test mode state (only available in development)
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const [testMode, setTestMode] = useState(false);
+  const [reloadingConfigs, setReloadingConfigs] = useState(false);
+
   // NFT state
   const [nfts, setNfts] = useState<NFTMetadata[]>([]);
   const [nftLoading, setNftLoading] = useState(false);
@@ -211,6 +216,41 @@ export default function WalletPage() {
     }>
   >([]);
 
+  // Reload contract configs handler
+  const handleReloadConfigs = useCallback(async () => {
+    if (!user || !account) return;
+
+    setReloadingConfigs(true);
+    try {
+      console.log("🔄 Manually reloading contract configs...");
+      await rewardsService.reloadContractConfigs();
+      // Refetch NFTs to trigger recalculation
+      await fetchUserNFTs();
+      console.log("✅ Configs reloaded and rewards recalculated");
+    } catch (error) {
+      console.error("Error reloading configs:", error);
+    } finally {
+      setReloadingConfigs(false);
+    }
+  }, [user, account, fetchUserNFTs]);
+
+  // Test NFT for GZv3n contract (only in development)
+  const TEST_NFT: NFTMetadata = {
+    id: "test-gzv3n-001",
+    name: "Test NFT - GZv3n Contract",
+    description: "Test NFT from GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
+    image: "/realmkin-1.webp",
+    contractAddress: "GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
+    tokenId: "TEST001",
+    rarity: "LEGENDARY",
+    power: 1000,
+    attributes: [
+      { trait_type: "Class", value: "Test" },
+      { trait_type: "Contract", value: "GZv3n" },
+      { trait_type: "Purpose", value: "Rewards Testing" },
+    ],
+  };
+
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
 
@@ -220,7 +260,14 @@ export default function WalletPage() {
     try {
       // Fetch from both standard and premium contracts
       const nftCollection = await nftService.fetchAllContractNFTs(account);
-      setNfts(nftCollection.nfts);
+
+      // Add test NFT if test mode is enabled (only in development)
+      const allNFTs =
+        isDevelopment && testMode
+          ? [...nftCollection.nfts, TEST_NFT]
+          : nftCollection.nfts;
+
+      setNfts(allNFTs);
 
       // Initialize/update rewards based on NFT count and contract types
       if (user) {
@@ -228,15 +275,15 @@ export default function WalletPage() {
           const rewards = await rewardsService.initializeUserRewards(
             user.uid,
             account,
-            nftCollection.nfts.length,
-            nftCollection.nfts,
+            allNFTs.length,
+            allNFTs,
           );
           setUserRewards(rewards);
 
           // Calculate current pending rewards with contract-aware calculation
           const calculation = rewardsService.calculatePendingRewards(
             rewards,
-            nftCollection.nfts.length,
+            allNFTs.length,
           );
           setRewardsCalculation(calculation);
         } catch (error) {
@@ -244,7 +291,7 @@ export default function WalletPage() {
         }
       }
 
-      if (nftCollection.nfts.length === 0) {
+      if (allNFTs.length === 0) {
         setNftError("No Realmkin NFTs found in this wallet");
       }
     } catch (error) {
@@ -253,7 +300,7 @@ export default function WalletPage() {
     } finally {
       setNftLoading(false);
     }
-  }, [account, user]);
+  }, [account, user, testMode, isDevelopment]);
 
   // Removed unified balance fetching
 
@@ -439,7 +486,7 @@ export default function WalletPage() {
       setNfts([]);
       setNftError(null);
     }
-  }, [isConnected, account, fetchUserNFTs]);
+  }, [isConnected, account, fetchUserNFTs, testMode]);
 
   // Fetch Discord link status when user session changes
   useEffect(() => {
@@ -596,7 +643,50 @@ export default function WalletPage() {
         <div className="p-4 md:mx-[10%] lg:mx-[15%]">
           {/* Reward Section */}
           <section className="card mb-6 premium-card interactive-element">
-            <h2 className="text-label mb-4">REWARD</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-label">REWARD</h2>
+              <div className="flex gap-2">
+                {/* Reload Configs Button */}
+                {isDevelopment && (
+                  <button
+                    onClick={handleReloadConfigs}
+                    disabled={reloadingConfigs}
+                    className="text-xs px-3 py-1 rounded-full border bg-blue-500/20 border-blue-400 text-blue-400 hover:bg-blue-500/30 transition-all disabled:opacity-50"
+                    title="Force reload contract configs from Firestore"
+                  >
+                    {reloadingConfigs ? "⟳ Reloading..." : "🔄 Reload Configs"}
+                  </button>
+                )}
+                {/* Test Mode Toggle (only in development) */}
+                {isDevelopment && (
+                  <button
+                    onClick={() => setTestMode(!testMode)}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                      testMode
+                        ? "bg-[#DA9C2F]/20 border-[#DA9C2F] text-[#DA9C2F]"
+                        : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
+                    }`}
+                    title="Enable test mode to simulate NFT from GZv3n contract"
+                  >
+                    {testMode ? "✓ Test Mode ON" : "Test Mode"}
+                  </button>
+                )}
+              </div>
+            </div>
+            {isDevelopment && testMode && (
+              <div className="mb-4 p-3 bg-[#DA9C2F]/10 border border-[#DA9C2F]/30 rounded-lg">
+                <p className="text-[#DA9C2F] text-sm font-semibold mb-1">
+                  🧪 Test Mode Active
+                </p>
+                <p className="text-white/70 text-xs">
+                  Simulating 1 NFT from contract:
+                  GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb
+                </p>
+                <p className="text-white/50 text-xs mt-1">
+                  Check your mining rate below to see the reward calculation.
+                </p>
+              </div>
+            )}
             <div className="text-left space-y-4">
               {/* Total Claimable */}
               <div className="flex justify-between items-start">
