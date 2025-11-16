@@ -219,17 +219,17 @@ export default function WalletPage() {
   // Test NFT for GZv3n contract (only in development)
   const TEST_NFT = useMemo(
     (): NFTMetadata => ({
-      id: "test-gzv3n-001",
-      name: "Test NFT - GZv3n Contract",
-      description: "Test NFT from GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
+      id: "test-ezjhz-001",
+      name: "Test NFT - Realmkin Mass Mint",
+      description: "Test NFT from EzjhzaTBqXohJTsaMKFSX6fgXcDJyXAV85NK7RK79u3Z",
       image: "/realmkin-1.webp",
-      contractAddress: "GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
+      contractAddress: "EzjhzaTBqXohJTsaMKFSX6fgXcDJyXAV85NK7RK79u3Z",
       tokenId: "TEST001",
       rarity: "LEGENDARY",
       power: 1000,
       attributes: [
         { trait_type: "Class", value: "Test" },
-        { trait_type: "Contract", value: "GZv3n" },
+        { trait_type: "Contract", value: "Realmkin Mass Mint" },
         { trait_type: "Purpose", value: "Rewards Testing" },
       ],
     }),
@@ -682,8 +682,10 @@ export default function WalletPage() {
                   🧪 Test Mode Active
                 </p>
                 <p className="text-white/70 text-xs">
-                  Simulating 1 NFT from contract:
-                  GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb
+                  Simulating 1 NFT from contract: Realmkin Mass Mint
+                </p>
+                <p className="text-white/60 text-xs mt-1">
+                  EzjhzaTBqXohJTsaMKFSX6fgXcDJyXAV85NK7RK79u3Z
                 </p>
                 <p className="text-white/50 text-xs mt-1">
                   Check your mining rate below to see the reward calculation.

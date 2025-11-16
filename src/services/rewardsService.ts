@@ -264,7 +264,7 @@ class RewardsService {
       const v = d.data() as ContractDoc;
 
       console.log(`\n📄 Document ID: ${d.id}`);
-      console.log(`   Raw data:`, v);
+      console.log(`   Raw data:`, JSON.stringify(v, null, 2));
 
       // Parse tiers if they exist (new format)
       let tiers:
@@ -298,12 +298,14 @@ class RewardsService {
             : Boolean(v.is_active ?? true),
       };
 
-      console.log(`   Parsed config:`, parsedConfig);
+      console.log(`   Parsed config:`, JSON.stringify(parsedConfig, null, 2));
 
       map.set(d.id, parsedConfig);
     });
 
-    console.log(`\n✅ Loaded ${map.size} contract configs into cache\n`);
+    console.log(`\n✅ Loaded ${map.size} contract configs into cache`);
+    console.log(`📋 Contract addresses in cache:`, Array.from(map.keys()));
+    console.log('');
 
     this.contractConfigCache = { loadedAt: now, map };
     return map;
@@ -326,6 +328,7 @@ class RewardsService {
 
     console.log("🔍 Rewards Calculation Debug:");
     console.log("NFTs by contract:", Object.fromEntries(nftsByContract));
+    console.log("Available configs:", Array.from(configs.keys()));
 
     // Calculate rewards for each contract
     for (const [addr, count] of nftsByContract.entries()) {

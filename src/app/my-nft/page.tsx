@@ -81,17 +81,17 @@ const SAMPLE_NFTS: NFTMetadata[] = [
   },
   {
     id: "test-nft-4",
-    name: "Test NFT - GZv3n Contract",
+    name: "Test NFT - Realmkin Mass Mint",
     description:
-      "Test NFT from GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb contract",
+      "Test NFT from EzjhzaTBqXohJTsaMKFSX6fgXcDJyXAV85NK7RK79u3Z contract",
     image: "/realmkin-1.webp",
-    contractAddress: "GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
+    contractAddress: "EzjhzaTBqXohJTsaMKFSX6fgXcDJyXAV85NK7RK79u3Z",
     tokenId: "TEST001",
     rarity: "LEGENDARY",
     power: 1000,
     attributes: [
       { trait_type: "Class", value: "Test" },
-      { trait_type: "Contract", value: "GZv3n" },
+      { trait_type: "Contract", value: "Realmkin Mass Mint" },
       { trait_type: "Purpose", value: "Rewards Testing" },
     ],
   },
