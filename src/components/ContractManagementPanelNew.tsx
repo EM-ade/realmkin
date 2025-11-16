@@ -99,21 +99,30 @@ export default function ContractManagementPanel({
             ? (v.updatedAt as { toDate?: () => Date }).toDate?.() || new Date()
             : (v.updatedAt as Date | string | undefined) || new Date();
 
-        // Parse tiers
+        // Parse tiers - handle both old and new format
         let tiers: RewardTier[] = [];
-        if (Array.isArray(v.tiers)) {
-          tiers = v.tiers.map((t: unknown) => {
-            const tier = t as {
-              minNFTs?: unknown;
-              maxNFTs?: unknown;
-              weeklyRate?: unknown;
-            };
-            return {
-              minNFTs: Number(tier.minNFTs || 0),
-              maxNFTs: Number(tier.maxNFTs || 0),
-              weeklyRate: Number(tier.weeklyRate || 0),
-            };
-          });
+
+        if (Array.isArray(v.tiers) && v.tiers.length > 0) {
+          // New format with tiers array
+          tiers = v.tiers
+            .map((t: unknown) => {
+              const tier = t as {
+                minNFTs?: unknown;
+                maxNFTs?: unknown;
+                weeklyRate?: unknown;
+              };
+              return {
+                minNFTs: Number(tier.minNFTs || 1),
+                maxNFTs: Number(tier.maxNFTs || 999),
+                weeklyRate: Number(tier.weeklyRate || 200),
+              };
+            })
+            .filter((t) => t.minNFTs > 0 && t.maxNFTs > 0 && t.weeklyRate > 0);
+        }
+
+        // If no valid tiers, use default tier
+        if (tiers.length === 0) {
+          tiers = [{ minNFTs: 1, maxNFTs: 999, weeklyRate: 200 }];
         }
 
         return {
@@ -124,11 +133,8 @@ export default function ContractManagementPanel({
           name: typeof v.name === "string" ? v.name : "",
           blockchain:
             typeof v.blockchain === "string" ? v.blockchain : "solana",
-          tiers:
-            tiers.length > 0
-              ? tiers
-              : [{ minNFTs: 1, maxNFTs: 999, weeklyRate: 200 }],
-          welcome_bonus: Number(v.welcome_bonus ?? 0) || 0,
+          tiers,
+          welcome_bonus: Number(v.welcome_bonus ?? 200) || 200,
           is_active: Boolean(v.is_active ?? true),
           created_at: (createdRaw instanceof Date
             ? createdRaw
