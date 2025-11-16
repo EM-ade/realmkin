@@ -305,7 +305,7 @@ class RewardsService {
 
     console.log(`\n✅ Loaded ${map.size} contract configs into cache`);
     console.log(`📋 Contract addresses in cache:`, Array.from(map.keys()));
-    console.log('');
+    console.log("");
 
     this.contractConfigCache = { loadedAt: now, map };
     return map;
@@ -621,7 +621,8 @@ class RewardsService {
     }
 
     const now = new Date();
-    const weeklyRate = currentNFTCount * this.WEEKLY_RATE_PER_NFT;
+    // Use the weeklyRate from userRewards (already calculated with tier-based logic)
+    const weeklyRate = userRewards.weeklyRate || 0;
     const lastClaimDate = this.convertToValidDate(claimDate, now);
 
     const timeSinceLastClaim = now.getTime() - lastClaimDate.getTime();
