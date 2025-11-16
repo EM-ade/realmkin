@@ -73,15 +73,9 @@ class RewardsService {
   private readonly MAX_CLAIMS_PER_WINDOW = 3;
 
   // Mirror a delta to the unified ledger via Gatekeeper API (client-side only)
-  private async postLedger(
-    delta: number,
-    reason: string,
-    refId: string,
-  ): Promise<void> {
+  private async postLedger(delta: number, reason: string, refId: string): Promise<void> {
     try {
-      const base =
-        process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
-        "https://gatekeeper-bot.fly.dev";
+      const base = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
       const auth = getAuth();
       const user = auth.currentUser;
       if (!user) return;
@@ -104,33 +98,20 @@ class RewardsService {
       if (timestamp instanceof Date) {
         return isNaN(timestamp.getTime()) ? fallbackDate : timestamp;
       }
-
-      if (
-        timestamp &&
-        typeof timestamp === "object" &&
-        "toDate" in timestamp &&
-        typeof (timestamp as { toDate: () => Date }).toDate === "function"
-      ) {
+      
+      if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp && typeof (timestamp as { toDate: () => Date }).toDate === 'function') {
         const date = (timestamp as { toDate: () => Date }).toDate();
         return isNaN(date.getTime()) ? fallbackDate : date;
       }
-
-      if (
-        timestamp &&
-        (typeof timestamp === "string" || typeof timestamp === "number")
-      ) {
+      
+      if (timestamp && (typeof timestamp === 'string' || typeof timestamp === 'number')) {
         const date = new Date(timestamp);
         return isNaN(date.getTime()) ? fallbackDate : date;
       }
-
+      
       return fallbackDate;
     } catch (error) {
-      console.warn(
-        "Error converting timestamp to Date:",
-        error,
-        "Using fallback date:",
-        fallbackDate.toISOString(),
-      );
+      console.warn("Error converting timestamp to Date:", error, "Using fallback date:", fallbackDate.toISOString());
       return fallbackDate;
     }
   }
@@ -181,9 +162,7 @@ class RewardsService {
 
       if (now - windowStart < this.RATE_LIMIT_WINDOW) {
         if (attempts >= this.MAX_CLAIMS_PER_WINDOW) {
-          throw new Error(
-            "Rate limit exceeded. Please wait before trying again.",
-          );
+          throw new Error("Rate limit exceeded. Please wait before trying again.");
         }
 
         await updateDoc(rateLimitRef, {
@@ -209,158 +188,72 @@ class RewardsService {
   // ---- Contract Config Cache (Firestore) ----
   private contractConfigCache: {
     loadedAt: number;
-    map: Map<
-      string,
-      {
-        weekly_rate?: number;
-        tiers?: Array<{ minNFTs: number; maxNFTs: number; weeklyRate: number }>;
-        welcome_bonus: number;
-        is_active: boolean;
-      }
-    >;
+    map: Map<string, { weekly_rate: number; welcome_bonus: number; is_active: boolean }>;
   } | null = null;
 
   private async loadContractConfigs(force = false) {
     const now = Date.now();
-    if (
-      !force &&
-      this.contractConfigCache &&
-      now - this.contractConfigCache.loadedAt < 60_000
-    ) {
+    if (!force && this.contractConfigCache && now - this.contractConfigCache.loadedAt < 60_000) {
       return this.contractConfigCache.map;
     }
 
     const snap = await getDocs(collection(db, "contractBonusConfigs"));
-    const map = new Map<
-      string,
-      {
-        weekly_rate?: number;
-        tiers?: Array<{ minNFTs: number; maxNFTs: number; weeklyRate: number }>;
-        welcome_bonus: number;
-        is_active: boolean;
-      }
-    >();
+    const map = new Map<string, { weekly_rate: number; welcome_bonus: number; is_active: boolean }>();
     type ContractDoc = {
       weekly_rate?: unknown;
-      tiers?: unknown;
       welcome_bonus?: unknown;
       is_active?: unknown;
     };
     snap.forEach((d) => {
       const v = d.data() as ContractDoc;
-
-      // Parse tiers if they exist (new format)
-      let tiers:
-        | Array<{ minNFTs: number; maxNFTs: number; weeklyRate: number }>
-        | undefined;
-      if (Array.isArray(v.tiers) && v.tiers.length > 0) {
-        tiers = v.tiers
-          .map((t: unknown) => {
-            const tier = t as {
-              minNFTs?: unknown;
-              maxNFTs?: unknown;
-              weeklyRate?: unknown;
-            };
-            return {
-              minNFTs: Number(tier.minNFTs || 1),
-              maxNFTs: Number(tier.maxNFTs || 999),
-              weeklyRate: Number(tier.weeklyRate || 0),
-            };
-          })
-          .filter((t) => t.minNFTs > 0 && t.maxNFTs > 0 && t.weeklyRate > 0);
-      }
-
       map.set(d.id, {
-        weekly_rate:
-          v.weekly_rate !== undefined ? Number(v.weekly_rate) || 0 : undefined,
-        tiers: tiers && tiers.length > 0 ? tiers : undefined,
+        weekly_rate: Number(v.weekly_rate ?? 0) || 0,
         welcome_bonus: Number(v.welcome_bonus ?? 0) || 0,
-        is_active:
-          typeof v.is_active === "boolean"
-            ? v.is_active
-            : Boolean(v.is_active ?? true),
+        is_active: typeof v.is_active === 'boolean' ? v.is_active : Boolean(v.is_active ?? true),
       });
     });
     this.contractConfigCache = { loadedAt: now, map };
     return map;
   }
 
-  // Calculate weekly rate using Firestore configs; supports both tier-based and legacy weekly_rate
-  private async calculateWeeklyRate(
-    nfts: Array<{ contractAddress: string }>,
-    userId?: string,
-  ): Promise<number> {
+  // Calculate weekly rate using Firestore configs; default to base for unknown contracts (Option A)
+  private async calculateWeeklyRate(nfts: Array<{ contractAddress: string }>, userId?: string): Promise<number> {
     const configs = await this.loadContractConfigs();
     let totalWeeklyRewards = 0;
 
-    // Group NFTs by contract address for tier-based calculation
-    const nftsByContract = new Map<string, number>();
     for (const nft of nfts) {
       const addr = nft.contractAddress;
-      nftsByContract.set(addr, (nftsByContract.get(addr) || 0) + 1);
-    }
-
-    // Calculate rewards for each contract
-    for (const [addr, count] of nftsByContract.entries()) {
       const cfg = configs.get(addr);
-
       if (cfg && cfg.is_active) {
-        // New tier-based format
-        if (cfg.tiers && cfg.tiers.length > 0) {
-          // Find the matching tier for this NFT count
-          const matchingTier = cfg.tiers.find(
-            (tier) => count >= tier.minNFTs && count <= tier.maxNFTs,
-          );
-
-          if (matchingTier) {
-            // Tier-based: weeklyRate is the total rate for the tier range, not per NFT
-            totalWeeklyRewards += matchingTier.weeklyRate;
-          } else {
-            // If no tier matches, use the highest tier's rate as fallback
-            const highestTier = cfg.tiers.reduce((max, tier) =>
-              tier.maxNFTs > max.maxNFTs ? tier : max,
-            );
-            totalWeeklyRewards += highestTier.weeklyRate;
-          }
-        }
-        // Legacy weekly_rate format (per NFT)
-        else if (cfg.weekly_rate !== undefined) {
-          totalWeeklyRewards += Math.max(0, cfg.weekly_rate) * count;
-        }
-        // No config for this contract, use default
-        else {
-          totalWeeklyRewards += this.WEEKLY_RATE_PER_NFT * count;
-        }
+        totalWeeklyRewards += Math.max(0, cfg.weekly_rate);
       } else {
-        // Default base rate (applies to unconfigured or inactive contracts)
-        totalWeeklyRewards += this.WEEKLY_RATE_PER_NFT * count;
+        // Default base rate (Option A), applies also to eTQujiFK... if not configured
+        totalWeeklyRewards += this.WEEKLY_RATE_PER_NFT;
       }
     }
-
+    
     // Add user-specific bonus if exists
     if (userId) {
       const bonusRate = await this.getUserBonusRate(userId);
       totalWeeklyRewards += bonusRate;
     }
-
+    
     return totalWeeklyRewards;
   }
-
+  
   // Get user-specific bonus weekly rate from Firestore
   private async getUserBonusRate(userId: string): Promise<number> {
     try {
       const userRewardsRef = doc(db, "userRewards", userId);
       const userDoc = await getDoc(userRewardsRef);
-
+      
       if (userDoc.exists()) {
         const data = userDoc.data();
-        return typeof data.bonusWeeklyRate === "number"
-          ? Math.max(0, data.bonusWeeklyRate)
-          : 0;
+        return typeof data.bonusWeeklyRate === 'number' ? Math.max(0, data.bonusWeeklyRate) : 0;
       }
       return 0;
     } catch (error) {
-      console.error("Error fetching user bonus rate:", error);
+      console.error('Error fetching user bonus rate:', error);
       return 0;
     }
   }
@@ -368,7 +261,7 @@ class RewardsService {
   // Compute welcome bonus for any newly detected NFTs per contract
   private async computeAndRecordWelcomeBonuses(
     userId: string,
-    nfts: Array<{ contractAddress: string }>,
+    nfts: Array<{ contractAddress: string }>
   ): Promise<number> {
     if (!nfts || nfts.length === 0) return 0;
     const configs = await this.loadContractConfigs();
@@ -381,40 +274,22 @@ class RewardsService {
 
     let totalBonus = 0;
     for (const [contractAddress, currentCount] of counts) {
-      const grantRef = doc(
-        db,
-        "contractWelcomeGrants",
-        `${userId}_${contractAddress}`,
-      );
+      const grantRef = doc(db, "contractWelcomeGrants", `${userId}_${contractAddress}`);
       const grantSnap = await getDoc(grantRef);
       type GrantDoc = { lastCount?: unknown };
-      const prevCount = grantSnap.exists()
-        ? Number((grantSnap.data() as GrantDoc).lastCount ?? 0)
-        : 0;
+      const prevCount = grantSnap.exists() ? Number(((grantSnap.data() as GrantDoc).lastCount ?? 0)) : 0;
       const delta = Math.max(0, currentCount - prevCount);
       if (delta === 0) continue;
 
       const cfg = configs.get(contractAddress);
-      const bonusPer =
-        cfg && cfg.is_active
-          ? Math.max(0, cfg.welcome_bonus)
-          : this.NEW_NFT_BONUS;
+      const bonusPer = cfg && cfg.is_active ? Math.max(0, cfg.welcome_bonus) : this.NEW_NFT_BONUS;
       const grantAmount = delta * bonusPer;
       totalBonus += grantAmount;
 
       if (grantSnap.exists()) {
-        await updateDoc(grantRef, {
-          lastCount: currentCount,
-          updatedAt: new Date(),
-        });
+        await updateDoc(grantRef, { lastCount: currentCount, updatedAt: new Date() });
       } else {
-        await setDoc(grantRef, {
-          userId,
-          contractAddress,
-          lastCount: currentCount,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
+        await setDoc(grantRef, { userId, contractAddress, lastCount: currentCount, createdAt: new Date(), updatedAt: new Date() });
       }
     }
 
@@ -425,16 +300,13 @@ class RewardsService {
     userId: string,
     walletAddress: string,
     nftCount: number,
-    nfts: Array<{ contractAddress: string }> = [],
+    nfts: Array<{contractAddress: string}> = []
   ): Promise<UserRewards> {
     const userRewardsRef = doc(db, "userRewards", userId);
     const existingDoc = await getDoc(userRewardsRef);
 
     const now = new Date();
-    const weeklyRate =
-      nfts.length > 0
-        ? await this.calculateWeeklyRate(nfts, userId)
-        : nftCount * this.WEEKLY_RATE_PER_NFT;
+    const weeklyRate = nfts.length > 0 ? await this.calculateWeeklyRate(nfts, userId) : nftCount * this.WEEKLY_RATE_PER_NFT;
 
     if (existingDoc.exists()) {
       const existingData = existingDoc.data() as UserRewards;
@@ -447,11 +319,8 @@ class RewardsService {
         totalClaimed: existingData.totalClaimed || 0,
         totalRealmkin: existingData.totalRealmkin || 0,
         pendingRewards: existingData.pendingRewards || 0,
-        lastCalculated: this.convertToValidDate(
-          existingData.lastCalculated,
-          now,
-        ),
-        lastClaimed: existingData.lastClaimed
+        lastCalculated: this.convertToValidDate(existingData.lastCalculated, now),
+        lastClaimed: existingData.lastClaimed 
           ? this.convertToValidDate(existingData.lastClaimed, now)
           : null,
         createdAt: this.convertToValidDate(existingData.createdAt, now),
@@ -460,14 +329,10 @@ class RewardsService {
 
       const previousNFTCount = processedData.totalNFTs;
       // Compute welcome bonuses per contract using tracked counts
-      const newNFTBonus =
-        nfts.length > 0
-          ? await this.computeAndRecordWelcomeBonuses(userId, nfts)
-          : Math.max(0, nftCount - previousNFTCount) * this.NEW_NFT_BONUS;
-      const weeklyRewards =
-        nfts.length > 0
-          ? await this.calculateWeeklyRate(nfts, userId)
-          : nftCount * this.WEEKLY_RATE_PER_NFT;
+      const newNFTBonus = nfts.length > 0
+        ? await this.computeAndRecordWelcomeBonuses(userId, nfts)
+        : Math.max(0, nftCount - previousNFTCount) * this.NEW_NFT_BONUS;
+      const weeklyRewards = nfts.length > 0 ? await this.calculateWeeklyRate(nfts, userId) : nftCount * this.WEEKLY_RATE_PER_NFT;
 
       const updatedData: Partial<UserRewards> = {
         totalNFTs: nftCount,
@@ -490,14 +355,10 @@ class RewardsService {
         ...updatedData,
       } as UserRewards;
     } else {
-      const welcomeBonus =
-        nfts.length > 0
-          ? await this.computeAndRecordWelcomeBonuses(userId, nfts)
-          : nftCount * this.NEW_NFT_BONUS;
-      const weeklyRewards =
-        nfts.length > 0
-          ? await this.calculateWeeklyRate(nfts, userId)
-          : nftCount * this.WEEKLY_RATE_PER_NFT;
+      const welcomeBonus = nfts.length > 0
+        ? await this.computeAndRecordWelcomeBonuses(userId, nfts)
+        : nftCount * this.NEW_NFT_BONUS;
+      const weeklyRewards = nfts.length > 0 ? await this.calculateWeeklyRate(nfts, userId) : nftCount * this.WEEKLY_RATE_PER_NFT;
       const totalInitialRewards = weeklyRewards + welcomeBonus;
 
       const newUserRewards: UserRewards = {
@@ -516,12 +377,8 @@ class RewardsService {
       };
 
       if (nftCount > 0) {
-        console.log(
-          `🎁 Welcome bonus: ${nftCount} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${welcomeBonus}`,
-        );
-        console.log(
-          `⛏️ Weekly mining rewards: ₥${weeklyRewards} (varies by contract)`,
-        );
+        console.log(`🎁 Welcome bonus: ${nftCount} NFTs × ₥${this.NEW_NFT_BONUS} = ₥${welcomeBonus}`);
+        console.log(`⛏️ Weekly mining rewards: ₥${weeklyRewards} (varies by contract)`);
         console.log(`💰 Total initial rewards: ₥${totalInitialRewards}`);
       }
 
@@ -535,7 +392,7 @@ class RewardsService {
   calculatePendingRewards(
     userRewards: UserRewards,
     currentNFTCount: number,
-    bypassWaitTime: boolean = false,
+    bypassWaitTime: boolean = false
   ): RewardsCalculation {
     if (!this.validateNFTCount(currentNFTCount)) {
       console.error("Invalid NFT count:", currentNFTCount);
@@ -543,8 +400,7 @@ class RewardsService {
     }
 
     const claimDate = userRewards.lastClaimed || userRewards.createdAt;
-    const claimDateTime =
-      claimDate instanceof Date ? claimDate.getTime() : new Date().getTime();
+    const claimDateTime = claimDate instanceof Date ? claimDate.getTime() : new Date().getTime();
 
     const cacheKey = `${userRewards.userId}_${currentNFTCount}_${claimDateTime}_${bypassWaitTime}`;
 
@@ -557,30 +413,20 @@ class RewardsService {
     const lastClaimDate = this.convertToValidDate(claimDate, now);
 
     const timeSinceLastClaim = now.getTime() - lastClaimDate.getTime();
-    const weeksElapsed = Math.floor(
-      timeSinceLastClaim / this.MILLISECONDS_PER_WEEK,
-    );
+    const weeksElapsed = Math.floor(timeSinceLastClaim / this.MILLISECONDS_PER_WEEK);
 
     let nextClaimDate;
-    if (
-      now.getTime() >
-      lastClaimDate.getTime() + weeksElapsed * this.MILLISECONDS_PER_WEEK
-    ) {
-      const remainingTime =
-        this.MILLISECONDS_PER_WEEK -
-        (timeSinceLastClaim % this.MILLISECONDS_PER_WEEK);
+    if (now.getTime() > lastClaimDate.getTime() + (weeksElapsed * this.MILLISECONDS_PER_WEEK)) {
+      const remainingTime = this.MILLISECONDS_PER_WEEK - (timeSinceLastClaim % this.MILLISECONDS_PER_WEEK);
       nextClaimDate = new Date(now.getTime() + remainingTime);
     } else {
       nextClaimDate = new Date(
-        lastClaimDate.getTime() +
-          (weeksElapsed + 1) * this.MILLISECONDS_PER_WEEK,
+        lastClaimDate.getTime() + (weeksElapsed + 1) * this.MILLISECONDS_PER_WEEK
       );
     }
 
     const accumulatedReward = weeklyRate * weeksElapsed;
-    const canClaim =
-      (bypassWaitTime || weeksElapsed >= 1) &&
-      accumulatedReward >= this.MIN_CLAIM_AMOUNT;
+    const canClaim = (bypassWaitTime || weeksElapsed >= 1) && accumulatedReward >= this.MIN_CLAIM_AMOUNT;
 
     const result = {
       totalNFTs: currentNFTCount,
@@ -602,7 +448,7 @@ class RewardsService {
     if (docSnap.exists()) {
       const data = docSnap.data() as UserRewards;
       const now = new Date();
-
+      
       return {
         ...data,
         totalNFTs: data.totalNFTs || 0,
@@ -611,7 +457,7 @@ class RewardsService {
         totalClaimed: data.totalClaimed || 0,
         pendingRewards: data.pendingRewards || 0,
         lastCalculated: this.convertToValidDate(data.lastCalculated, now),
-        lastClaimed: data.lastClaimed
+        lastClaimed: data.lastClaimed 
           ? this.convertToValidDate(data.lastClaimed, now)
           : null,
         createdAt: this.convertToValidDate(data.createdAt, now),
@@ -625,7 +471,7 @@ class RewardsService {
   async claimRewards(
     userId: string,
     walletAddress: string,
-    bypassWaitTime: boolean = false,
+    bypassWaitTime: boolean = false
   ): Promise<ClaimRecord> {
     if (!this.validateUserId(userId)) {
       throw new Error("Invalid user ID");
@@ -649,7 +495,7 @@ class RewardsService {
     const calculation = this.calculatePendingRewards(
       userRewards,
       userRewards.totalNFTs,
-      bypassWaitTime,
+      bypassWaitTime
     );
 
     if (!calculation.canClaim) {
@@ -680,7 +526,7 @@ class RewardsService {
       const currentCalculation = this.calculatePendingRewards(
         currentUserRewards,
         currentUserRewards.totalNFTs,
-        bypassWaitTime,
+        bypassWaitTime
       );
 
       if (!currentCalculation.canClaim) {
@@ -726,13 +572,13 @@ class RewardsService {
 
   async getClaimHistory(
     userId: string,
-    limitCount: number = 10,
+    limitCount: number = 10
   ): Promise<ClaimRecord[]> {
     const claimsQuery = query(
       collection(db, "claimRecords"),
       where("userId", "==", userId),
       orderBy("claimedAt", "desc"),
-      limit(limitCount),
+      limit(limitCount)
     );
 
     const querySnapshot = await getDocs(claimsQuery);
@@ -748,13 +594,13 @@ class RewardsService {
 
   async getClaimHistoryByWallet(
     walletAddress: string,
-    limitCount: number = 10,
+    limitCount: number = 10
   ): Promise<ClaimRecord[]> {
     const claimsQuery = query(
       collection(db, "claimRecords"),
       where("walletAddress", "==", walletAddress),
       orderBy("claimedAt", "desc"),
-      limit(limitCount),
+      limit(limitCount)
     );
 
     const querySnapshot = await getDocs(claimsQuery);
@@ -771,7 +617,7 @@ class RewardsService {
   async getTotalClaimedByWallet(walletAddress: string): Promise<number> {
     const claimsQuery = query(
       collection(db, "claimRecords"),
-      where("walletAddress", "==", walletAddress),
+      where("walletAddress", "==", walletAddress)
     );
 
     const querySnapshot = await getDocs(claimsQuery);
@@ -781,14 +627,12 @@ class RewardsService {
     }, 0);
   }
 
-  async saveTransactionHistory(
-    transaction: Omit<TransactionHistory, "id" | "createdAt">,
-  ): Promise<void> {
+  async saveTransactionHistory(transaction: Omit<TransactionHistory, "id" | "createdAt">): Promise<void> {
     const now = new Date();
     const transactionId = `${transaction.userId}_${now.getTime()}_${Math.random().toString(36).substr(2, 9)}`;
-
+    
     const transactionRef = doc(db, "transactionHistory", transactionId);
-
+    
     await setDoc(transactionRef, {
       ...transaction,
       id: transactionId,
@@ -798,13 +642,13 @@ class RewardsService {
 
   async getTransactionHistory(
     userId: string,
-    limitCount: number = 10,
+    limitCount: number = 10
   ): Promise<TransactionHistory[]> {
     const transactionsQuery = query(
       collection(db, "transactionHistory"),
       where("userId", "==", userId),
       orderBy("createdAt", "desc"),
-      limit(limitCount),
+      limit(limitCount)
     );
 
     const querySnapshot = await getDocs(transactionsQuery);
@@ -820,13 +664,13 @@ class RewardsService {
 
   async getTransactionHistoryByWallet(
     walletAddress: string,
-    limitCount: number = 10,
+    limitCount: number = 10
   ): Promise<TransactionHistory[]> {
     const transactionsQuery = query(
       collection(db, "transactionHistory"),
       where("walletAddress", "==", walletAddress),
       orderBy("createdAt", "desc"),
-      limit(limitCount),
+      limit(limitCount)
     );
 
     const querySnapshot = await getDocs(transactionsQuery);
@@ -843,7 +687,7 @@ class RewardsService {
   async transferMKIN(
     senderUserId: string,
     recipientUserId: string,
-    amount: number,
+    amount: number
   ): Promise<void> {
     if (!this.validateUserId(senderUserId)) {
       throw new Error("Invalid sender user ID");
@@ -912,7 +756,7 @@ class RewardsService {
   async getUserIdByWallet(walletAddress: string): Promise<string | null> {
     try {
       const walletDoc = await getDoc(
-        doc(db, "wallets", walletAddress.toLowerCase()),
+        doc(db, "wallets", walletAddress.toLowerCase())
       );
 
       if (!walletDoc.exists()) {
@@ -949,7 +793,7 @@ class RewardsService {
 
     const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
     const hours = Math.floor(
-      (timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+      (timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
     );
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 

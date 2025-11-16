@@ -40,7 +40,13 @@ const NFTCarousel = dynamic(() => import("@/components/NFTCarousel"), {
 function Home() {
   const router = useRouter();
   const { user, userData } = useAuth();
-  const { connectWallet, disconnectWallet, account, isConnected, isConnecting } = useWeb3();
+  const {
+    connectWallet,
+    disconnectWallet,
+    account,
+    isConnected,
+    isConnecting,
+  } = useWeb3();
   const { nfts } = useNFT();
   const { setIsNewUser, startOnboarding, setStartingStep } = useOnboarding();
   const isMobile = useIsMobile();
@@ -60,15 +66,22 @@ function Home() {
     if (userData && !userData.username) {
       // Trigger onboarding for new users via context (no localStorage)
       setIsNewUser(true);
-      setStartingStep('username'); // Skip wallet step since they're already connected
+      setStartingStep("username"); // Skip wallet step since they're already connected
       startOnboarding();
-      router.push('/onboarding');
+      router.push("/onboarding");
       return;
     }
-    
+
     // Otherwise proceed with normal wallet connection
     await connectWallet();
-  }, [userData, connectWallet, router, setIsNewUser, setStartingStep, startOnboarding]);
+  }, [
+    userData,
+    connectWallet,
+    router,
+    setIsNewUser,
+    setStartingStep,
+    startOnboarding,
+  ]);
 
   // Fetch user rewards from Firebase
   useEffect(() => {
@@ -113,7 +126,11 @@ function Home() {
     if (!user?.uid) return;
     setDiscordConnecting(true);
     // Open OAuth flow in a new tab to avoid navigating away from the app
-    const win = window.open("/api/discord/login", "_blank", "noopener,noreferrer");
+    const win = window.open(
+      "/api/discord/login",
+      "_blank",
+      "noopener,noreferrer",
+    );
     if (!win) {
       // Fallback if pop-up blocked
       window.location.href = "/api/discord/login";
@@ -143,7 +160,7 @@ function Home() {
       setDiscordUnlinking(false);
     }
   }, [user, gatekeeperBase]);
-  
+
   // When wallet is disconnected, keep Discord linked
   const handleWalletDisconnect = useCallback(async () => {
     try {
@@ -153,8 +170,6 @@ function Home() {
       console.error("Wallet disconnect error:", error);
     }
   }, [disconnectWallet]);
-
-  
 
   // Calculate stats
   const nftCount = nfts?.length || 0;
@@ -168,7 +183,11 @@ function Home() {
       { label: "Home", href: "/", icon: "/dashboard.png" },
       { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
       { label: "Staking", href: "/staking", icon: "/staking.png" },
-      { label: "Marketplace", href: "/marketplace", icon: "/marketplace_logo.png" },
+      {
+        label: "Marketplace",
+        href: "/marketplace",
+        icon: "/marketplace_logo.png",
+      },
       { label: "Game", href: "/game", icon: "/game.png" },
       { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
       { label: "Merches", href: "/merches", icon: "/merches.png" },

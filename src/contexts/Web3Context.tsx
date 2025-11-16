@@ -11,10 +11,14 @@ import {
 import { isValidSolanaAddress } from "@/utils/formatAddress";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/config/firebase";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 
 // Enhanced error message function for Solana wallet connections with mobile support
 interface ConnectionErrorResponse {
@@ -24,75 +28,90 @@ interface ConnectionErrorResponse {
   downloadUrl?: string;
 }
 
-const getSolanaConnectionErrorMessage = (error: Error, isMobile: boolean = false): ConnectionErrorResponse => {
-  const errorMessage = error?.message || '';
+const getSolanaConnectionErrorMessage = (
+  error: Error,
+  isMobile: boolean = false,
+): ConnectionErrorResponse => {
+  const errorMessage = error?.message || "";
 
-  if (errorMessage.includes('User rejected') || errorMessage.includes('User denied')) {
+  if (
+    errorMessage.includes("User rejected") ||
+    errorMessage.includes("User denied")
+  ) {
     return {
       title: "⚔️ CONNECTION REJECTED",
-      message: "The wallet guardian has denied access. Please approve the connection request to link your Solana wallet to the Realmkin realm.",
-      showRetry: false
+      message:
+        "The wallet guardian has denied access. Please approve the connection request to link your Solana wallet to the Realmkin realm.",
+      showRetry: false,
     };
   }
 
-  if (errorMessage.includes('Invalid Solana address')) {
+  if (errorMessage.includes("Invalid Solana address")) {
     return {
       title: "🔮 INVALID WALLET",
-      message: "Please ensure you're connecting a valid Solana wallet. This app only supports Solana addresses.",
-      showRetry: true
+      message:
+        "Please ensure you're connecting a valid Solana wallet. This app only supports Solana addresses.",
+      showRetry: true,
     };
   }
 
-  if (errorMessage.includes('Connection timeout')) {
+  if (errorMessage.includes("Connection timeout")) {
     return {
       title: "⏰ CONNECTION TIMEOUT",
-      message: isMobile 
+      message: isMobile
         ? "Wallet connection timed out. This can happen when switching between browser and wallet app. Please ensure you return to the browser after approving the connection in Phantom."
         : "Wallet connection timed out. This can happen when the wallet app is slow to respond. Please try again.",
-      showRetry: true
+      showRetry: true,
     };
   }
 
-  if (errorMessage.includes('Mobile connection failed')) {
+  if (errorMessage.includes("Mobile connection failed")) {
     return {
       title: "📱 MOBILE CONNECTION ISSUE",
-      message: "Failed to connect on mobile. Please ensure you have the Phantom app installed and try again. If the issue persists, try clearing your browser cache.",
-      showRetry: true
+      message:
+        "Failed to connect on mobile. Please ensure you have the Phantom app installed and try again. If the issue persists, try clearing your browser cache.",
+      showRetry: true,
     };
   }
 
-  if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+  if (errorMessage.includes("network") || errorMessage.includes("connection")) {
     return {
       title: "🌐 NETWORK ISSUE",
-      message: "Network connection issue detected. Please check your internet connection and try again.",
-      showRetry: true
+      message:
+        "Network connection issue detected. Please check your internet connection and try again.",
+      showRetry: true,
     };
   }
 
-  if (errorMessage.includes('not found') || errorMessage.includes('unavailable')) {
+  if (
+    errorMessage.includes("not found") ||
+    errorMessage.includes("unavailable")
+  ) {
     return {
       title: isMobile ? "📱 PHANTOM APP REQUIRED" : "🔌 WALLET UNAVAILABLE",
       message: isMobile
         ? "Phantom app not found. Please install Phantom from the App Store or Google Play Store to connect your wallet."
         : "Wallet extension not detected. Please ensure your wallet is installed and enabled.",
       showRetry: false,
-      downloadUrl: isMobile ? "https://phantom.app/download" : undefined
+      downloadUrl: isMobile ? "https://phantom.app/download" : undefined,
     };
   }
-  
+
   return {
     title: isMobile ? "📱 MOBILE CONNECTION FAILED" : "🔮 CONNECTION FAILED",
     message: isMobile
       ? "Failed to connect to your Phantom wallet on mobile. This could be due to app switching issues. Please try again and ensure you return to the browser after approving the connection."
       : "Failed to connect to your Solana wallet. Please try again or ensure your wallet is properly installed.",
-    showRetry: true
+    showRetry: true,
   };
 };
 
 // Detect if running on mobile device
 const isMobileDevice = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (typeof window === "undefined") return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  );
 };
 
 interface Web3ContextType {
@@ -135,7 +154,12 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const phantomEventListenerRef = useRef<(() => void) | null>(null);
 
   // Bridge to Solana Wallet Adapter state
-  const { publicKey, connected, connecting, disconnect: adapterDisconnect } = useWallet();
+  const {
+    publicKey,
+    connected,
+    connecting,
+    disconnect: adapterDisconnect,
+  } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
   const router = useRouter();
 
@@ -143,7 +167,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const autoAuthenticateFirebase = async (walletAddress: string) => {
     try {
       const auth = getAuth();
-      
+
       if (auth.currentUser) {
         if (auth.currentUser.uid) {
           setUid(auth.currentUser.uid);
@@ -156,12 +180,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       const tempPassword = walletAddress;
 
       console.log(`🔐 Authenticating wallet: ${walletAddress}`);
-      
+
       // Check if we're in onboarding - if so, don't navigate
-      const isOnboarding = localStorage.getItem('onboarding_active') === 'true';
-      
+      const isOnboarding = localStorage.getItem("onboarding_active") === "true";
+
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, tempEmail, tempPassword);
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          tempEmail,
+          tempPassword,
+        );
         setUid(userCredential.user.uid);
 
         // Store wallet address in original case (Solana addresses are case-sensitive)
@@ -171,13 +199,13 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         const walletDocRef = doc(db, "wallets", walletLower);
         const walletDoc = await getDoc(walletDocRef);
         if (!walletDoc.exists()) {
-          console.log('📝 Creating missing wallet mapping...');
-          await setDoc(walletDocRef, { 
+          console.log("📝 Creating missing wallet mapping...");
+          await setDoc(walletDocRef, {
             uid: userCredential.user.uid,
             walletAddress: walletAddress, // Store in original case
-            createdAt: new Date()
+            createdAt: new Date(),
           });
-          console.log('✅ Wallet mapping created');
+          console.log("✅ Wallet mapping created");
         }
 
         // Ensure user profile exists
@@ -185,57 +213,64 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           const userDocRef = doc(db, "users", userCredential.user.uid);
           const userDoc = await getDoc(userDocRef);
           if (!userDoc.exists()) {
-            console.log('📝 Creating missing user profile...');
+            console.log("📝 Creating missing user profile...");
             await setDoc(userDocRef, {
               walletAddress: walletAddress, // Store in original case
               createdAt: new Date(),
             });
-            console.log('✅ User profile created');
+            console.log("✅ User profile created");
           }
         } catch (profileErr) {
-          console.warn('⚠️ Failed to ensure user profile exists:', profileErr);
+          console.warn("⚠️ Failed to ensure user profile exists:", profileErr);
         }
 
-        console.log('✅ Sign-in successful');
+        console.log("✅ Sign-in successful");
       } catch (error: unknown) {
         const authError = error as { code?: string };
-        if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
-          console.log('ℹ️ No account found. Attempting to create profile...');
+        if (
+          authError.code === "auth/user-not-found" ||
+          authError.code === "auth/invalid-credential"
+        ) {
+          console.log("ℹ️ No account found. Attempting to create profile...");
           try {
             // Try to create a new account instead of redirecting
-            const newUserCredential = await createUserWithEmailAndPassword(auth, tempEmail, tempPassword);
+            const newUserCredential = await createUserWithEmailAndPassword(
+              auth,
+              tempEmail,
+              tempPassword,
+            );
             setUid(newUserCredential.user.uid);
-            
+
             // Create wallet mapping (lowercased key for lookup, but store original case)
             const walletLower = walletAddress.toLowerCase();
             const walletDocRef = doc(db, "wallets", walletLower);
-            await setDoc(walletDocRef, { 
+            await setDoc(walletDocRef, {
               uid: newUserCredential.user.uid,
               walletAddress: walletAddress, // Store in original case
-              createdAt: new Date()
+              createdAt: new Date(),
             });
-            
+
             // Create user profile
             const userDocRef = doc(db, "users", newUserCredential.user.uid);
             await setDoc(userDocRef, {
               walletAddress: walletAddress, // Store in original case
               createdAt: new Date(),
             });
-            
-            console.log('✅ New account created successfully');
+
+            console.log("✅ New account created successfully");
           } catch (createErr) {
-            console.error('🚨 Failed to create account:', createErr);
+            console.error("🚨 Failed to create account:", createErr);
             // Only redirect if we're not already on the login page and not during onboarding
-            if (!window.location.pathname.includes('/login') && !isOnboarding) {
+            if (!window.location.pathname.includes("/login") && !isOnboarding) {
               router.push(`/login?wallet=${walletAddress}`);
             }
           }
         } else {
-          console.error('🚨 Firebase sign-in error:', error);
+          console.error("🚨 Firebase sign-in error:", error);
         }
       }
     } catch (error) {
-      console.error('🚨 Auto-authentication process failed:', error);
+      console.error("🚨 Auto-authentication process failed:", error);
     }
   };
 
@@ -244,17 +279,26 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     try {
       setIsConnecting(Boolean(connecting));
       if (publicKey) {
-        const address = (publicKey as unknown as { toBase58?: () => string; toString: () => string }).toBase58?.() ?? publicKey.toString();
+        const address =
+          (
+            publicKey as unknown as {
+              toBase58?: () => string;
+              toString: () => string;
+            }
+          ).toBase58?.() ?? publicKey.toString();
         if (address && isValidSolanaAddress(address)) {
           setAccount(address);
           setIsConnected(true);
 
           // Cache connection for faster reloads
-          localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-            type: 'adapter',
-            address,
-            timestamp: Date.now(),
-          }));
+          localStorage.setItem(
+            "realmkin_cached_wallet",
+            JSON.stringify({
+              type: "adapter",
+              address,
+              timestamp: Date.now(),
+            }),
+          );
 
           // Auto-authenticate with Firebase (always authenticate, but don't redirect during onboarding)
           autoAuthenticateFirebase(address);
@@ -265,7 +309,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         setIsConnected(false);
       }
     } catch (e) {
-      console.log('Wallet adapter sync error:', e);
+      console.log("Wallet adapter sync error:", e);
     }
   }, [publicKey, connected, connecting, autoAuthenticateFirebase]);
 
@@ -287,18 +331,25 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
     const handleAccountChanged = (publicKey: unknown) => {
       console.log("🔍 Phantom account changed:", publicKey);
-      if (publicKey && typeof publicKey === 'object' && 'toString' in publicKey) {
+      if (
+        publicKey &&
+        typeof publicKey === "object" &&
+        "toString" in publicKey
+      ) {
         const address = publicKey.toString();
         if (isValidSolanaAddress(address)) {
           setAccount(address);
           setIsConnected(true);
-          
+
           // Update cached wallet data
-          localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-            type: 'phantom',
-            address: address,
-            timestamp: Date.now()
-          }));
+          localStorage.setItem(
+            "realmkin_cached_wallet",
+            JSON.stringify({
+              type: "phantom",
+              address: address,
+              timestamp: Date.now(),
+            }),
+          );
         }
       } else {
         // Account disconnected
@@ -313,15 +364,15 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
     // Add new listeners
     if (phantom.on) {
-      phantom.on('accountChanged', handleAccountChanged);
-      phantom.on('disconnect', handleDisconnect);
+      phantom.on("accountChanged", handleAccountChanged);
+      phantom.on("disconnect", handleDisconnect);
     }
 
     // Store cleanup function
     phantomEventListenerRef.current = () => {
       if (phantom.off) {
-        phantom.off('accountChanged', handleAccountChanged);
-        phantom.off('disconnect', handleDisconnect);
+        phantom.off("accountChanged", handleAccountChanged);
+        phantom.off("disconnect", handleDisconnect);
       }
     };
   };
@@ -356,7 +407,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         if (solanaWindow.phantom?.solana) {
           try {
             const phantom = solanaWindow.phantom.solana;
-            
+
             // Check if already connected
             if (phantom.isConnected) {
               const response = await phantom.connect();
@@ -364,7 +415,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
               if (address && isValidSolanaAddress(address)) {
                 connectedAddress = address;
-                walletType = 'phantom';
+                walletType = "phantom";
                 setupPhantomEventListeners(phantom);
               }
             }
@@ -376,9 +427,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
         // Try other wallets if Phantom didn't work
         const walletsToTry = [
-          { name: 'solflare', provider: solanaWindow.solflare },
-          { name: 'backpack', provider: solanaWindow.backpack },
-          { name: 'glow', provider: solanaWindow.glow }
+          { name: "solflare", provider: solanaWindow.solflare },
+          { name: "backpack", provider: solanaWindow.backpack },
+          { name: "glow", provider: solanaWindow.glow },
         ];
 
         for (const wallet of walletsToTry) {
@@ -388,7 +439,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               let address: string | null = null;
 
               // Handle different wallet response types
-              if (wallet.name === 'solflare') {
+              if (wallet.name === "solflare") {
                 // Type narrow to SolflareWallet
                 const solflareProvider = wallet.provider as SolflareWallet;
                 // Solflare returns boolean and stores publicKey on the wallet object
@@ -397,7 +448,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 }
               } else {
                 // Other wallets return object with publicKey property
-                address = (response as { publicKey?: { toString(): string } | string })?.publicKey?.toString() || null;
+                address =
+                  (
+                    response as { publicKey?: { toString(): string } | string }
+                  )?.publicKey?.toString() || null;
               }
 
               if (address && isValidSolanaAddress(address)) {
@@ -418,12 +472,15 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           setProvider(null);
 
           // Update cached wallet data
-          localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-            type: walletType,
-            address: connectedAddress,
-            timestamp: Date.now()
-          }));
-          
+          localStorage.setItem(
+            "realmkin_cached_wallet",
+            JSON.stringify({
+              type: walletType,
+              address: connectedAddress,
+              timestamp: Date.now(),
+            }),
+          );
+
           // Auto-authenticate with Firebase
           await autoAuthenticateFirebase(connectedAddress);
           return;
@@ -440,7 +497,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   }
 
   const checkCachedWalletConnection = async () => {
-    const cachedWallet = localStorage.getItem('realmkin_cached_wallet');
+    const cachedWallet = localStorage.getItem("realmkin_cached_wallet");
     if (!cachedWallet) return;
 
     try {
@@ -450,14 +507,14 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       // Only use cache if it's less than 2 hours old (more generous for mobile)
       if (cacheAge < 7200000) {
         const solanaWindow = window as WindowWithSolanaWallets;
-        
+
         // Try to reconnect based on cached wallet type with retry logic
         const maxRetries = 2;
         let retryCount = 0;
 
         while (retryCount < maxRetries) {
           try {
-            if (walletData.type === 'phantom' && solanaWindow.phantom?.solana) {
+            if (walletData.type === "phantom" && solanaWindow.phantom?.solana) {
               const phantom = solanaWindow.phantom.solana;
               const response = await phantom.connect();
               const address = response.publicKey.toString();
@@ -468,14 +525,20 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 setProvider(null);
                 setupPhantomEventListeners(phantom);
 
-                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                  type: 'phantom',
-                  address: address,
-                  timestamp: Date.now()
-                }));
+                localStorage.setItem(
+                  "realmkin_cached_wallet",
+                  JSON.stringify({
+                    type: "phantom",
+                    address: address,
+                    timestamp: Date.now(),
+                  }),
+                );
                 return;
               }
-            } else if (walletData.type === 'solflare' && solanaWindow.solflare) {
+            } else if (
+              walletData.type === "solflare" &&
+              solanaWindow.solflare
+            ) {
               const response = await solanaWindow.solflare.connect();
               let address: string | null = null;
 
@@ -489,14 +552,20 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 setIsConnected(true);
                 setProvider(null);
 
-                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                  type: 'solflare',
-                  address: address,
-                  timestamp: Date.now()
-                }));
+                localStorage.setItem(
+                  "realmkin_cached_wallet",
+                  JSON.stringify({
+                    type: "solflare",
+                    address: address,
+                    timestamp: Date.now(),
+                  }),
+                );
                 return;
               }
-            } else if (walletData.type === 'backpack' && solanaWindow.backpack) {
+            } else if (
+              walletData.type === "backpack" &&
+              solanaWindow.backpack
+            ) {
               const response = await solanaWindow.backpack.connect();
               const address = response.publicKey.toString();
 
@@ -505,14 +574,17 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 setIsConnected(true);
                 setProvider(null);
 
-                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                  type: 'backpack',
-                  address: address,
-                  timestamp: Date.now()
-                }));
+                localStorage.setItem(
+                  "realmkin_cached_wallet",
+                  JSON.stringify({
+                    type: "backpack",
+                    address: address,
+                    timestamp: Date.now(),
+                  }),
+                );
                 return;
               }
-            } else if (walletData.type === 'glow' && solanaWindow.glow) {
+            } else if (walletData.type === "glow" && solanaWindow.glow) {
               const response = await solanaWindow.glow.connect();
               const address = response.publicKey.toString();
 
@@ -521,11 +593,14 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 setIsConnected(true);
                 setProvider(null);
 
-                localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-                  type: 'glow',
-                  address: address,
-                  timestamp: Date.now()
-                }));
+                localStorage.setItem(
+                  "realmkin_cached_wallet",
+                  JSON.stringify({
+                    type: "glow",
+                    address: address,
+                    timestamp: Date.now(),
+                  }),
+                );
                 return;
               }
             }
@@ -533,20 +608,25 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           } catch (error) {
             retryCount++;
             if (retryCount >= maxRetries) {
-              console.log(`Failed to restore ${walletData.type} connection from cache after ${maxRetries} attempts:`, error);
+              console.log(
+                `Failed to restore ${walletData.type} connection from cache after ${maxRetries} attempts:`,
+                error,
+              );
               break;
             }
             // Wait before retrying (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * retryCount),
+            );
           }
         }
       } else {
         // Cache is too old, remove it
-        localStorage.removeItem('realmkin_cached_wallet');
+        localStorage.removeItem("realmkin_cached_wallet");
       }
     } catch (error) {
       console.log("Failed to restore cached wallet:", error);
-      localStorage.removeItem('realmkin_cached_wallet');
+      localStorage.removeItem("realmkin_cached_wallet");
     }
   };
 
@@ -560,53 +640,82 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       if (typeof window === "undefined") {
         showCustomAlert(
           "🔮 REALM ACCESS DENIED",
-          "Web3 functionality is not available in this environment."
+          "Web3 functionality is not available in this environment.",
         );
         return;
+      }
+
+      // Check for Brave Wallet interference
+      const solanaWindow = window as WindowWithSolanaWallets;
+      interface SolanaProviderCheck {
+        isBraveWallet?: boolean;
+        isPhantom?: boolean;
+      }
+      const solanaProvider = (window as { solana?: SolanaProviderCheck })
+        .solana;
+
+      if (solanaProvider?.isBraveWallet && !solanaProvider?.isPhantom) {
+        console.warn("⚠️ Brave Wallet detected - may interfere with Phantom");
+
+        // Check if Phantom is available at its dedicated namespace
+        if (!solanaWindow.phantom?.solana) {
+          showCustomAlert(
+            "⚠️ BRAVE WALLET DETECTED",
+            "Brave Wallet is blocking other wallets. Please disable it at brave://settings/wallet and set both Ethereum and Solana default wallets to 'None', then restart your browser.",
+          );
+          releaseConnectionLock();
+          return;
+        }
       }
 
       // Prefer opening the official adapter modal directly (we are inside WalletModalProvider)
       let opened = false;
       try {
         if (setWalletModalVisible) {
-          console.log('🔔 Opening Solana Wallet Adapter modal via context');
+          console.log("🔔 Opening Solana Wallet Adapter modal via context");
           setWalletModalVisible(true);
           opened = true;
-          
+
           // Add a small delay to ensure modal opens before releasing lock
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
       } catch (e) {
-        console.warn('⚠️ Failed to open adapter modal via context:', e);
+        console.warn("⚠️ Failed to open adapter modal via context:", e);
       }
 
       if (!opened) {
         try {
-          console.log('🔔 Dispatching event to open adapter modal');
-          window.dispatchEvent(new Event('realmkin:open-wallet-modal'));
+          console.log("🔔 Dispatching event to open adapter modal");
+          window.dispatchEvent(new Event("realmkin:open-wallet-modal"));
           opened = true;
-          
+
           // Add a small delay to ensure modal opens before releasing lock
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         } catch (e) {
-          console.warn('⚠️ Failed to open adapter modal via event:', e);
+          console.warn("⚠️ Failed to open adapter modal via event:", e);
         }
       }
 
       if (!opened) {
-        console.log('🔁 Falling back to custom wallet selector');
+        console.log("🔁 Falling back to custom wallet selector");
         showWalletSelection();
       } else {
         // Verify modal appeared; if not, fallback quickly for reliability
         setTimeout(() => {
           try {
-            const modalPresent = !!document.querySelector('[class*="wallet-adapter"]');
+            const modalPresent = !!document.querySelector(
+              '[class*="wallet-adapter"]',
+            );
             if (!modalPresent) {
-              console.log('⚠️ Adapter modal not detected in DOM; showing custom selector as fallback');
+              console.log(
+                "⚠️ Adapter modal not detected in DOM; showing custom selector as fallback",
+              );
               showWalletSelection();
             }
           } catch {
-            console.log('Modal presence check failed; showing fallback selector');
+            console.log(
+              "Modal presence check failed; showing fallback selector",
+            );
             showWalletSelection();
           }
         }, 400);
@@ -621,8 +730,14 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     connect(): Promise<{ publicKey: { toString(): string } }>;
     disconnect?(): Promise<void>;
     isConnected?: boolean;
-    on?(event: 'accountChanged' | 'disconnect', callback: (...args: unknown[]) => void): void;
-    off?(event: 'accountChanged' | 'disconnect', callback: (...args: unknown[]) => void): void;
+    on?(
+      event: "accountChanged" | "disconnect",
+      callback: (...args: unknown[]) => void,
+    ): void;
+    off?(
+      event: "accountChanged" | "disconnect",
+      callback: (...args: unknown[]) => void,
+    ): void;
   }
 
   interface SolflareWallet {
@@ -654,26 +769,36 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   }
 
   // Helper function to extract address from wallet response
-  const extractAddressFromResponse = (response: unknown, walletType: string): string | null => {
+  const extractAddressFromResponse = (
+    response: unknown,
+    walletType: string,
+  ): string | null => {
     try {
       switch (walletType) {
-        case 'phantom':
+        case "phantom":
           // Phantom returns { publicKey: { toString() } }
-          return (response as { publicKey?: { toString(): string } })?.publicKey?.toString() || null;
-        case 'solflare':
+          return (
+            (
+              response as { publicKey?: { toString(): string } }
+            )?.publicKey?.toString() || null
+          );
+        case "solflare":
           // Solflare returns { publicKey: string } directly
           return (response as { publicKey?: string })?.publicKey || null;
-        case 'backpack':
+        case "backpack":
           // Backpack returns { publicKey: string } directly
           return (response as { publicKey?: string })?.publicKey || null;
-        case 'glow':
+        case "glow":
           // Glow returns { publicKey: string } directly
           return (response as { publicKey?: string })?.publicKey || null;
         default:
           return null;
       }
     } catch (error) {
-      console.error(`Error extracting address from ${walletType} response:`, error);
+      console.error(
+        `Error extracting address from ${walletType} response:`,
+        error,
+      );
       return null;
     }
   };
@@ -699,14 +824,17 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         try {
           if (walletType === "phantom") {
             // Check if Phantom is available
-            if (typeof solanaWindow === "undefined" || !solanaWindow.phantom?.solana) {
+            if (
+              typeof solanaWindow === "undefined" ||
+              !solanaWindow.phantom?.solana
+            ) {
               // For mobile, check if we should use deep linking
               if (isMobile) {
                 showCustomAlert(
                   "📱 PHANTOM APP REQUIRED",
                   "Phantom app not found. Please install Phantom from the App Store or Google Play Store to connect your wallet.",
                   false,
-                  "https://phantom.app/download"
+                  "https://phantom.app/download",
                 );
                 return;
               } else {
@@ -714,7 +842,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                   "👻 PHANTOM NOT FOUND",
                   "Phantom wallet is not installed. Please install Phantom extension and try again.",
                   false,
-                  "https://phantom.app/"
+                  "https://phantom.app/",
                 );
                 return;
               }
@@ -724,31 +852,44 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
             // Special handling for mobile devices
             if (isMobile) {
-              console.log("📱 Mobile device detected, using mobile connection flow");
-              
+              console.log(
+                "📱 Mobile device detected, using mobile connection flow",
+              );
+
               // For mobile, we need to handle the connection differently
               // Use a shorter timeout for mobile since users need to switch apps
               const connectionPromise = phantom.connect();
-              const timeoutPromise = new Promise<never>((_, reject) => 
-                setTimeout(() => reject(new Error('Connection timeout')), 8000)
+              const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("Connection timeout")), 8000),
               );
 
-              const response = await Promise.race([connectionPromise, timeoutPromise]);
+              const response = await Promise.race([
+                connectionPromise,
+                timeoutPromise,
+              ]);
               connectedAddress = response.publicKey.toString();
             } else {
               // Standard desktop connection
               const connectionPromise = phantom.connect();
-              const timeoutPromise = new Promise<never>((_, reject) => 
-                setTimeout(() => reject(new Error('Connection timeout')), 10000)
+              const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(
+                  () => reject(new Error("Connection timeout")),
+                  10000,
+                ),
               );
 
-              const response = await Promise.race([connectionPromise, timeoutPromise]);
+              const response = await Promise.race([
+                connectionPromise,
+                timeoutPromise,
+              ]);
               connectedAddress = response.publicKey.toString();
             }
 
             // Validate this is a Solana address
             if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
-              throw new Error('Invalid Solana address received from Phantom wallet');
+              throw new Error(
+                "Invalid Solana address received from Phantom wallet",
+              );
             }
 
             // Setup event listeners (only for desktop)
@@ -758,21 +899,23 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
             // Cache the wallet connection - use sessionStorage for mobile for better reliability
             const storage = isMobile ? sessionStorage : localStorage;
-            storage.setItem('realmkin_cached_wallet', JSON.stringify({
-              type: 'phantom',
-              address: connectedAddress,
-              timestamp: Date.now(),
-              isMobile: isMobile
-            }));
+            storage.setItem(
+              "realmkin_cached_wallet",
+              JSON.stringify({
+                type: "phantom",
+                address: connectedAddress,
+                timestamp: Date.now(),
+                isMobile: isMobile,
+              }),
+            );
 
             setAccount(connectedAddress);
             setIsConnected(true);
             setProvider(null);
-            
+
             // Auto-authenticate with Firebase
             await autoAuthenticateFirebase(connectedAddress);
             return;
-
           } else if (walletType === "solflare") {
             // Check if Solflare is available
             if (typeof solanaWindow === "undefined" || !solanaWindow.solflare) {
@@ -780,7 +923,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 "🔥 SOLFLARE NOT FOUND",
                 "Solflare wallet is not installed. Please install Solflare extension and try again.",
                 false,
-                "https://solflare.com/"
+                "https://solflare.com/",
               );
               return;
             }
@@ -789,44 +932,64 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
             // Request connection with timeout
             const connectionPromise = solflare.connect();
-            const timeoutPromise = new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Connection timeout')), 10000)
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Connection timeout")), 10000),
             );
 
-            const response = await Promise.race([connectionPromise, timeoutPromise]);
-            
-            console.log('🔍 Solflare connection response:', response);
-            console.log('🔍 Solflare wallet object after connection:', solflare);
+            const response = await Promise.race([
+              connectionPromise,
+              timeoutPromise,
+            ]);
+
+            console.log("🔍 Solflare connection response:", response);
+            console.log(
+              "🔍 Solflare wallet object after connection:",
+              solflare,
+            );
 
             // Solflare returns boolean true on success, and stores publicKey on the wallet object
             if (response === true && solflare.publicKey) {
               connectedAddress = solflare.publicKey.toString();
-              console.log('🔍 Solflare publicKey from wallet object:', connectedAddress);
+              console.log(
+                "🔍 Solflare publicKey from wallet object:",
+                connectedAddress,
+              );
             } else {
-              console.error('❌ Solflare connection failed or publicKey not available');
-              throw new Error('Solflare connection failed or publicKey not available');
+              console.error(
+                "❌ Solflare connection failed or publicKey not available",
+              );
+              throw new Error(
+                "Solflare connection failed or publicKey not available",
+              );
             }
 
             if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
-              console.error('❌ Invalid Solana address from Solflare:', connectedAddress);
-              throw new Error('Invalid Solana address received from Solflare wallet');
+              console.error(
+                "❌ Invalid Solana address from Solflare:",
+                connectedAddress,
+              );
+              throw new Error(
+                "Invalid Solana address received from Solflare wallet",
+              );
             }
 
-            localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-              type: 'solflare',
-              address: connectedAddress,
-              timestamp: Date.now(),
-              isMobile: isMobile
-            }));
+            localStorage.setItem(
+              "realmkin_cached_wallet",
+              JSON.stringify({
+                type: "solflare",
+                address: connectedAddress,
+                timestamp: Date.now(),
+                isMobile: isMobile,
+              }),
+            );
 
             setAccount(connectedAddress);
             setIsConnected(true);
             setProvider(null);
-            
+
             // Auto-authenticate with Firebase
             await autoAuthenticateFirebase(connectedAddress);
             return;
-
           } else if (walletType === "backpack") {
             // Check if Backpack is available
             if (typeof solanaWindow === "undefined" || !solanaWindow.backpack) {
@@ -834,7 +997,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 "🎒 BACKPACK NOT FOUND",
                 "Backpack wallet is not installed. Please install Backpack extension and try again.",
                 false,
-                "https://backpack.app/"
+                "https://backpack.app/",
               );
               return;
             }
@@ -843,31 +1006,38 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
             // Request connection with timeout
             const connectionPromise = backpack.connect();
-            const timeoutPromise = new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Connection timeout')), 10000)
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Connection timeout")), 10000),
             );
 
-            const response = await Promise.race([connectionPromise, timeoutPromise]);
-            connectedAddress = extractAddressFromResponse(response, 'backpack');
+            const response = await Promise.race([
+              connectionPromise,
+              timeoutPromise,
+            ]);
+            connectedAddress = extractAddressFromResponse(response, "backpack");
 
             if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
-              throw new Error('Invalid Solana address received from Backpack wallet');
+              throw new Error(
+                "Invalid Solana address received from Backpack wallet",
+              );
             }
 
-            localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-              type: 'backpack',
-              address: connectedAddress,
-              timestamp: Date.now()
-            }));
+            localStorage.setItem(
+              "realmkin_cached_wallet",
+              JSON.stringify({
+                type: "backpack",
+                address: connectedAddress,
+                timestamp: Date.now(),
+              }),
+            );
 
             setAccount(connectedAddress);
             setIsConnected(true);
             setProvider(null);
-            
+
             // Auto-authenticate with Firebase
             await autoAuthenticateFirebase(connectedAddress);
             return;
-
           } else if (walletType === "glow") {
             // Check if Glow is available
             if (typeof solanaWindow === "undefined" || !solanaWindow.glow) {
@@ -875,7 +1045,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 "✨ GLOW NOT FOUND",
                 "Glow wallet is not installed. Please install Glow extension and try again.",
                 false,
-                "https://glow.app/"
+                "https://glow.app/",
               );
               return;
             }
@@ -884,52 +1054,64 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
             // Request connection with timeout
             const connectionPromise = glow.connect();
-            const timeoutPromise = new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Connection timeout')), 10000)
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Connection timeout")), 10000),
             );
 
-            const response = await Promise.race([connectionPromise, timeoutPromise]);
-            connectedAddress = extractAddressFromResponse(response, 'glow');
+            const response = await Promise.race([
+              connectionPromise,
+              timeoutPromise,
+            ]);
+            connectedAddress = extractAddressFromResponse(response, "glow");
 
             if (!connectedAddress || !isValidSolanaAddress(connectedAddress)) {
-              throw new Error('Invalid Solana address received from Glow wallet');
+              throw new Error(
+                "Invalid Solana address received from Glow wallet",
+              );
             }
 
-            localStorage.setItem('realmkin_cached_wallet', JSON.stringify({
-              type: 'glow',
-              address: connectedAddress,
-              timestamp: Date.now()
-            }));
+            localStorage.setItem(
+              "realmkin_cached_wallet",
+              JSON.stringify({
+                type: "glow",
+                address: connectedAddress,
+                timestamp: Date.now(),
+              }),
+            );
 
             setAccount(connectedAddress);
             setIsConnected(true);
             setProvider(null);
-            
+
             // Auto-authenticate with Firebase
             await autoAuthenticateFirebase(connectedAddress);
             return;
-
           } else {
             showCustomAlert(
               "🔮 UNSUPPORTED WALLET",
-              "This wallet type is not supported. Please use Phantom, Solflare, Backpack, or Glow."
+              "This wallet type is not supported. Please use Phantom, Solflare, Backpack, or Glow.",
             );
             return;
           }
-
         } catch (error: unknown) {
           retryCount++;
           if (retryCount >= maxRetries) {
-            console.error(`Error connecting wallet after ${maxRetries} attempts:`, error);
-            
+            console.error(
+              `Error connecting wallet after ${maxRetries} attempts:`,
+              error,
+            );
+
             // Use the utility function to get appropriate error message
-            const { title, message, showRetry } = getSolanaConnectionErrorMessage(error as Error);
+            const { title, message, showRetry } =
+              getSolanaConnectionErrorMessage(error as Error);
             showCustomAlert(title, message, showRetry);
             break;
           }
-          
+
           // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * retryCount),
+          );
         }
       }
     } finally {
@@ -937,7 +1119,6 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       releaseConnectionLock();
     }
   };
-
 
   const showWalletSelection = () => {
     const selectionDiv = document.createElement("div");
@@ -1017,7 +1198,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     }
 
     (window as unknown as WindowWithConnect).connectWallet = (
-      walletType: string
+      walletType: string,
     ): void => {
       connectSpecificWallet(walletType);
     };
@@ -1027,7 +1208,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     title: string,
     message: string,
     showRetry: boolean = false,
-    downloadUrl?: string
+    downloadUrl?: string,
   ) => {
     // Create custom modal-style alert
     const alertDiv = document.createElement("div");
@@ -1091,15 +1272,15 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     setAccount(null);
     setIsConnected(false);
     setProvider(null);
-    
+
     // Clear cached wallet connection
-    localStorage.removeItem('realmkin_cached_wallet');
+    localStorage.removeItem("realmkin_cached_wallet");
 
     // Also disconnect via adapter when available
     try {
       if (adapterDisconnect) adapterDisconnect();
     } catch (e) {
-      console.log('Adapter disconnect error:', e);
+      console.log("Adapter disconnect error:", e);
     }
   };
   const refreshWalletState = async () => {

@@ -31,13 +31,20 @@ const UserManagementDashboard = () => {
             ...doc.data(),
           }));
         } catch (e) {
-          console.log("userRewards collection not found, using users collection");
+          console.log(
+            "userRewards collection not found, using users collection",
+          );
         }
 
         // Fetch users collection
         const usersCollection = collection(db, "users");
         const usersSnapshot = await getDocs(usersCollection);
-        type UserDoc = { id: string; username: string; totalRealmkin?: number; [key: string]: unknown };
+        type UserDoc = {
+          id: string;
+          username: string;
+          totalRealmkin?: number;
+          [key: string]: unknown;
+        };
         const usersData = usersSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -81,10 +88,8 @@ const UserManagementDashboard = () => {
       (user.username &&
         user.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (user.walletAddress &&
-        user.walletAddress.toLowerCase().includes(searchTerm.toLowerCase()))
+        user.walletAddress.toLowerCase().includes(searchTerm.toLowerCase())),
   );
-
-
 
   return (
     <div className="text-white">
@@ -104,10 +109,18 @@ const UserManagementDashboard = () => {
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#DA9C2F]/20">
-              <th className="py-3 px-4 text-left text-sm font-bold text-[#DA9C2F]">Username</th>
-              <th className="py-3 px-4 text-left text-sm font-bold text-[#DA9C2F]">Wallet Address</th>
-              <th className="py-3 px-4 text-right text-sm font-bold text-[#DA9C2F]">Total MKIN</th>
-              <th className="py-3 px-4 text-center text-sm font-bold text-[#DA9C2F]">Action</th>
+              <th className="py-3 px-4 text-left text-sm font-bold text-[#DA9C2F]">
+                Username
+              </th>
+              <th className="py-3 px-4 text-left text-sm font-bold text-[#DA9C2F]">
+                Wallet Address
+              </th>
+              <th className="py-3 px-4 text-right text-sm font-bold text-[#DA9C2F]">
+                Total MKIN
+              </th>
+              <th className="py-3 px-4 text-center text-sm font-bold text-[#DA9C2F]">
+                Action
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -116,10 +129,13 @@ const UserManagementDashboard = () => {
                 key={user.id}
                 className="border-b border-[#DA9C2F]/10 hover:bg-[#DA9C2F]/5 transition-colors"
               >
-                <td className="py-3 px-4 text-sm font-medium">{user.username}</td>
-                <td className="py-3 px-4 text-sm font-mono text-[#DA9C2F]/80">
-                  {user.walletAddress.slice(0, 8)}...{user.walletAddress.slice(-8)}
+                <td className="py-3 px-4 text-sm font-medium">
+                  {user.username}
                 </td>
+                {/*<td className="py-3 px-4 text-sm font-mono text-[#DA9C2F]/80">
+                  {user.walletAddress.slice(0, 8)}...
+                  {user.walletAddress.slice(-8)}
+                </td>*/}
                 <td className="py-3 px-4 text-sm font-bold text-[#DA9C2F] text-right">
                   ₥{user.totalRealmkin.toLocaleString()}
                 </td>
@@ -154,12 +170,15 @@ const UserManagementDashboard = () => {
             <div className="flex justify-between items-start mb-3">
               <div>
                 <p className="font-bold text-white text-sm">{user.username}</p>
-                <p className="text-[#DA9C2F]/80 font-mono text-xs mt-1">
-                  {user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-6)}
-                </p>
+                {/*<p className="text-[#DA9C2F]/80 font-mono text-xs mt-1">
+                  {user.walletAddress.slice(0, 6)}...
+                  {user.walletAddress.slice(-6)}
+                </p>*/}
               </div>
               <div className="text-right">
-                <p className="text-[#DA9C2F] font-bold text-sm">₥{user.totalRealmkin.toLocaleString()}</p>
+                <p className="text-[#DA9C2F] font-bold text-sm">
+                  ₥{user.totalRealmkin.toLocaleString()}
+                </p>
                 <p className="text-white/40 text-xs mt-1">MKIN</p>
               </div>
             </div>
@@ -192,14 +211,14 @@ const UserManagementDashboard = () => {
           onUpdate={(updatedUser) => {
             setUsers((prevUsers) =>
               prevUsers.map((user) =>
-                user.id === updatedUser.id ? updatedUser : user
-              )
+                user.id === updatedUser.id ? updatedUser : user,
+              ),
             );
             setSelectedUser(updatedUser);
           }}
           onDelete={(userId) => {
             setUsers((prevUsers) =>
-              prevUsers.filter((user) => user.id !== userId)
+              prevUsers.filter((user) => user.id !== userId),
             );
             setIsModalOpen(false);
           }}
