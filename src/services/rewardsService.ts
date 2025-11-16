@@ -358,20 +358,25 @@ class RewardsService {
           );
 
           if (matchingTier) {
-            // Tier-based: weeklyRate is the total rate for the tier range, not per NFT
+            // Tier-based: weeklyRate is per-NFT rate, multiply by count
+            const reward = matchingTier.weeklyRate * count;
             console.log(
-              `   ✓ Matched tier: ${matchingTier.minNFTs}-${matchingTier.maxNFTs} NFTs = ${matchingTier.weeklyRate} MKIN/week`,
+              `   ✓ Matched tier: ${matchingTier.minNFTs}-${matchingTier.maxNFTs} NFTs @ ${matchingTier.weeklyRate} MKIN/NFT`,
             );
-            totalWeeklyRewards += matchingTier.weeklyRate;
+            console.log(
+              `   💰 Calculation: ${matchingTier.weeklyRate} × ${count} = ${reward} MKIN/week`,
+            );
+            totalWeeklyRewards += reward;
           } else {
             // If no tier matches, use the highest tier's rate as fallback
             const highestTier = cfg.tiers.reduce((max, tier) =>
               tier.maxNFTs > max.maxNFTs ? tier : max,
             );
+            const reward = highestTier.weeklyRate * count;
             console.log(
-              `   ⚠️ No matching tier, using highest: ${highestTier.weeklyRate} MKIN/week`,
+              `   ⚠️ No matching tier, using highest: ${highestTier.weeklyRate} MKIN/NFT × ${count} = ${reward} MKIN/week`,
             );
-            totalWeeklyRewards += highestTier.weeklyRate;
+            totalWeeklyRewards += reward;
           }
         }
         // Legacy weekly_rate format (per NFT) - ONLY if no tiers

@@ -29,7 +29,7 @@ Both formats are fully supported and backward compatible.
 
 **Calculation**: `totalRewards = weekly_rate × nftCount`
 
-Example: If a user holds 5 NFTs with `weekly_rate: 200`, they earn **1,000 MKIN/week**.
+Example: If a user holds 5 NFTs with `weekly_rate: 200`, they earn **5 × 200 = 1,000 MKIN/week**.
 
 ---
 
@@ -53,9 +53,11 @@ Example: If a user holds 5 NFTs with `weekly_rate: 200`, they earn **1,000 MKIN/
 }
 ```
 
-**Calculation**: System finds the matching tier based on NFT count and applies that tier's `weeklyRate`.
+**Calculation**: System finds the matching tier based on NFT count and applies that tier's `weeklyRate` as the **per-NFT rate**.
 
-Example: If a user holds 7 NFTs, the system matches the tier `{ minNFTs: 6, maxNFTs: 9, weeklyRate: 40 }`, so they earn **40 MKIN/week** total (not per NFT).
+Example: If a user holds 7 NFTs, the system matches the tier `{ minNFTs: 6, maxNFTs: 9, weeklyRate: 40 }`, so they earn **7 × 40 = 280 MKIN/week**.
+
+**Important**: The `weeklyRate` in tiers is the **rate per NFT**, not the total rate. Higher tiers give higher per-NFT rates to incentivize collecting more NFTs.
 
 ---
 
@@ -83,11 +85,11 @@ for (const [contractAddress, nftCount] of nftsByContract.entries()) {
   const config = contractConfigs.get(contractAddress);
   
   if (config.tiers) {
-    // NEW: Tier-based calculation
+    // NEW: Tier-based calculation (weeklyRate is per-NFT)
     const matchingTier = config.tiers.find(
       tier => nftCount >= tier.minNFTs && nftCount <= tier.maxNFTs
     );
-    totalRewards += matchingTier.weeklyRate;
+    totalRewards += matchingTier.weeklyRate * nftCount;
   } 
   else if (config.weekly_rate) {
     // LEGACY: Per-NFT calculation
@@ -204,11 +206,11 @@ Expected Rewards: 50 × 3 = 150 MKIN/week
 ### Scenario 2: Tier-Based Contract
 ```
 Config: { tiers: [
-  { minNFTs: 1, maxNFTs: 5, weeklyRate: 100 },
-  { minNFTs: 6, maxNFTs: 10, weeklyRate: 200 }
+  { minNFTs: 1, maxNFTs: 5, weeklyRate: 30 },
+  { minNFTs: 6, maxNFTs: 10, weeklyRate: 40 }
 ]}
 User NFTs: 7
-Expected Rewards: 200 MKIN/week (matches tier 2)
+Expected Rewards: 7 × 40 = 280 MKIN/week (matches tier 2, 40 MKIN per NFT)
 ```
 
 ### Scenario 3: Multiple Contracts
@@ -218,7 +220,7 @@ Contract B (tier): { tiers: [{ minNFTs: 1, maxNFTs: 999, weeklyRate: 50 }] }, Us
 
 Expected Rewards:
 - Contract A: 30 × 2 = 60 MKIN/week
-- Contract B: 50 MKIN/week
+- Contract B: 50 × 1 = 50 MKIN/week
 - Total: 110 MKIN/week
 ```
 
@@ -246,7 +248,7 @@ interface ContractConfig {
   tiers?: Array<{
     minNFTs: number;
     maxNFTs: number;
-    weeklyRate: number;
+    weeklyRate: number;  // Per-NFT rate for this tier
   }>;
   
   // Common fields
