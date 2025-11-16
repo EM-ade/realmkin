@@ -103,7 +103,7 @@ export async function claimTokens(
 export async function getClaimHistory(
   userId: string,
   limit: number = 10,
-): Promise<any> {
+): Promise<unknown> {
   try {
     // Get Firebase auth token for authentication
     const auth = getAuth();
