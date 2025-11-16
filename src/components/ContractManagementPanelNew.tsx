@@ -680,21 +680,27 @@ export default function ContractManagementPanel({
                 <div className="mt-4">
                   <p className="text-white/60 text-xs mb-2">Reward Tiers</p>
                   <div className="space-y-2">
-                    {contract.tiers.map((tier, idx) => (
-                      <div
-                        key={idx}
-                        className="flex justify-between items-center p-2 bg-[#1a1a1a]/50 rounded border border-[#DA9C2F]/10"
-                      >
-                        <span className="text-white/80 text-sm">
-                          {tier.minNFTs === tier.maxNFTs
-                            ? `${tier.minNFTs} NFT${tier.minNFTs > 1 ? "s" : ""}`
-                            : `${tier.minNFTs}-${tier.maxNFTs} NFTs`}
-                        </span>
-                        <span className="text-[#DA9C2F] font-semibold text-sm">
-                          {tier.weeklyRate} MKIN/week
-                        </span>
+                    {contract.tiers && contract.tiers.length > 0 ? (
+                      contract.tiers.map((tier, idx) => (
+                        <div
+                          key={idx}
+                          className="flex justify-between items-center p-2 bg-[#1a1a1a]/50 rounded border border-[#DA9C2F]/10"
+                        >
+                          <span className="text-white/80 text-sm">
+                            {tier.minNFTs === tier.maxNFTs
+                              ? `${tier.minNFTs} NFT${tier.minNFTs > 1 ? "s" : ""}`
+                              : `${tier.minNFTs}-${tier.maxNFTs} NFTs`}
+                          </span>
+                          <span className="text-[#DA9C2F] font-semibold text-sm">
+                            {tier.weeklyRate} MKIN/week
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-white/60 text-sm">
+                        No tiers configured
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
