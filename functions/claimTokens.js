@@ -139,8 +139,8 @@ async function transferMKINTokens(toWalletAddress, amount) {
     const fromTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(tokenMint, gatekeeperKeypair.publicKey);
     const toTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(tokenMint, toWallet);
     // Create transfer instruction
-    const instruction = (0, spl_token_1.createTransferCheckedInstruction)(fromTokenAccount, tokenMint, toTokenAccount, gatekeeperKeypair.publicKey, Math.floor(amount * 10 ** 6), // Assuming 6 decimals
-    6);
+    const instruction = (0, spl_token_1.createTransferCheckedInstruction)(fromTokenAccount, tokenMint, toTokenAccount, gatekeeperKeypair.publicKey, Math.floor(amount * 10 ** 9), // Using 9 decimals for MKIN token
+    9);
     // Create and send transaction
     const transaction = new web3_js_1.Transaction().add(instruction);
     transaction.feePayer = gatekeeperKeypair.publicKey;

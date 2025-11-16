@@ -172,8 +172,8 @@ async function transferMKINTokens(
     tokenMint,
     toTokenAccount,
     gatekeeperKeypair.publicKey,
-    Math.floor(amount * 10 ** 6), // Assuming 6 decimals
-    6
+    Math.floor(amount * 10 ** 9), // Using 9 decimals for MKIN token
+    9
   );
 
   // Create and send transaction

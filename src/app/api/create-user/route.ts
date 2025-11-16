@@ -15,10 +15,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate username
+    if (username.length < 3) {
+      return NextResponse.json(
+        { error: "Username must be at least 3 characters long" },
+        { status: 400 }
+      );
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return NextResponse.json(
+        { error: "Username can only contain letters, numbers, and underscores" },
+        { status: 400 }
+      );
+    }
+
     const auth = getAuth();
     const db = adminDb;
 
-    // Validate username
+    // Check if username is already taken
     const usernameDocRef = db.collection("usernames").doc(username.toLowerCase());
     const usernameDoc = await usernameDocRef.get();
     if (usernameDoc.exists) {
@@ -28,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize wallet address
+    // Normalize wallet address (store in lowercase for lookup, but keep original case for display)
     const walletLower = walletAddress.toLowerCase();
     
     // Use wallet address as UID (consistent identifier)
@@ -58,13 +73,17 @@ export async function POST(request: NextRequest) {
     
     batch.set(db.collection("users").doc(uid), {
       username,
-      walletAddress: walletLower,
+      walletAddress, // Store in original case
       createdAt: new Date(),
       lastLogin: new Date(),
     });
 
     batch.set(db.collection("usernames").doc(username.toLowerCase()), { uid });
-    batch.set(db.collection("wallets").doc(walletLower), { uid });
+    batch.set(db.collection("wallets").doc(walletLower), { 
+      uid,
+      walletAddress, // Store in original case
+      createdAt: new Date()
+    });
 
     await batch.commit();
 
@@ -73,6 +92,7 @@ export async function POST(request: NextRequest) {
         success: true,
         uid,
         username,
+        walletAddress, // Return original case wallet address
         message: "User created successfully",
       },
       { status: 201 }

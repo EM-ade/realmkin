@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import UserManagementDashboard from "@/components/UserManagementDashboard";
-import ContractManagementPanel from "@/components/ContractManagementPanel";
+import ContractManagementPanel from "@/components/ContractManagementPanelNew";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Link from "next/link";
 
 const AdminPage = () => {
-  const [activeTab, setActiveTab] = useState<"users" | "contracts" | "leaderboard">("users");
+  const [activeTab, setActiveTab] = useState<
+    "users" | "contracts" | "leaderboard"
+  >("users");
   const [showContractsPanel, setShowContractsPanel] = useState(false);
 
   const tabs = [
@@ -28,7 +30,9 @@ const AdminPage = () => {
                 <h1 className="text-3xl md:text-4xl font-bold tracking-widest gold-gradient-text">
                   ADMIN DASHBOARD
                 </h1>
-                <p className="text-white/60 text-sm mt-1">Manage users, contracts, and leaderboards</p>
+                <p className="text-white/60 text-sm mt-1">
+                  Manage users, contracts, and leaderboards
+                </p>
               </div>
               <Link
                 href="/"
@@ -66,8 +70,12 @@ const AdminPage = () => {
                 <div className="card premium-card interactive-element p-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <div>
-                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">User Management</h2>
-                      <p className="text-white/60 text-sm">Search, view, and manage user accounts</p>
+                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">
+                        User Management
+                      </h2>
+                      <p className="text-white/60 text-sm">
+                        Search, view, and manage user accounts
+                      </p>
                     </div>
                   </div>
                   <UserManagementDashboard />
@@ -81,8 +89,12 @@ const AdminPage = () => {
                 <div className="card premium-card interactive-element p-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <div>
-                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">Contract Bonuses</h2>
-                      <p className="text-white/60 text-sm">Configure NFT collections and mining bonuses</p>
+                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">
+                        Contract Bonuses
+                      </h2>
+                      <p className="text-white/60 text-sm">
+                        Configure NFT collections and mining bonuses
+                      </p>
                     </div>
                     <button
                       onClick={() => setShowContractsPanel(true)}
@@ -110,8 +122,12 @@ const AdminPage = () => {
                 <div className="card premium-card interactive-element p-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <div>
-                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">Leaderboard Management</h2>
-                      <p className="text-white/60 text-sm">View rankings, manage winners, and export data</p>
+                      <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">
+                        Leaderboard Management
+                      </h2>
+                      <p className="text-white/60 text-sm">
+                        View rankings, manage winners, and export data
+                      </p>
                     </div>
                     <Link
                       href="/admin/leaderboard"
@@ -122,9 +138,15 @@ const AdminPage = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-[#0f0f0f] rounded-lg p-4 border border-[#DA9C2F]/20">
-                      <p className="text-white/60 text-sm mb-2">Current Month</p>
-                      <p className="text-2xl font-bold text-[#DA9C2F]">Top 100</p>
-                      <p className="text-white/40 text-xs mt-1">Active players</p>
+                      <p className="text-white/60 text-sm mb-2">
+                        Current Month
+                      </p>
+                      <p className="text-2xl font-bold text-[#DA9C2F]">
+                        Top 100
+                      </p>
+                      <p className="text-white/40 text-xs mt-1">
+                        Active players
+                      </p>
                     </div>
                     <div className="bg-[#0f0f0f] rounded-lg p-4 border border-[#DA9C2F]/20">
                       <p className="text-white/60 text-sm mb-2">Features</p>

@@ -95,13 +95,13 @@ export function formatCurrency(amount: number, symbol: string = "$"): string {
  */
 export function isValidSolanaAddress(address: string): boolean {
   try {
-    // Solana addresses are 44 characters in base58
-    // Simple validation without requiring base58 library
-    if (address.length !== 44) return false;
+    // Solana addresses are base58 encoded and typically 32-44 characters
+    // More thorough validation than basic length/character checks
+    if (!address || address.length < 32 || address.length > 44) return false;
     
     // Check if it contains only valid base58 characters
-    const base58Chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-    return address.split("").every((char) => base58Chars.includes(char));
+    const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+    return base58Regex.test(address);
   } catch {
     return false;
   }

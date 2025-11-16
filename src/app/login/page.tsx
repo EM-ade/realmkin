@@ -260,6 +260,14 @@ function LoginPageContent() {
         if (existingUser) {
           console.log("✅ Existing user found:", existingUser.username);
 
+          // Ensure username is set
+          if (!existingUser.username) {
+            console.log("⚠️ User found but no username set, treating as new user");
+            setIsNewUser(true);
+            setAsyncState((prev) => ({ ...prev, checkingUser: false }));
+            return;
+          }
+
           // Store user data in local storage for faster future logins
           localStorage.setItem(
             `realmkin_user_${address.toLowerCase()}`,

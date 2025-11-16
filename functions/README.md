@@ -1,6 +1,6 @@
-# Firebase Functions - Auto Claim Rewards
+# Firebase Functions - Realmkin Backend Services
 
-This directory contains Firebase Functions for automatic reward claiming.
+This directory contains Firebase Functions for the Realmkin application, now organized into dedicated service modules.
 
 ## Setup Instructions
 
@@ -25,37 +25,42 @@ npm install
 firebase deploy --only functions
 ```
 
+## Service Structure
+
+Functions are now organized into dedicated service modules in the `src/services` directory:
+
+### Claiming Service
+Handles all token claiming operations including withdrawals of MKIN tokens to user wallets.
+
+### Staking Service
+Handles all NFT staking operations for earning rewards.
+
 ## Available Functions
 
-- **scheduledAutoClaim**: Runs automatically every day at 2:00 AM UTC
-- **manualAutoClaim**: HTTP endpoint for manual triggering (optional)
-- **autoClaimRewards**: Core function for testing
+- **claimTokens** (`processClaim`): Process token claims (withdrawals) to user wallets
+- **getClaimHistory**: Retrieve claim history for a user
+- **processStake**: Stake NFTs to earn rewards
+- **processUnstake**: Unstake NFTs
+- **getStakingHistory**: Retrieve staking history for a user
+- **recomputeStats**: Recompute statistics
+- **migrateStakes**: Migration function for stakes
+- **scheduledAutoClaim**: Runs automatically every day at 2:00 AM UTC (legacy)
 
 ## Configuration
 
-The function uses environment variables from your Firebase project. Make sure your Firebase project has the proper Firestore database structure with:
-- `userRewards` collection
-- `claimRecords` collection
+The functions use environment variables from your Firebase project. Make sure your Firebase project has the proper Firestore database structure with:
+- `users` collection
+- `claims` collection
+- `stakes` collection
+- `nfts` collection
 
 ## Testing
 
-You can test the function locally using the Firebase emulator:
+You can test the functions locally using the Firebase emulator:
 ```bash
 firebase emulators:start --only functions
 ```
 
-Or trigger the manual endpoint manually:
-```bash
-curl -X POST https://your-project-region-your-project-id.cloudfunctions.net/manualAutoClaim
-```
+## Migration
 
-## Scheduling
-
-The function is scheduled to run daily at 2:00 AM UTC. You can modify the schedule in `functions/index.js` by changing the cron expression:
-
-```javascript
-exports.scheduledAutoClaim = functions.pubsub.schedule('0 2 * * *')
-  .timeZone('UTC')
-  .onRun(async (context) => {
-    // Your function code
-  });
+The new service structure replaces the previous monolithic function files with dedicated service modules for better organization and maintainability.

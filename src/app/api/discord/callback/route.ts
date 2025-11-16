@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   const error = req.nextUrl.searchParams.get('error');
+  const state = req.nextUrl.searchParams.get('state') || '';
+  
+  // Extract Firebase token and wallet address from state if embedded
+  let firebaseToken = '';
+  let walletAddress = '';
+  
+  if (state.includes('__firebase_token:')) {
+    const parts = state.split('__firebase_token:');
+    if (parts.length > 1) {
+      firebaseToken = parts[1].split('__')[0]; // Extract token before next delimiter
+    }
+  }
+  
+  if (state.includes('__wallet_address:')) {
+    const parts = state.split('__wallet_address:');
+    if (parts.length > 1) {
+      walletAddress = parts[1].split('__')[0]; // Extract wallet address before next delimiter
+    }
+  }
+  
   if (error) {
     return NextResponse.redirect(new URL(`/discord/linked?status=error&reason=${encodeURIComponent(error)}`, req.url));
   }
@@ -99,12 +120,14 @@ export async function GET(req: NextRequest) {
     const discriminator = me.discriminator;
     console.log('[discord:callback] User profile fetched successfully:', { discordId, username });
 
-    // Redirect to client page to complete linking using Firebase token
+    // Redirect to client page to complete linking using Firebase token and wallet address
     const url = new URL('/discord/linked', req.url);
     url.searchParams.set('status', 'ok');
     url.searchParams.set('discordId', discordId);
     if (username) url.searchParams.set('username', username);
     if (discriminator) url.searchParams.set('disc', discriminator);
+    if (walletAddress) url.searchParams.set('wallet', walletAddress); // Pass wallet address through
+    if (firebaseToken) url.searchParams.set('firebase_token', firebaseToken); // Pass Firebase token through
     console.log('[discord:callback] Redirecting to linked page with status=ok');
     return NextResponse.redirect(url);
   } catch (e: unknown) {

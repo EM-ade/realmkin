@@ -44,9 +44,12 @@ export const isValidSolanaAddress = (address: string): boolean => {
   if (!address) return false;
   
   // Solana addresses are base58 encoded and typically 32-44 characters
-  return address.length >= 32 && 
-         address.length <= 44 && 
-         /^[1-9A-HJ-NP-Za-km-z]+$/.test(address);
+  // More thorough validation than basic length/character checks
+  if (address.length < 32 || address.length > 44) return false;
+  
+  // Check if it contains only valid base58 characters
+  const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+  return base58Regex.test(address);
 };
 
 /**

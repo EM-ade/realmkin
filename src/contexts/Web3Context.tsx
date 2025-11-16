@@ -572,6 +572,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           console.log('🔔 Opening Solana Wallet Adapter modal via context');
           setWalletModalVisible(true);
           opened = true;
+          
+          // Add a small delay to ensure modal opens before releasing lock
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (e) {
         console.warn('⚠️ Failed to open adapter modal via context:', e);
@@ -582,6 +585,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           console.log('🔔 Dispatching event to open adapter modal');
           window.dispatchEvent(new Event('realmkin:open-wallet-modal'));
           opened = true;
+          
+          // Add a small delay to ensure modal opens before releasing lock
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (e) {
           console.warn('⚠️ Failed to open adapter modal via event:', e);
         }
@@ -931,7 +937,6 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       releaseConnectionLock();
     }
   };
-
 
 
   const showWalletSelection = () => {

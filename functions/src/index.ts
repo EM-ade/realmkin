@@ -1,4 +1,5 @@
 export { recomputeStats } from "./metrics";
-export { processUnstake } from "./unstake";
 export { migrateStakes } from "./migrateStakes";
-export { claimTokens, getClaimHistory } from "./claimTokens";
+export { processUnstake } from "./unstake";
+export { processClaim as claimTokens, getClaimHistory } from "./services/claimingService";
+export { processStake, getStakingHistory } from "./services/stakingService";

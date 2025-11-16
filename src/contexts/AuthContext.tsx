@@ -117,11 +117,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Starting signup process for:", email);
 
-      // Skip username checking for now due to connection issues
-      // const isAvailable = await checkUsernameAvailability(username);
-      // if (!isAvailable) {
-      //   throw new Error("Username is already taken");
-      // }
+      // Validate username
+      if (!username || username.length < 3) {
+        throw new Error("Username must be at least 3 characters long");
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        throw new Error("Username can only contain letters, numbers, and underscores");
+      }
+
+      // Check username availability
+      const isAvailable = await checkUsernameAvailability(username);
+      if (!isAvailable) {
+        throw new Error("Username is already taken");
+      }
 
       // Create user account
       console.log("Creating user account...");
@@ -133,7 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const user = userCredential.user;
       console.log("User account created:", user.uid);
 
-      // Save user data to Firestore (skip for now if connection issues)
+      // Save user data to Firestore
       try {
         const userData: UserData = {
           username,
@@ -149,13 +158,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           uid: user.uid,
         });
 
-        // Only create wallet mapping if username is provided and walletAddress exists
-        if (walletAddress && username) {
+        // Only create wallet mapping if walletAddress exists
+        if (walletAddress) {
           const walletMappingPath = `wallets/${walletAddress.toLowerCase()}`;
           console.log("🔧 Creating wallet mapping at:", walletMappingPath);
           await setDoc(doc(db, "wallets", walletAddress.toLowerCase()), {
             uid: user.uid,
-            username: username,
+            walletAddress: walletAddress, // Store in original case
             createdAt: new Date(),
           });
           console.log(
@@ -185,7 +194,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.log("✅ Successfully logged in existing user");
 
             // Now try to create the missing wallet mapping and user data
-            if (walletAddress && username) {
+            if (walletAddress) {
               try {
                 const currentUser = auth.currentUser;
                 if (currentUser) {
@@ -207,7 +216,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     doc(db, "wallets", walletAddress.toLowerCase()),
                     {
                       uid: currentUser.uid,
-                      username: username,
+                      walletAddress: walletAddress, // Store in original case
                       createdAt: new Date(),
                     }
                   );
