@@ -216,40 +216,25 @@ export default function WalletPage() {
     }>
   >([]);
 
-  // Reload contract configs handler
-  const handleReloadConfigs = useCallback(async () => {
-    if (!user || !account) return;
-
-    setReloadingConfigs(true);
-    try {
-      console.log("🔄 Manually reloading contract configs...");
-      await rewardsService.reloadContractConfigs();
-      // Refetch NFTs to trigger recalculation
-      await fetchUserNFTs();
-      console.log("✅ Configs reloaded and rewards recalculated");
-    } catch (error) {
-      console.error("Error reloading configs:", error);
-    } finally {
-      setReloadingConfigs(false);
-    }
-  }, [user, account, fetchUserNFTs]);
-
   // Test NFT for GZv3n contract (only in development)
-  const TEST_NFT: NFTMetadata = {
-    id: "test-gzv3n-001",
-    name: "Test NFT - GZv3n Contract",
-    description: "Test NFT from GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
-    image: "/realmkin-1.webp",
-    contractAddress: "GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
-    tokenId: "TEST001",
-    rarity: "LEGENDARY",
-    power: 1000,
-    attributes: [
-      { trait_type: "Class", value: "Test" },
-      { trait_type: "Contract", value: "GZv3n" },
-      { trait_type: "Purpose", value: "Rewards Testing" },
-    ],
-  };
+  const TEST_NFT = useMemo(
+    (): NFTMetadata => ({
+      id: "test-gzv3n-001",
+      name: "Test NFT - GZv3n Contract",
+      description: "Test NFT from GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
+      image: "/realmkin-1.webp",
+      contractAddress: "GZv3nDEoD9poH1PN8A9oMUQCZo77ZeBq4peK9MYFq9Rb",
+      tokenId: "TEST001",
+      rarity: "LEGENDARY",
+      power: 1000,
+      attributes: [
+        { trait_type: "Class", value: "Test" },
+        { trait_type: "Contract", value: "GZv3n" },
+        { trait_type: "Purpose", value: "Rewards Testing" },
+      ],
+    }),
+    [],
+  );
 
   const fetchUserNFTs = useCallback(async () => {
     if (!account || !user) return;
@@ -300,7 +285,25 @@ export default function WalletPage() {
     } finally {
       setNftLoading(false);
     }
-  }, [account, user, testMode, isDevelopment]);
+  }, [account, user, testMode, isDevelopment, TEST_NFT]);
+
+  // Reload contract configs handler
+  const handleReloadConfigs = useCallback(async () => {
+    if (!user || !account) return;
+
+    setReloadingConfigs(true);
+    try {
+      console.log("🔄 Manually reloading contract configs...");
+      await rewardsService.reloadContractConfigs();
+      // Refetch NFTs to trigger recalculation
+      await fetchUserNFTs();
+      console.log("✅ Configs reloaded and rewards recalculated");
+    } catch (error) {
+      console.error("Error reloading configs:", error);
+    } finally {
+      setReloadingConfigs(false);
+    }
+  }, [user, account, fetchUserNFTs]);
 
   // Removed unified balance fetching
 
