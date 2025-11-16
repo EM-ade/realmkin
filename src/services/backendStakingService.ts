@@ -14,80 +14,81 @@ export interface StakeResponse {
  */
 export async function stakeNFT(
   nftId: string,
-  walletAddress: string
+  walletAddress: string,
 ): Promise<StakeResponse> {
   try {
     // Validate inputs
     if (!nftId) {
       return {
         success: false,
-        error: "NFT ID is required"
+        error: "NFT ID is required",
       };
     }
 
     if (!walletAddress) {
       return {
         success: false,
-        error: "Wallet address is required"
+        error: "Wallet address is required",
       };
     }
 
     // Get Firebase auth token for authentication
     const auth = getAuth();
     const user = auth.currentUser;
-    
+
     if (!user) {
       return {
         success: false,
-        error: "User must be authenticated"
+        error: "User must be authenticated",
       };
     }
-    
+
     const token = await user.getIdToken();
 
     // Get backend service URL from environment variables
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
-    
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
+
     // Call the new backend service
     const response = await fetch(`${backendUrl}/api/staking/stake`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         userId: user.uid,
         nftId: nftId,
-        walletAddress: walletAddress
-      })
+        walletAddress: walletAddress,
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return {
         success: false,
-        error: errorData.error || `HTTP error! status: ${response.status}`
+        error: errorData.error || `HTTP error! status: ${response.status}`,
       };
     }
 
     const data = await response.json();
-    
+
     if (data.success) {
       return {
         success: true,
-        stakeId: data.stakeId
+        stakeId: data.stakeId,
       };
     } else {
       return {
         success: false,
-        error: data.error || "Failed to stake NFT"
+        error: data.error || "Failed to stake NFT",
       };
     }
   } catch (error) {
     console.error("Error staking NFT:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred"
+      error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   }
 }
@@ -97,73 +98,72 @@ export async function stakeNFT(
  * @param stakeId The stake ID to unstake
  * @returns StakeResponse with success status and stake ID
  */
-export async function unstakeNFT(
-  stakeId: string
-): Promise<StakeResponse> {
+export async function unstakeNFT(stakeId: string): Promise<StakeResponse> {
   try {
     // Validate inputs
     if (!stakeId) {
       return {
         success: false,
-        error: "Stake ID is required"
+        error: "Stake ID is required",
       };
     }
 
     // Get Firebase auth token for authentication
     const auth = getAuth();
     const user = auth.currentUser;
-    
+
     if (!user) {
       return {
         success: false,
-        error: "User must be authenticated"
+        error: "User must be authenticated",
       };
     }
-    
+
     const token = await user.getIdToken();
 
     // Get backend service URL from environment variables
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
-    
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
+
     // Call the new backend service
     const response = await fetch(`${backendUrl}/api/staking/unstake`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         userId: user.uid,
-        stakeId: stakeId
-      })
+        stakeId: stakeId,
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return {
         success: false,
-        error: errorData.error || `HTTP error! status: ${response.status}`
+        error: errorData.error || `HTTP error! status: ${response.status}`,
       };
     }
 
     const data = await response.json();
-    
+
     if (data.success) {
       return {
         success: true,
-        stakeId: data.stakeId
+        stakeId: data.stakeId,
       };
     } else {
       return {
         success: false,
-        error: data.error || "Failed to unstake NFT"
+        error: data.error || "Failed to unstake NFT",
       };
     }
   } catch (error) {
     console.error("Error unstaking NFT:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred"
+      error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   }
 }
@@ -176,33 +176,39 @@ export async function unstakeNFT(
  */
 export async function getStakingHistory(
   userId: string,
-  limit: number = 10
-): Promise<any> {
+  limit: number = 10,
+): Promise<unknown> {
   try {
     // Get Firebase auth token for authentication
     const auth = getAuth();
     const user = auth.currentUser;
-    
+
     if (!user) {
       throw new Error("User must be authenticated");
     }
-    
+
     const token = await user.getIdToken();
 
     // Get backend service URL from environment variables
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
-    
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
+
     // Call the new backend service
-    const response = await fetch(`${backendUrl}/api/staking/history/${userId}?limit=${limit}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    });
+    const response = await fetch(
+      `${backendUrl}/api/staking/history/${userId}?limit=${limit}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.error || `HTTP error! status: ${response.status}`,
+      );
     }
 
     return await response.json();
