@@ -3,11 +3,19 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Image optimization
   images: {
+    // Explicitly allow common NFT CDN/IPFS gateways
+    domains: [
+      "gateway.irys.xyz",
+      "arweave.net",
+      "ipfs.io",
+      "nftstorage.link",
+      "cloudflare-ipfs.com",
+      "shdw-drive.genesysgo.net",
+      "cdn.helius.xyz",
+      "metadata.degods.com",
+    ],
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*",
-      },
+      { protocol: "https", hostname: "*" },
     ],
     dangerouslyAllowSVG: true,
     formats: ["image/avif", "image/webp"],

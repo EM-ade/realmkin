@@ -6,9 +6,10 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import { useDiscord } from "@/contexts/DiscordContext";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { doc, setDoc, getDoc, runTransaction } from "firebase/firestore";
+import { doc, setDoc, getDoc, runTransaction, collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import { getAuth } from "firebase/auth";
+import { SkeletonLoader } from "@/components/SkeletonLoader";
 
 const STEPS = ["welcome", "wallet", "username", "discord", "complete"];
 
@@ -23,6 +24,7 @@ export default function OnboardingWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDiscordConnecting, setIsDiscordConnecting] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
 
   const handleNextStep = () => {
     const currentIndex = STEPS.indexOf(currentStep);
@@ -54,6 +56,55 @@ export default function OnboardingWizard() {
       completeStep("discord");
     }
   }, [currentStep, discordLinked, completeStep]);
+
+  // Helper to sanitize username from displayName
+  const sanitize = (value: string) => {
+    const lower = (value || "").toLowerCase();
+    const filtered = lower.replace(/[^a-z0-9_\-]+/g, "");
+    // collapse multiple underscores/dashes
+    return filtered.replace(/[_-]{2,}/g, "_").slice(0, 24);
+  };
+
+  // When entering username step, attempt to auto-map existing username by uid.
+  useEffect(() => {
+    const run = async () => {
+      if (currentStep !== "username") return;
+      if (!user) return;
+      setIsCheckingUsername(true);
+      try {
+        // Look up any existing username mapping for this uid
+        const q = query(collection(db, "usernames"), where("uid", "==", user.uid), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const found = snap.docs[0].id;
+          // Write username onto user doc if missing and advance
+          await runTransaction(db, async (tx) => {
+            const userRef = doc(db, "users", user.uid);
+            const uSnap = await tx.get(userRef);
+            const has = uSnap.exists() && (uSnap.data() as { username?: string }).username;
+            if (!has) {
+              tx.set(userRef, { username: found, updatedAt: new Date() }, { merge: true });
+            }
+          });
+          toast.success("Username detected and applied");
+          completeStep("username");
+          return;
+        }
+
+        // No mapping: prefill from displayName if available
+        const displayName = (user as { displayName?: string })?.displayName || "";
+        if (displayName) {
+          const candidate = sanitize(displayName);
+          if (candidate.length >= 3) setUsername(candidate);
+        }
+      } catch (e) {
+        // Non-fatal; user can manually enter
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    };
+    run();
+  }, [currentStep, user, completeStep]);
 
   useEffect(() => {
     let cancelled = false;
@@ -219,18 +270,25 @@ export default function OnboardingWizard() {
           {/* Username Input for username step */}
           {currentStep === "username" && (
             <div className="mt-6 space-y-3">
-              <input
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => handleUsernameChange(e.target.value)}
-                className={`w-full px-4 py-3 rounded-lg bg-[#0f0f0f] border-2 text-white placeholder-white/30 focus:outline-none transition-colors ${
-                  usernameError
-                    ? "border-red-500 focus:border-red-400"
-                    : "border-[#DA9C2F]/30 focus:border-[#DA9C2F]"
-                }`}
-                autoFocus
-              />
+              {isCheckingUsername ? (
+                <div className="space-y-3">
+                  <SkeletonLoader heightClass="h-10" />
+                  <SkeletonLoader heightClass="h-4" />
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => handleUsernameChange(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-lg bg-[#0f0f0f] border-2 text-white placeholder-white/30 focus:outline-none transition-colors ${
+                    usernameError
+                      ? "border-red-500 focus:border-red-400"
+                      : "border-[#DA9C2F]/30 focus:border-[#DA9C2F]"
+                  }`}
+                  autoFocus
+                />
+              )}
               {usernameError && (
                 <p className="text-red-400 text-sm">⚠ {usernameError}</p>
               )}
@@ -248,7 +306,7 @@ export default function OnboardingWizard() {
         <div className="flex flex-col gap-3">
           <button
             onClick={content.action}
-            disabled={isSubmitting || isDiscordConnecting || (currentStep === "username" && (username.length < 3 || !!usernameError))}
+            disabled={isSubmitting || isDiscordConnecting || isCheckingUsername || (currentStep === "username" && (username.length < 3 || !!usernameError))}
             className="w-full rounded-xl py-3 font-semibold transition-all bg-[#DA9C2F] text-black hover:bg-[#ffbf00] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#DA9C2F]"
           >
             {isSubmitting || isDiscordConnecting ? (
@@ -260,12 +318,13 @@ export default function OnboardingWizard() {
               content.actionLabel
             )}
           </button>
-          
-          {currentStep !== "complete" && (
+
+          {/* Allow skipping ONLY on the Discord step */}
+          {currentStep === "discord" && (
             <button
               onClick={skipOnboarding}
               className="w-full rounded-xl border border-[#DA9C2F]/30 py-3 font-semibold text-[#DA9C2F] transition-all hover:bg-[#DA9C2F]/10 disabled:opacity-50"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDiscordConnecting}
             >
               Skip for now
             </button>

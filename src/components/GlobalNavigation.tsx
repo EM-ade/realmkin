@@ -9,6 +9,8 @@ import { useDiscord } from "@/contexts/DiscordContext";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { notifySuccess, notifyError } from "@/utils/toastNotifications";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
+import { db } from "@/config/firebase";
+import { collection, query, where, getDocs, limit, doc, setDoc } from "firebase/firestore";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/", icon: "/dashboard.png" },
@@ -67,6 +69,29 @@ export default function GlobalNavigation() {
       notifyError("Failed to disconnect Discord");
     }
   }, [disconnectDiscord, user, gatekeeperBase]);
+
+  // Ensure users/{uid}.username exists if a mapping already exists in usernames/{name}
+  useEffect(() => {
+    const ensureUsernameOnUserDoc = async () => {
+      try {
+        if (!user?.uid) return;
+        // If userData already has username, nothing to do
+        if (userData?.username) return;
+        // Look up mapping by uid in usernames collection
+        const q = query(collection(db, "usernames"), where("uid", "==", user.uid), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const foundName = snap.docs[0].id;
+          // Merge username into users/{uid}
+          await setDoc(doc(db, "users", user.uid), { username: foundName, updatedAt: new Date() }, { merge: true });
+        }
+      } catch (e) {
+        // Non-fatal; onboarding wizard will handle if needed
+        console.debug("Username ensure in nav skipped:", e);
+      }
+    };
+    ensureUsernameOnUserDoc();
+  }, [user?.uid, userData?.username]);
 
   // Hide nav on login page
   if (pathname === "/login" || pathname?.startsWith("/discord")) {

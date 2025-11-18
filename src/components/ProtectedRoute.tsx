@@ -3,7 +3,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import RealmTransition from '@/components/RealmTransition';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,13 +13,26 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, adminWallets }: ProtectedRouteProps) {
   const { user, userData, loading } = useAuth();
-  const { isConnected } = useWeb3();
+  const { isConnected, isConnecting } = useWeb3();
   const router = useRouter();
   const pathname = usePathname();
   const [redirecting, setRedirecting] = useState(false);
+  const [graceOver, setGraceOver] = useState(false);
+
+  // Start a short grace window to allow auth and wallet to hydrate after refresh
+  useEffect(() => {
+    const timeout = setTimeout(() => setGraceOver(true), 3000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // During grace, block interactions with a loading overlay
+  const inGrace = useMemo(() => !graceOver, [graceOver]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading) return; // still hydrating auth
+
+    // While within grace window or wallet is mid-connecting, do not redirect yet
+    if (inGrace || isConnecting) return;
 
     // Require BOTH: authenticated user AND connected wallet
     if (!user || !isConnected) {
@@ -31,19 +45,12 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
     if (adminWallets && userData && !adminWallets.includes((userData.walletAddress ?? '').toLowerCase())) {
       router.push('/');
     }
-  }, [user, userData, loading, isConnected, router, adminWallets, pathname]);
+  }, [user, userData, loading, isConnected, isConnecting, router, adminWallets, pathname, inGrace]);
 
-  if (loading) {
+  if (loading || inGrace || isConnecting) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
-        <video
-          className="max-w-full max-h-full object-contain"
-          src="/loading-screen.mp4"
-          autoPlay
-          muted
-          playsInline
-          preload="auto"
-        />
+      <div className="fixed inset-0 z-[9998]">
+        <RealmTransition active={true} />
       </div>
     );
   }
