@@ -4,11 +4,11 @@
  * Uses CSS animations instead of JavaScript
  */
 
-export function SkeletonLoader() {
+export function SkeletonLoader({ heightClass }: { heightClass?: string }) {
   return (
     <div className="space-y-3">
-      <div className="h-4 bg-gradient-to-r from-[#DA9C2F]/20 to-[#DA9C2F]/10 rounded animate-pulse"></div>
-      <div className="h-4 bg-gradient-to-r from-[#DA9C2F]/20 to-[#DA9C2F]/10 rounded animate-pulse w-5/6"></div>
+      <div className={`${heightClass ?? "h-4"} bg-gradient-to-r from-[#DA9C2F]/20 to-[#DA9C2F]/10 rounded animate-pulse`}></div>
+      <div className={`${heightClass ?? "h-4"} bg-gradient-to-r from-[#DA9C2F]/20 to-[#DA9C2F]/10 rounded animate-pulse w-5/6`}></div>
     </div>
   );
 }

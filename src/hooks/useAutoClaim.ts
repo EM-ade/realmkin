@@ -70,9 +70,12 @@ export function useAutoClaim() {
   // Attempt to claim rewards
   const attemptAutoClaim = useCallback(async () => {
     if (!user || !account) return;
+    // Respect user setting: do not auto-claim unless explicitly enabled
+    const settingsGuard = loadSettings();
+    if (!settingsGuard.enabled) return;
 
     try {
-      console.log('🤖 Attempting auto-claim for user:', user.uid);
+      // Auto-claim disabled by default; no logs on page load
 
       // Get user rewards to check eligibility
       const userRewards = await rewardsService.getUserRewards(user.uid);
@@ -138,12 +141,6 @@ export function useAutoClaim() {
       clearInterval(intervalRef.current);
     }
 
-    // Check immediately
-    const settings = loadSettings();
-    if (shouldAttemptClaim(settings)) {
-      attemptAutoClaim();
-    }
-
     // Set up periodic checking (every 5 minutes)
     intervalRef.current = setInterval(() => {
       const currentSettings = loadSettings();
@@ -180,12 +177,19 @@ export function useAutoClaim() {
     if (user && account) {
       // Initialize settings if not exists
       const settings = loadSettings();
-      if (!settings.nextScheduledClaim) {
-        settings.nextScheduledClaim = new Date(Date.now() + (settings.intervalHours * 60 * 60 * 1000));
+      // Ensure we don't claim immediately on login/mount: push next schedule at least 5 minutes ahead
+      const minNext = new Date(Date.now() + 5 * 60 * 1000);
+      if (!settings.nextScheduledClaim || settings.nextScheduledClaim < minNext) {
+        settings.nextScheduledClaim = minNext;
         saveSettings(settings);
       }
 
-      startAutoClaim();
+      // Only start auto-claim if user has explicitly enabled it
+      if (settings.enabled) {
+        startAutoClaim();
+      } else {
+        stopAutoClaim();
+      }
     } else {
       stopAutoClaim();
     }

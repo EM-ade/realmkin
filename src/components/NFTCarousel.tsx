@@ -48,17 +48,109 @@ type NFTCarouselProps = {
 
 export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [items, setItems] = useState<StaticCarouselItem[]>(SAMPLE_NFTS);
   const carouselIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Fetch NFTs for the featured COLLECTION (contract) via Helius RPC (if API key provided)
   useEffect(() => {
-    if (!SAMPLE_NFTS.length) return;
+    let cancelled = false;
+    const COLLECTION_ADDRESS = "EzjhzaTBqXohJTsaMKFSX6fgXcDJyXAV85NK7RK79u3Z"; // Solana collection (verified collection) address
+    const apiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
+    const fetchAssets = async () => {
+      if (!apiKey) {
+        console.debug("NFTCarousel: NEXT_PUBLIC_HELIUS_API_KEY not set; using sample images.");
+        return;
+      }
+      try {
+        const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
+        let assets: any[] | null = null;
+
+        // 1) Try getAssetsByGroup (groupKey: collection)
+        try {
+          const res = await fetch(rpcUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: "realmkin-carousel",
+              method: "getAssetsByGroup",
+              params: {
+                groupKey: "collection",
+                groupValue: COLLECTION_ADDRESS,
+                page: 1,
+                limit: 10,
+              },
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const list = Array.isArray(data?.result?.items) ? data.result.items : [];
+            assets = list;
+          }
+        } catch {}
+
+        // 2) Fallback to searchAssets
+        if (!assets || assets.length === 0) {
+          try {
+            const res = await fetch(rpcUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: "realmkin-carousel",
+                method: "searchAssets",
+                params: {
+                  grouping: [{ groupKey: "collection", groupValue: COLLECTION_ADDRESS }],
+                  page: 1,
+                  limit: 10,
+                },
+              }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const list = Array.isArray(data?.result?.items) ? data.result.items : [];
+              assets = list;
+            }
+          } catch {}
+        }
+
+        if (!assets || assets.length === 0) return;
+        // Map to images
+        const parsed: StaticCarouselItem[] = assets
+          .map((a) => {
+            const id = a?.id || a?.tokenAddress || a?.content?.metadata?.mint || a?.mint;
+            const name = a?.content?.metadata?.name || a?.name || "NFT";
+            const files: any[] = a?.content?.files || [];
+            const fileImg = files.find((f) => typeof f?.uri === "string" && /\.(png|jpg|jpeg|webp|gif)$/i.test(f.uri))?.uri;
+            const metaImg = a?.content?.links?.image || a?.content?.metadata?.image;
+            const image = fileImg || metaImg;
+            if (!id || !image) return null;
+            return { id: String(id), name: String(name), image: String(image) } as StaticCarouselItem;
+          })
+          .filter((x): x is StaticCarouselItem => Boolean(x))
+          .slice(0, 10);
+        if (!cancelled && parsed.length) {
+          setItems(parsed);
+        }
+      } catch (e) {
+        console.warn("NFTCarousel: failed to fetch NFTs for featured address; using samples.", e);
+      }
+    };
+    fetchAssets();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!items.length) return;
 
     if (carouselIntervalRef.current) {
       clearInterval(carouselIntervalRef.current);
     }
 
     carouselIntervalRef.current = setInterval(() => {
-      setCarouselIndex((prev) => (prev + 1) % SAMPLE_NFTS.length);
+      setCarouselIndex((prev) => (prev + 1) % items.length);
     }, 4500);
 
     return () => {
@@ -66,7 +158,7 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
         clearInterval(carouselIntervalRef.current);
       }
     };
-  }, []);
+  }, [items.length]);
 
   const handleMouseEnter = () => {
     if (carouselIntervalRef.current) {
@@ -76,21 +168,21 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
   };
 
   const handleMouseLeave = () => {
-    if (!carouselIntervalRef.current && SAMPLE_NFTS.length) {
+    if (!carouselIntervalRef.current && items.length) {
       carouselIntervalRef.current = setInterval(() => {
-        setCarouselIndex((prev) => (prev + 1) % SAMPLE_NFTS.length);
+        setCarouselIndex((prev) => (prev + 1) % items.length);
       }, 4500);
     }
   };
 
-  if (!SAMPLE_NFTS.length) {
+  if (!items.length) {
     return null;
   }
 
   return (
     <div className="carousel-container">
       <div className="carousel-shell-inner">
-        {SAMPLE_NFTS.map((item, idx) => {
+        {items.map((item, idx) => {
           const isActive = idx === carouselIndex;
           return (
             <div
@@ -108,19 +200,13 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
                   className="carousel-image"
                   priority={idx === 0}
                 />
-                <div className="carousel-overlay"></div>
-              </div>
-              <div className="carousel-caption">
-                <div className="carousel-status" style={{ fontFamily: "var(--font-amnestia)" }}>
-                  COMING SOON
-                </div>
               </div>
             </div>
           );
         })}
 
         <div className="carousel-dots">
-          {SAMPLE_NFTS.map((item, idx) => (
+          {items.map((item, idx) => (
             <button
               key={`${item.id}-dot`}
               className={`carousel-dot ${idx === carouselIndex ? "active" : ""}`}
@@ -178,29 +264,6 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
   max-height: 100%;
   width: auto !important;
   height: auto !important;
-}
-
-.carousel-caption {
-  position: absolute;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  pointer-events: none;
-  width: 100%;
-  text-align: center;
-}
-
-.carousel-status {
-  display: inline-block;
-  padding: 8px 24px;
-  background: rgba(218, 156, 47, 0.9);
-  color: #000;
-  font-weight: bold;
-  font-size: 14px;
-  letter-spacing: 0.1em;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(218, 156, 47, 0.3);
 }
 
 .carousel-dots {
