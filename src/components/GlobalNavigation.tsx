@@ -114,11 +114,11 @@ export default function GlobalNavigation() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-4">
-          {isConnected && (
+          {/* {isConnected && (
             <div className="text-xs text-white/60 px-3 py-1 rounded-lg bg-[#DA9C2F]/10">
               {formattedBalance}
             </div>
-          )}
+          )} */}
           {discordLinked && (
             <button
               onClick={handleDiscordDisconnect}
