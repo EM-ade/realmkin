@@ -11,14 +11,16 @@ import {
 import { isValidSolanaAddress } from "@/utils/formatAddress";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { PublicKey } from "@solana/web3.js";
 import {
   getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { db } from "@/config/firebase";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import { dataRepairService } from "@/services/dataRepairService";
 
 // Enhanced error message function for Solana wallet connections with mobile support
 interface ConnectionErrorResponse {
@@ -166,11 +168,27 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   // Auto-authenticate with Firebase when wallet connects
   const autoAuthenticateFirebase = async (walletAddress: string) => {
     try {
+      // Validate wallet address using Solana's PublicKey constructor
+      try {
+        new PublicKey(walletAddress); // This will throw if invalid
+      } catch (e) {
+        console.error("Invalid Solana wallet address:", walletAddress);
+        throw new Error("Invalid Solana wallet address");
+      }
+
       const auth = getAuth();
 
       if (auth.currentUser) {
         if (auth.currentUser.uid) {
           setUid(auth.currentUser.uid);
+          
+          // Repair user data if needed
+          try {
+            await dataRepairService.repairUsernameMapping(auth.currentUser.uid);
+          } catch (repairError) {
+            console.warn("Failed to repair user data:", repairError);
+          }
+          
           return;
         }
       }
@@ -208,7 +226,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           console.log("✅ Wallet mapping created");
         }
 
-        // Ensure user profile exists
+        // Ensure user profile exists with proper username validation
         try {
           const userDocRef = doc(db, "users", userCredential.user.uid);
           const userDoc = await getDoc(userDocRef);
@@ -219,6 +237,27 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               createdAt: new Date(),
             });
             console.log("✅ User profile created");
+          } else {
+            // Check if user has a username set
+            const userData = userDoc.data();
+            if (!userData?.username) {
+              console.warn("User profile exists but missing username");
+              // Try to repair username mapping
+              try {
+                const repaired = await dataRepairService.repairUsernameMapping(userCredential.user.uid);
+                if (repaired) {
+                  console.log("✅ Username mapping repaired during login");
+                }
+              } catch (repairError) {
+                console.warn("Failed to repair username mapping:", repairError);
+              }
+              
+              // Don't redirect during onboarding
+              if (!isOnboarding) {
+                // Set a flag to indicate incomplete setup
+                localStorage.setItem("realmkin_incomplete_setup", "true");
+              }
+            }
           }
         } catch (profileErr) {
           console.warn("⚠️ Failed to ensure user profile exists:", profileErr);
@@ -286,6 +325,18 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               toString: () => string;
             }
           ).toBase58?.() ?? publicKey.toString();
+        
+        // Validate wallet address using Solana's PublicKey constructor
+        try {
+          new PublicKey(address); // This will throw if invalid
+        } catch (e) {
+          console.error("Invalid Solana wallet address from wallet adapter:", address);
+          setAccount(null);
+          setUid(null);
+          setIsConnected(false);
+          return;
+        }
+
         if (address && isValidSolanaAddress(address)) {
           setAccount(address);
           setIsConnected(true);
@@ -315,8 +366,18 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
   // Prevent multiple simultaneous connection attempts
   const acquireConnectionLock = () => {
-    if (connectionLockRef.current) return false;
+    if (connectionLockRef.current) {
+      console.log("🔒 Connection attempt already in progress");
+      return false;
+    }
     connectionLockRef.current = true;
+    // Auto-release lock after 10 seconds to prevent deadlocks
+    setTimeout(() => {
+      if (connectionLockRef.current) {
+        console.log("🔓 Connection lock auto-released after timeout");
+        connectionLockRef.current = false;
+      }
+    }, 10000);
     return true;
   };
 
@@ -392,6 +453,15 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   }, []);
 
   async function checkConnection() {
+    // Add debounce to prevent excessive connection checks
+    const now = Date.now();
+    const lastCheck = parseInt(localStorage.getItem("last_connection_check") || "0");
+    if (now - lastCheck < 2000) {
+      console.log("⏱️ Skipping connection check (too frequent)");
+      return;
+    }
+    localStorage.setItem("last_connection_check", now.toString());
+
     if (!acquireConnectionLock()) {
       console.log("🔒 Connection check already in progress");
       return;

@@ -50,17 +50,15 @@ export async function claimTokens(
       process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
 
     // Call the new backend service
-    const response = await fetch(`${backendUrl}/api/claiming/claim`, {
+    const response = await fetch(`${backendUrl}/api/claim`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        userId: user.uid,
-        amount: amount,
         walletAddress: walletAddress,
-        claimType: "withdraw",
+        amount: Math.floor(amount),
       }),
     });
 
@@ -68,21 +66,24 @@ export async function claimTokens(
       const errorData = await response.json().catch(() => ({}));
       return {
         success: false,
-        error: errorData.error || `HTTP error! status: ${response.status}`,
+        error:
+          errorData.error ||
+          errorData.details?.error ||
+          `HTTP error! status: ${response.status}`,
       };
     }
 
     const data = await response.json();
 
-    if (data.success) {
+    if (data.success && data.data) {
       return {
         success: true,
-        txHash: data.txHash,
+        txHash: data.data.transactionSignature,
       };
     } else {
       return {
         success: false,
-        error: data.error || "Failed to claim tokens",
+        error: data.error || data.details || "Failed to claim tokens",
       };
     }
   } catch (error) {
@@ -120,15 +121,12 @@ export async function getClaimHistory(
       process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
 
     // Call the new backend service
-    const response = await fetch(
-      `${backendUrl}/api/claiming/history/${userId}?limit=${limit}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+    const response = await fetch(`${backendUrl}/api/claim/status`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
       },
-    );
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

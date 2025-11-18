@@ -8,7 +8,19 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  serverTimestamp, 
+  runTransaction,
+  collection,
+  query,
+  where,
+  getDocs
+} from "firebase/firestore";
+import { PublicKey } from "@solana/web3.js";
 import { auth, db } from "@/lib/firebase";
 
 interface UserData {
@@ -71,8 +83,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const userWallet = data.walletAddress?.toLowerCase();
             const isAdmin = userWallet ? adminWallets.includes(userWallet) : false;
             
+            // Fix data inconsistency: Ensure username is properly set
+            let username = data.username;
+            if (!username && data.email) {
+              // Try to find username from usernames collection
+              const usernameDoc = await findUsernameByUID(user.uid);
+              if (usernameDoc) {
+                username = usernameDoc;
+                // Update user document with correct username
+                try {
+                  await updateDoc(doc(db, "users", user.uid), {
+                    username: username
+                  });
+                  console.log("Fixed username mapping for user:", user.uid);
+                } catch (updateError) {
+                  console.warn("Failed to update username in user document:", updateError);
+                }
+              }
+            }
+            
             setUserData({
               ...data,
+              username: username,
               admin: isAdmin
             });
           }
@@ -88,6 +120,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return unsubscribe;
   }, []);
+
+  // Helper function to find username by UID
+  const findUsernameByUID = async (uid: string): Promise<string | null> => {
+    try {
+      const usernamesQuery = query(
+        collection(db, "usernames"),
+        where("uid", "==", uid)
+      );
+      const usernamesSnapshot = await getDocs(usernamesQuery);
+      
+      if (!usernamesSnapshot.empty) {
+        // Return the first username found (should only be one)
+        return usernamesSnapshot.docs[0].id;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error finding username by UID:", error);
+      return null;
+    }
+  };
 
   const login = async (email: string, password: string) => {
     try {
@@ -126,10 +178,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error("Username can only contain letters, numbers, and underscores");
       }
 
-      // Check username availability
-      const isAvailable = await checkUsernameAvailability(username);
-      if (!isAvailable) {
-        throw new Error("Username is already taken");
+      // Additional validation: Ensure username is set before allowing wallet connection
+      if (!username.trim()) {
+        throw new Error("Username is required before connecting wallet");
+      }
+
+      // Validate wallet address using Solana's PublicKey constructor if provided
+      if (walletAddress) {
+        try {
+          new PublicKey(walletAddress); // This will throw if invalid
+        } catch (e) {
+          throw new Error("Invalid Solana wallet address provided");
+        }
       }
 
       // Create user account
@@ -141,42 +201,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       );
       const user = userCredential.user;
       console.log("User account created:", user.uid);
-
-      // Save user data to Firestore
       try {
-        const userData: UserData = {
-          username,
-          email,
-          walletAddress,
-          createdAt: new Date(),
-          admin: false, // Default to non-admin
-        };
-
-        console.log("Saving user data to Firestore...");
-        await setDoc(doc(db, "users", user.uid), userData);
-        await setDoc(doc(db, "usernames", username.toLowerCase()), {
-          uid: user.uid,
-        });
-
-        // Only create wallet mapping if walletAddress exists
-        if (walletAddress) {
-          const walletMappingPath = `wallets/${walletAddress.toLowerCase()}`;
-          console.log("🔧 Creating wallet mapping at:", walletMappingPath);
-          await setDoc(doc(db, "wallets", walletAddress.toLowerCase()), {
-            uid: user.uid,
-            walletAddress: walletAddress, // Store in original case
+        const nameLower = username.toLowerCase();
+        const userRef = doc(db, "users", user.uid);
+        const unameRef = doc(db, "usernames", nameLower);
+        const walletLower = walletAddress?.toLowerCase();
+        const walletRef = walletLower ? doc(db, "wallets", walletLower) : null;
+        await runTransaction(db, async (tx) => {
+          const unameSnap = await tx.get(unameRef);
+          if (unameSnap.exists()) {
+            throw new Error("Username is already taken");
+          }
+          if (walletRef) {
+            const walletSnap = await tx.get(walletRef);
+            if (walletSnap.exists() && walletSnap.data()?.uid !== user.uid) {
+              throw new Error("Wallet already mapped to another account");
+            }
+          }
+          tx.set(unameRef, { uid: user.uid });
+          tx.set(userRef, {
+            username: nameLower,
+            email,
+            walletAddress, // Store in original case for blockchain compatibility
             createdAt: new Date(),
+            admin: false,
           });
-          console.log(
-            "✅ Wallet mapping created successfully at:",
-            walletMappingPath
-          );
-        }
-
-        console.log("User data saved successfully");
+          if (walletRef && walletAddress) {
+            tx.set(walletRef, {
+              uid: user.uid,
+              walletAddress, // Store in original case for blockchain compatibility
+              createdAt: new Date(),
+            });
+          }
+        });
       } catch (firestoreError) {
         console.warn("Failed to save user data to Firestore:", firestoreError);
-        // Don't fail the signup if Firestore fails - user account is still created
       }
     } catch (error: unknown) {
       console.error("Signup error:", error);
@@ -193,38 +252,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             await signInWithEmailAndPassword(auth, email, password);
             console.log("✅ Successfully logged in existing user");
 
-            // Now try to create the missing wallet mapping and user data
-            if (walletAddress) {
+            const currentUser = auth.currentUser;
+            if (currentUser) {
               try {
-                const currentUser = auth.currentUser;
-                if (currentUser) {
-                  const userData: UserData = {
-                    username,
-                    email,
-                    walletAddress,
-                    createdAt: new Date(),
-                  };
-
-                  console.log(
-                    "🔧 Creating missing wallet mapping and user data..."
-                  );
-                  await setDoc(doc(db, "users", currentUser.uid), userData);
-                  await setDoc(doc(db, "usernames", username.toLowerCase()), {
-                    uid: currentUser.uid,
-                  });
-                  await setDoc(
-                    doc(db, "wallets", walletAddress.toLowerCase()),
-                    {
-                      uid: currentUser.uid,
-                      walletAddress: walletAddress, // Store in original case
-                      createdAt: new Date(),
+                const nameLower = username.toLowerCase();
+                const userRef = doc(db, "users", currentUser.uid);
+                const unameRef = doc(db, "usernames", nameLower);
+                const walletLower = walletAddress?.toLowerCase();
+                const walletRef = walletLower ? doc(db, "wallets", walletLower) : null;
+                await runTransaction(db, async (tx) => {
+                  const unameSnap = await tx.get(unameRef);
+                  if (unameSnap.exists() && unameSnap.data()?.uid !== currentUser.uid) {
+                    throw new Error("Username is already taken");
+                  }
+                  if (walletRef) {
+                    const walletSnap = await tx.get(walletRef);
+                    if (walletSnap.exists() && walletSnap.data()?.uid !== currentUser.uid) {
+                      throw new Error("Wallet already mapped to another account");
                     }
-                  );
-                  console.log("✅ Missing data created successfully");
-                }
+                  }
+                  tx.set(unameRef, { uid: currentUser.uid });
+                  tx.set(userRef, {
+                    username: nameLower,
+                    email,
+                    walletAddress, // Store in original case for blockchain compatibility
+                    createdAt: new Date(),
+                  });
+                  if (walletRef && walletAddress) {
+                    tx.set(walletRef, {
+                      uid: currentUser.uid,
+                      walletAddress, // Store in original case for blockchain compatibility
+                      createdAt: new Date(),
+                    });
+                  }
+                });
               } catch (firestoreError) {
                 console.warn("Failed to create missing data:", firestoreError);
-                // Don't fail the login if Firestore fails
               }
             }
 
@@ -363,13 +426,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         userData.admin
       );
 
+      // Fix data inconsistency: Ensure username is properly set
+      const fixedUserData = { ...userData };
+      if (!userData.username && userData.email) {
+        // Try to find username from usernames collection
+        const username = await findUsernameByUID(uid);
+        if (username) {
+          fixedUserData.username = username;
+          // Update user document with correct username
+          try {
+            await updateDoc(doc(db, "users", uid), {
+              username: username
+            });
+            console.log("Fixed username mapping for user:", uid);
+          } catch (updateError) {
+            console.warn("Failed to update username in user document:", updateError);
+          }
+        }
+      }
+
       // Cache the user data
       localStorage.setItem(cacheKey, JSON.stringify({
-        userData,
+        userData: fixedUserData,
         timestamp: Date.now()
       }));
 
-      return userData;
+      return fixedUserData;
     } catch (error) {
       console.error("Error getting user by wallet:", error);
       return null;

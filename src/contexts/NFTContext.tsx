@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useWeb3 } from "./Web3Context";
 import { nftService, NFTMetadata, NFTCollection } from "@/services/nftService";
+import { PublicKey } from "@solana/web3.js";
 
 interface NFTContextType {
   nfts: NFTMetadata[];
@@ -50,6 +51,15 @@ export const NFTProvider = ({ children }: NFTProviderProps) => {
   const fetchNFTs = useCallback(async () => {
     if (!account) return;
 
+    // Validate wallet address before fetching NFTs
+    try {
+      new PublicKey(account); // This will throw if invalid
+    } catch (e) {
+      console.error("Invalid Solana wallet address:", account);
+      setError("Invalid wallet address. Please reconnect your wallet.");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -66,11 +76,30 @@ export const NFTProvider = ({ children }: NFTProviderProps) => {
       // Fetch fresh data
       const nftCollection = await nftService.fetchUserNFTs(account);
 
-      setNFTs(nftCollection.nfts);
-      setTotalNFTs(nftCollection.totalCount);
+      // Validate NFT data before setting state
+      const validNFTs = nftCollection.nfts.filter(nft => {
+        // Validate contract address
+        try {
+          new PublicKey(nft.contractAddress);
+        } catch (e) {
+          console.warn("Invalid contract address for NFT:", nft);
+          return false;
+        }
+        
+        // Validate token ID
+        if (!nft.tokenId) {
+          console.warn("Missing token ID for NFT:", nft);
+          return false;
+        }
+        
+        return true;
+      });
+
+      setNFTs(validNFTs);
+      setTotalNFTs(validNFTs.length);
 
       // Cache the results
-      cacheNFTs(account, nftCollection);
+      cacheNFTs(account, { nfts: validNFTs, totalCount: validNFTs.length });
     } catch (err) {
       console.error("Error fetching NFTs:", err);
       setError("Failed to load your NFTs. Please try again.");

@@ -46,8 +46,11 @@ interface HeliusNFT {
 }
 
 interface HeliusResponse {
-  result: {
+  result?: {
     items: HeliusNFT[];
+  };
+  error?: {
+    message: string;
   };
 }
 
@@ -84,6 +87,23 @@ interface MagicEdenSolanaNFT {
 export interface NFTCollection {
   nfts: NFTMetadata[];
   totalCount: number;
+  weeklyRate?: number;
+}
+
+// Contract config type from Firestore
+export interface ContractConfig {
+  contract_address?: string;
+  name?: string;
+  blockchain?: string;
+  weekly_rate?: number;
+  welcome_bonus?: number;
+  is_active?: boolean;
+  is_tiered?: boolean;
+  tiers?: Array<{
+    tier_name?: string;
+    weekly_rate?: number;
+    welcome_bonus?: number;
+  }>;
 }
 
 class NFTService {
@@ -113,30 +133,52 @@ class NFTService {
   // Cache for NFT data
   private nftCache = new Map<string, NFTCollection>();
 
-  // Cache for active contract addresses (Firestore)
-  private contractsCache: { loadedAt: number; addrs: string[] } | null = null;
+  // Magic Eden collection symbols
+  private readonly ME_SYMBOLS = ['the_realm_kins', 'Therealmkin', 'therealmkin'];
 
-  private async loadActiveContractAddresses(): Promise<string[]> {
+  // Cache for active contract configs
+  private contractsCache: { loadedAt: number; addrs: string[]; configs: Map<string, ContractConfig> } | null = null;
+
+  private async loadActiveContractConfigs(): Promise<{ addresses: string[]; configs: Map<string, ContractConfig> }> {
     const now = Date.now();
     if (this.contractsCache && now - this.contractsCache.loadedAt < 60_000) {
-      return this.contractsCache.addrs;
+      return { addresses: this.contractsCache.addrs, configs: this.contractsCache.configs };
     }
     try {
       const snap = await getDocs(collection(db, 'contractBonusConfigs'));
-      type ContractDoc = { is_active?: unknown };
-      const active: string[] = [];
+      const addresses: string[] = [];
+      const configs = new Map<string, ContractConfig>();
       snap.forEach(d => {
-        const v = d.data() as ContractDoc;
-        const isActive = typeof v.is_active === 'boolean' ? v.is_active : true;
-        if (isActive) active.push(d.id);
+        const data = d.data() as ContractConfig;
+        if (data.is_active !== false) {
+          const addr = d.id;
+          if (addr) {
+            addresses.push(addr);
+            configs.set(addr.toLowerCase(), data);
+          }
+        }
       });
-      this.contractsCache = { loadedAt: now, addrs: active };
-      return active;
+      this.contractsCache = { loadedAt: now, addrs: addresses, configs };
+      console.log(`📋 Loaded ${addresses.length} active contract addresses from Firestore`);
+      return { addresses, configs };
     } catch {
-      console.warn('Failed to load contractBonusConfigs; falling back to base contract only');
-      this.contractsCache = { loadedAt: now, addrs: [] };
-      return [];
+      console.warn('Failed to load contractBonusConfigs; using base contract only');
+      this.contractsCache = { loadedAt: now, addrs: [], configs: new Map() };
+      return { addresses: [], configs: new Map() };
     }
+  }
+
+  // Calculate weekly rate for an NFT based on its contract
+  private calculateWeeklyRate(contractAddr: string, configs: Map<string, ContractConfig>): number {
+    const config = configs.get(contractAddr.toLowerCase());
+    if (!config) return 0;
+
+    if (config.is_tiered && config.tiers && config.tiers.length > 0) {
+      const totalRate = config.tiers.reduce((sum, tier) => sum + (tier.weekly_rate || 0), 0);
+      return totalRate;
+    }
+
+    return config.weekly_rate || 0;
   }
 
 
@@ -155,52 +197,100 @@ class NFTService {
     }
 
     try {
-      const response = await axios.post<HeliusResponse>(
-        `https://mainnet.helius-rpc.com/?api-key=${this.HELIUS_API_KEY}`,
-        {
-          jsonrpc: "2.0",
-          id: "my-id",
-          method: "getAssetsByOwner",
-          params: {
-            ownerAddress: walletAddress,
-            page: 1,
-            limit: 1000,
-            displayOptions: {
-              showFungible: false,
-              showNativeBalance: false,
+      const { addresses: contractAddresses, configs } = await this.loadActiveContractConfigs();
+      if (contractAddresses.length === 0) {
+        return { nfts: [], totalCount: 0, weeklyRate: 0 };
+      }
+
+      const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${this.HELIUS_API_KEY}`;
+      let allItems: HeliusNFT[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await axios.post<HeliusResponse>(
+          rpcUrl,
+          {
+            jsonrpc: "2.0",
+            id: "realmkin-helius",
+            method: "getAssetsByOwner",
+            params: {
+              ownerAddress: walletAddress,
+              page: page,
+              limit: 1000,
+              displayOptions: {
+                showFungible: false,
+                showNativeBalance: false,
+              },
             },
           },
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.data.error) {
+          console.warn(`⚠️ Helius API error on page ${page}:`, response.data.error);
+          break;
         }
-      );
 
-      // Determine allowed contracts: if no configs, only base; if configs exist, base + configs
-      const configured = await this.loadActiveContractAddresses();
-      const allowedContracts = configured.length > 0
-        ? Array.from(new Set([this.REALMKIN_SOLANA_CONTRACT_ADDRESS, ...configured]))
-        : [this.REALMKIN_SOLANA_CONTRACT_ADDRESS];
+        const items: HeliusNFT[] = response.data.result?.items || [];
+        console.log(`🛰️ Helius page ${page}: fetched ${items.length} NFTs (total so far: ${allItems.length + items.length})`);
 
-      // Filter for allowed collections/contracts via Helius grouping (case-insensitive)
-      const allowedContractsLower = allowedContracts.map(addr => addr.toLowerCase());
-      const realmkinNFTs = response.data.result.items.filter((nft: HeliusNFT) =>
-        nft.grouping?.some(
+        allItems = allItems.concat(items);
+
+        hasMore = items.length === 1000;
+        if (hasMore) {
+          page++;
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      }
+
+      // Filter by collection grouping OR mint address
+      const allowedContractsLower = contractAddresses.map((addr: string) => addr.toLowerCase());
+      const filtered = allItems.filter((nft: HeliusNFT) => {
+        const hasCollectionGrouping = nft.grouping?.some(
           (group) => group.group_key === "collection" && allowedContractsLower.includes(group.group_value?.toLowerCase())
-        )
-      );
+        );
 
-      const nfts = await Promise.all(
-        realmkinNFTs.map(async (nft: HeliusNFT) => {
-          return await this.processHeliusNFTData(nft);
+        const mintMatches = allowedContractsLower.includes((nft.id || nft.mint || "").toLowerCase());
+
+        return hasCollectionGrouping || mintMatches;
+      });
+
+      const nfts = filtered
+        .map((nft: HeliusNFT) => {
+          const contractAddr = nft.grouping?.find((g) => g.group_key === "collection")?.group_value || nft.id || nft.mint || "";
+          let imageUrl = nft.content?.links?.image || nft.content?.files?.[0]?.uri || "";
+          imageUrl = this.resolveIPFSUrl(imageUrl);
+
+          return {
+            id: nft.id || nft.mint || "",
+            name: nft.content?.metadata?.name || `Realmkin #${nft.id}`,
+            description: nft.content?.metadata?.description || "",
+            image: imageUrl,
+            attributes: nft.content?.metadata?.attributes || [],
+            power: this.calculateNFTPower(nft.content?.metadata?.attributes || []),
+            rarity: this.determineRarity(nft.content?.metadata?.attributes || []),
+            contractAddress: contractAddr,
+            tokenId: nft.id || nft.mint || "",
+          };
         })
-      );
+        .filter((n) => n.contractAddress);
+
+      // Calculate total weekly rate
+      let totalWeeklyRate = 0;
+      nfts.forEach((nft) => {
+        const rate = this.calculateWeeklyRate(nft.contractAddress, configs);
+        totalWeeklyRate += rate;
+      });
 
       const result = {
-        nfts: nfts.filter((nft) => nft !== null),
-        totalCount: realmkinNFTs.length,
+        nfts,
+        totalCount: nfts.length,
+        weeklyRate: totalWeeklyRate,
       };
 
       // Cache the result
@@ -214,69 +304,86 @@ class NFTService {
   }
 
   /**
-   * Fetch NFTs using Magic Eden Solana API as fallback
+   * Fetch NFTs using Magic Eden Solana API
    */
-  async fetchNFTsWithMagicEdenSolana(
-    walletAddress: string
-  ): Promise<NFTCollection> {
+  async fetchNFTsWithMagicEdenSolana(walletAddress: string): Promise<NFTCollection> {
     // Check cache first
     if (this.nftCache.has(walletAddress)) {
       return this.nftCache.get(walletAddress)!;
     }
 
     try {
-      // Call our Next.js API proxy to avoid browser CORS issues
-      const response = await axios.get<MagicEdenSolanaNFT[]>(
-        `/api/magic-eden`,
-        {
-          headers: { Accept: "application/json" },
-          params: {
-            wallet: walletAddress,
-            collection_symbol: this.MAGIC_EDEN_COLLECTION_SYMBOL,
-            limit: 500,
-            offset: 0,
-          },
-        }
+      const { configs } = await this.loadActiveContractConfigs();
+
+      // Fetch from all ME symbols in parallel
+      const meResults = await Promise.all(
+        this.ME_SYMBOLS.map((symbol: string) => this.fetchNFTsByMESymbol(walletAddress, symbol))
       );
 
-      // Load active contract addresses from Firestore
-      const configured = await this.loadActiveContractAddresses();
-      const allowedContracts = configured.length > 0
-        ? Array.from(new Set([this.REALMKIN_SOLANA_CONTRACT_ADDRESS, ...configured]))
-        : [this.REALMKIN_SOLANA_CONTRACT_ADDRESS];
+      const nfts = meResults.flat();
 
-      // Filter for Realmkin collection - Magic Eden API might not filter properly by collection param
-      const realmkinNFTs = response.data.filter((nft: MagicEdenSolanaNFT) => 
-        nft.collection === this.MAGIC_EDEN_COLLECTION_SYMBOL || 
-        nft.symbol === this.MAGIC_EDEN_COLLECTION_SYMBOL
-      );
-
-      const nfts = await Promise.all(
-        realmkinNFTs.map(async (nft: MagicEdenSolanaNFT) => {
-          return await this.processMagicEdenSolanaNFTData(nft);
-        })
-      );
-
-      // Filter NFTs by allowed contracts (validate against admin-registered contracts)
-      // Use case-insensitive comparison
-      const allowedContractsLower = allowedContracts.map(addr => addr.toLowerCase());
-      const filteredNFTs = nfts.filter((nft): nft is NFTMetadata => 
-        nft !== null && allowedContractsLower.includes(nft.contractAddress.toLowerCase())
-      );
+      // Calculate total weekly rate
+      let totalWeeklyRate = 0;
+      nfts.forEach((nft) => {
+        const rate = this.calculateWeeklyRate(nft.contractAddress, configs);
+        totalWeeklyRate += rate;
+      });
 
       const result: NFTCollection = {
-        nfts: filteredNFTs,
-        totalCount: filteredNFTs.length,
+        nfts,
+        totalCount: nfts.length,
+        weeklyRate: totalWeeklyRate,
       };
 
       // Cache the result
       this.nftCache.set(walletAddress, result);
       return result;
     } catch (error) {
-      console.error("Error fetching NFTs with Magic Eden V2:", error);
+      console.error("Error fetching NFTs with Magic Eden:", error);
+      return { nfts: [], totalCount: 0, weeklyRate: 0 };
+    }
+  }
 
-      // Return empty collection as fallback
-      return { nfts: [], totalCount: 0 };
+  /**
+   * Fetch NFTs from Magic Eden by symbol
+   */
+  private async fetchNFTsByMESymbol(wallet: string, symbol: string): Promise<NFTMetadata[]> {
+    try {
+      const url = `https://api-mainnet.magiceden.dev/v2/wallets/${wallet}/tokens?collection_symbol=${encodeURIComponent(symbol)}`;
+
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { accept: "application/json" },
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        console.warn(`⚠️ Magic Eden search failed for symbol "${symbol}":`, res.status);
+        return [];
+      }
+
+      const data = await res.json();
+      const items: Array<Record<string, unknown>> = Array.isArray(data) ? data : [];
+
+      const mapped: NFTMetadata[] = items
+        .map((it: Record<string, unknown>) => ({
+          id: String(it.mintAddress || it.tokenMint || it.id || ""),
+          name: String(it.name || "Unknown NFT"),
+          description: String(it.description || ""),
+          image: String(it.image || it.img || it.media || ""),
+          attributes: Array.isArray(it.attributes) ? it.attributes : Array.isArray(it.traits) ? it.traits : [],
+          power: undefined,
+          rarity: it?.rarity ? String(it.rarity) : undefined,
+          contractAddress: String(it.mintAddress || it.tokenMint || ""),
+          tokenId: String(it.mintAddress || it.tokenMint || it.id || ""),
+        }))
+        .filter((n) => n.contractAddress);
+
+      console.log(`✅ Magic Eden symbol "${symbol}" returned ${mapped.length} NFTs`);
+      return mapped;
+    } catch (e) {
+      console.error(`❌ Error fetching Magic Eden symbol "${symbol}":`, e);
+      return [];
     }
   }
 
@@ -353,11 +460,13 @@ class NFTService {
         
       console.log("🔍 NFT Service: Using address:", addressToUse);
 
-      // Try both APIs regardless of errors and combine results
-      const results = await Promise.allSettled([
-        this.HELIUS_API_KEY ? this.fetchNFTsWithHelius(addressToUse) : Promise.resolve({ nfts: [], totalCount: 0 }),
-        this.fetchNFTsWithMagicEdenSolana(addressToUse)
-      ]);
+      const { addresses: configuredAddrs } = await this.loadActiveContractConfigs();
+      const promises: Promise<NFTCollection>[] = [];
+      if (this.HELIUS_API_KEY && configuredAddrs.length > 0) {
+        promises.push(this.fetchNFTsWithHelius(addressToUse));
+      }
+      promises.push(this.fetchNFTsWithMagicEdenSolana(addressToUse));
+      const results = await Promise.allSettled(promises);
 
       // Combine results from both APIs
       const allNFTs: NFTMetadata[] = [];
@@ -387,6 +496,13 @@ class NFTService {
       // Return mock data for development/testing
       return this.getMockNFTs();
     }
+  }
+
+  /**
+   * Compatibility alias for test pages expecting fetchAllNFTs
+   */
+  async fetchAllNFTs(walletAddress: string): Promise<NFTCollection> {
+    return this.fetchUserNFTs(walletAddress);
   }
 
   /**
@@ -420,8 +536,11 @@ class NFTService {
       const power = this.calculateNFTPower(attributes);
       const rarity = this.determineRarity(attributes);
 
-      // Try to extract the collection/contract address from grouping
-      const contractAddr = nft.grouping?.find(g => g.group_key === 'collection')?.group_value || this.REALMKIN_SOLANA_CONTRACT_ADDRESS;
+      // Extract the collection/contract address from grouping; if missing, drop
+      const contractAddr = nft.grouping?.find(g => g.group_key === 'collection')?.group_value;
+      if (!contractAddr) {
+        return null;
+      }
 
       return {
         id: nft.id || nft.mint || "",
@@ -461,9 +580,9 @@ class NFTService {
         const verifiedCreator = nft.creators.find(c => c.verified);
         contractAddress = verifiedCreator?.address || nft.creators[0].address;
       }
-      // Fallback to default contract
+      // If we cannot resolve a contract address, drop the token (cannot verify)
       if (!contractAddress) {
-        contractAddress = this.REALMKIN_SOLANA_CONTRACT_ADDRESS;
+        return null;
       }
 
       return {
@@ -488,11 +607,16 @@ class NFTService {
    */
   private resolveIPFSUrl(url: string): string {
     if (!url) return "";
-
     if (url.startsWith("ipfs://")) {
-      return url.replace("ipfs://", "https://ipfs.io/ipfs/");
+      const cleaned = url.replace("ipfs://ipfs/", "ipfs://");
+      return cleaned.replace("ipfs://", "https://nftstorage.link/ipfs/");
     }
-
+    if (url.includes("ipfs.io/ipfs/")) {
+      return url.replace("https://ipfs.io/ipfs/", "https://nftstorage.link/ipfs/");
+    }
+    if (url.startsWith("ar://")) {
+      return url.replace("ar://", "https://arweave.net/");
+    }
     return url;
   }
 

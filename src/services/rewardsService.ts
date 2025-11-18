@@ -255,6 +255,7 @@ class RewardsService {
     console.log(`   Found ${snap.size} documents`);
 
     type ContractDoc = {
+      contract_address?: unknown;
       weekly_rate?: unknown;
       tiers?: unknown;
       welcome_bonus?: unknown;
@@ -300,7 +301,12 @@ class RewardsService {
 
       console.log(`   Parsed config:`, JSON.stringify(parsedConfig, null, 2));
 
-      map.set(d.id, parsedConfig);
+      const addrField = typeof v.contract_address === "string" ? v.contract_address.trim() : "";
+      if (!addrField) {
+        // Skip configs without explicit contract_address to avoid doc ID usage
+        return;
+      }
+      map.set(addrField, parsedConfig);
     });
 
     console.log(`\n✅ Loaded ${map.size} contract configs into cache`);
@@ -1030,6 +1036,11 @@ class RewardsService {
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
+  }
+
+  // Public method to calculate weekly rate for NFTs
+  async calculateWeeklyRateForNFTs(nfts: Array<{ contractAddress: string }>): Promise<number> {
+    return await this.calculateWeeklyRate(nfts);
   }
 }
 

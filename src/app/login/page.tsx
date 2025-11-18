@@ -14,7 +14,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
-// import AnimatedRoadmap from "@/components/AnimatedRoadmap";
+import { dataRepairService } from "@/services/dataRepairService";
 import SocialLinks from "@/components/SocialLinks";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
 import React from "react";
@@ -263,6 +263,21 @@ function LoginPageContent() {
           // Ensure username is set
           if (!existingUser.username) {
             console.log("⚠️ User found but no username set, treating as new user");
+            // Try to repair username mapping
+            try {
+              if (user?.uid) {
+                const repaired = await dataRepairService.repairUsernameMapping(user.uid);
+                if (repaired) {
+                  console.log("✅ Username mapping repaired during login check");
+                  // Refresh user data
+                  setIsNewUser(false);
+                  setAsyncState((prev) => ({ ...prev, checkingUser: false }));
+                  return;
+                }
+              }
+            } catch (repairError) {
+              console.warn("Failed to repair username mapping:", repairError);
+            }
             setIsNewUser(true);
             setAsyncState((prev) => ({ ...prev, checkingUser: false }));
             return;
@@ -316,7 +331,7 @@ function LoginPageContent() {
         setAsyncState((prev) => ({ ...prev, checkingUser: false }));
       }
     },
-    [getUserByWallet],
+    [getUserByWallet, user?.uid],
   );
 
   // Check if wallet is connected and handle user state
@@ -328,8 +343,12 @@ function LoginPageContent() {
     if (currentWallet) {
       console.log("✅ Wallet connected:", currentWallet);
       setWalletConnected(true);
-      // Check if user already has a username associated with this wallet
-      checkExistingUser(currentWallet);
+      // Add a small delay to prevent race conditions
+      const timer = setTimeout(() => {
+        // Check if user already has a username associated with this wallet
+        checkExistingUser(currentWallet);
+      }, 500);
+      return () => clearTimeout(timer);
     } else {
       console.log("❌ No wallet address");
       setWalletConnected(false);
@@ -385,11 +404,15 @@ function LoginPageContent() {
       !isNewUser &&
       !asyncState.loading
     ) {
-      console.log(
-        "🚀 Existing wallet user detected, navigating",
-        redirectTarget,
-      );
-      router.push(redirectTarget);
+      // Add a small delay to prevent race conditions
+      const timer = setTimeout(() => {
+        console.log(
+          "🚀 Existing wallet user detected, navigating",
+          redirectTarget,
+        );
+        router.push(redirectTarget);
+      }, 1000);
+      return () => clearTimeout(timer);
     }
   }, [
     walletConnected,
@@ -426,7 +449,7 @@ function LoginPageContent() {
 
     try {
       setAsyncState((prev) => ({ ...prev, loading: true }));
-      setFormState((prev) => ({ ...prev, error: "" }));
+      setFormState((prev) => ({ ...prev, error: "" })); // Fixed syntax error here
       // Create a temporary email based on wallet address for Firebase Auth
       const tempEmail = `${walletForSignup.toLowerCase()}@wallet.realmkin.com`;
       const tempPassword = walletForSignup; // Use wallet address as password

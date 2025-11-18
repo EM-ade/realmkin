@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { claimTokens as claimTokensBackend } from "@/services/backendClaimService";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
 import { notifySuccess, notifyError, notifyLoading } from "@/utils/toastNotifications";
@@ -39,26 +40,23 @@ export function useTokenClaim() {
       const toastId = notifyLoading(`Claiming ${amount} MKIN...`);
 
       try {
-        const claimTokensFunction = httpsCallable(functions, "claimTokens");
-        const result = await claimTokensFunction({
-          amount: Math.floor(amount),
-          walletAddress,
-          claimType: "earned",
-        });
-
-        const data = result.data as { success: boolean; txHash: string };
+        const result = await claimTokensBackend(Math.floor(amount), walletAddress);
 
         toast.dismiss(toastId);
-        notifySuccess(
-          `Claimed ${amount} MKIN! TX: ${data.txHash.slice(0, 8)}...`
-        );
+        if (result.success && result.txHash) {
+          notifySuccess(
+            `Claimed ${amount} MKIN! TX: ${result.txHash.slice(0, 8)}...`
+          );
+        } else {
+          throw new Error(result.error || "Claim failed");
+        }
 
         // Refresh claim history
         await fetchClaimHistory();
 
         return {
           success: true,
-          txHash: data.txHash,
+          txHash: result.txHash,
         };
       } catch (error) {
         toast.dismiss(toastId);
