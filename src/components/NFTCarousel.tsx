@@ -9,6 +9,20 @@ type StaticCarouselItem = {
   image: string;
 };
 
+// Minimal typing for Helius asset responses
+type HeliusFile = { uri?: string };
+type HeliusAsset = {
+  id?: string;
+  tokenAddress?: string;
+  mint?: string;
+  name?: string;
+  content?: {
+    metadata?: { mint?: string; name?: string; image?: string };
+    files?: HeliusFile[];
+    links?: { image?: string };
+  };
+};
+
 const SAMPLE_NFTS: StaticCarouselItem[] = [
   {
     id: "realmkin-1",
@@ -63,7 +77,7 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
       }
       try {
         const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-        let assets: any[] | null = null;
+        let assets: HeliusAsset[] | null = null;
 
         // 1) Try getAssetsByGroup (groupKey: collection)
         try {
@@ -84,7 +98,7 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
           });
           if (res.ok) {
             const data = await res.json();
-            const list = Array.isArray(data?.result?.items) ? data.result.items : [];
+            const list = Array.isArray(data?.result?.items) ? (data.result.items as HeliusAsset[]) : [];
             assets = list;
           }
         } catch {}
@@ -108,7 +122,7 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
             });
             if (res.ok) {
               const data = await res.json();
-              const list = Array.isArray(data?.result?.items) ? data.result.items : [];
+              const list = Array.isArray(data?.result?.items) ? (data.result.items as HeliusAsset[]) : [];
               assets = list;
             }
           } catch {}
@@ -117,10 +131,10 @@ export default function NFTCarousel({ contain = true }: NFTCarouselProps) {
         if (!assets || assets.length === 0) return;
         // Map to images
         const parsed: StaticCarouselItem[] = assets
-          .map((a) => {
+          .map((a: HeliusAsset) => {
             const id = a?.id || a?.tokenAddress || a?.content?.metadata?.mint || a?.mint;
             const name = a?.content?.metadata?.name || a?.name || "NFT";
-            const files: any[] = a?.content?.files || [];
+            const files: HeliusFile[] = a?.content?.files || [];
             const fileImg = files.find((f) => typeof f?.uri === "string" && /\.(png|jpg|jpeg|webp|gif)$/i.test(f.uri))?.uri;
             const metaImg = a?.content?.links?.image || a?.content?.metadata?.image;
             const image = fileImg || metaImg;
