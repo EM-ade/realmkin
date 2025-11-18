@@ -345,11 +345,12 @@ class NFTService {
   }
 
   /**
-   * Fetch NFTs from Magic Eden by symbol
+   * Fetch NFTs from Magic Eden by symbol (using server-side proxy to avoid CORS)
    */
   private async fetchNFTsByMESymbol(wallet: string, symbol: string): Promise<NFTMetadata[]> {
     try {
-      const url = `https://api-mainnet.magiceden.dev/v2/wallets/${wallet}/tokens?collection_symbol=${encodeURIComponent(symbol)}`;
+      // Use server-side proxy endpoint to avoid CORS issues
+      const url = `/api/magic-eden?wallet=${encodeURIComponent(wallet)}&collection_symbol=${encodeURIComponent(symbol)}`;
 
       const res = await fetch(url, {
         method: "GET",
