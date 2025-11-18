@@ -6,7 +6,7 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import { useDiscord } from "@/contexts/DiscordContext";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import { getAuth } from "firebase/auth";
 
@@ -22,6 +22,7 @@ export default function OnboardingWizard() {
   const [usernameError, setUsernameError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDiscordConnecting, setIsDiscordConnecting] = useState(false);
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
 
   const handleNextStep = () => {
     const currentIndex = STEPS.indexOf(currentStep);
@@ -53,6 +54,26 @@ export default function OnboardingWizard() {
       completeStep("discord");
     }
   }, [currentStep, discordLinked, completeStep]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const validate = async () => {
+      if (usernameError || username.trim().length < 3) return;
+      const name = username.toLowerCase();
+      try {
+        const ref = doc(db, "usernames", name);
+        const snap = await getDoc(ref);
+        if (!cancelled) setIsAvailable(!snap.exists());
+      } catch {
+        if (!cancelled) setIsAvailable(null);
+      }
+    };
+    const t = setTimeout(validate, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [username, usernameError]);
 
   if (!isVisible) return null;
 
@@ -87,68 +108,53 @@ export default function OnboardingWizard() {
   const handleUsernameChange = (value: string) => {
     setUsername(value);
     setUsernameError("");
-    
+    setIsAvailable(null);
     if (value.length < 3) {
       setUsernameError("Username must be at least 3 characters");
-    } else if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
       setUsernameError("Only letters, numbers, and underscores allowed");
+      return;
     }
   };
+
 
   const handleUsernameSubmit = async () => {
     if (username.length < 3 || usernameError) {
       setUsernameError("Please enter a valid username");
       return;
     }
-    
+    if (isAvailable === false) {
+      setUsernameError("Username is already taken");
+      return;
+    }
     setIsSubmitting(true);
     try {
-      // Get current Firebase user directly
       const auth = getAuth();
       const currentUser = auth.currentUser;
-      
       if (!currentUser) {
-        console.error("❌ No current user in Firebase auth");
         toast.error("User not authenticated");
         setIsSubmitting(false);
         return;
       }
-
-      console.log("💾 Saving username for user:", currentUser.uid);
-
-      // Save username to user profile in Firestore (use setDoc with merge to create if doesn't exist)
-      const userDocRef = doc(db, "users", currentUser.uid);
-      try {
-        await setDoc(userDocRef, {
-          username: username.toLowerCase(),
-          updatedAt: new Date(),
-        }, { merge: true });
-        console.log("✅ User document updated with username");
-      } catch (userError) {
-        console.error("❌ Error updating user document:", userError);
-        throw userError;
-      }
-
-      // Also create username mapping for quick lookup
-      const usernameDocRef = doc(db, "usernames", username.toLowerCase());
-      try {
-        await setDoc(usernameDocRef, {
-          uid: currentUser.uid,
-          createdAt: new Date(),
-        });
-        console.log("✅ Username mapping created");
-      } catch (usernameError) {
-        console.error("❌ Error creating username mapping:", usernameError);
-        // Don't throw - username was saved to user doc, this is just a mapping
-      }
-      console.log("✅ Username saved successfully:", username);
-      toast.success("Username set!");
+      const name = username.toLowerCase();
+      const userRef = doc(db, "users", currentUser.uid);
+      const unameRef = doc(db, "usernames", name);
+      await runTransaction(db, async (tx) => {
+        const unameSnap = await tx.get(unameRef);
+        if (unameSnap.exists()) {
+          throw new Error("Username is already taken");
+        }
+        tx.set(unameRef, { uid: currentUser.uid, createdAt: new Date() });
+        tx.set(userRef, { username: name, updatedAt: new Date() }, { merge: true });
+      });
+      toast.success("Username set");
       setIsSubmitting(false);
       completeStep("username");
     } catch (error) {
-      console.error("❌ Failed to save username:", error);
-      const errorMsg = error instanceof Error ? error.message : "Failed to save username";
-      toast.error(errorMsg);
+      const msg = error instanceof Error ? error.message : "Failed to save username";
+      toast.error(msg);
       setIsSubmitting(false);
     }
   };
@@ -170,7 +176,7 @@ export default function OnboardingWizard() {
       title: "Create Your Username",
       description: "Set up your unique username for the Realmkin community",
       action: handleUsernameSubmit,
-      actionLabel: username ? "Set Username" : "Enter Username",
+      actionLabel: username ? (isAvailable ? "Claim Username" : "Enter Username") : "Enter Username",
     },
     discord: {
       title: "Link Discord",
@@ -228,8 +234,11 @@ export default function OnboardingWizard() {
               {usernameError && (
                 <p className="text-red-400 text-sm">⚠ {usernameError}</p>
               )}
-              {!usernameError && username.length >= 3 && (
+              {!usernameError && username.length >= 3 && isAvailable === true && (
                 <p className="text-green-400 text-sm">✓ Username available</p>
+              )}
+              {!usernameError && username.length >= 3 && isAvailable === false && (
+                <p className="text-red-400 text-sm">⚠ Username taken</p>
               )}
             </div>
           )}

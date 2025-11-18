@@ -1,3 +1,6 @@
+// Import PublicKey at the top of the file
+import { PublicKey } from "@solana/web3.js";
+
 /**
  * Formats a wallet address to display in truncated format
  * @param address - The full wallet address
@@ -43,13 +46,13 @@ export const detectWalletType = (address: string): 'solana' | 'unknown' => {
 export const isValidSolanaAddress = (address: string): boolean => {
   if (!address) return false;
   
-  // Solana addresses are base58 encoded and typically 32-44 characters
-  // More thorough validation than basic length/character checks
-  if (address.length < 32 || address.length > 44) return false;
-  
-  // Check if it contains only valid base58 characters
-  const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
-  return base58Regex.test(address);
+  // Use Solana's PublicKey constructor for validation instead of regex
+  try {
+    new PublicKey(address);
+    return true;
+  } catch (e) {
+    return false;
+  }
 };
 
 /**

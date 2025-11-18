@@ -55,6 +55,19 @@ export default function GlobalNavigation() {
     }
   }, [disconnectWallet]);
 
+  const handleDiscordDisconnect = useCallback(async () => {
+    try {
+      if (!user) {
+        notifyError("You must be logged in to disconnect Discord");
+        return;
+      }
+      await disconnectDiscord(user, gatekeeperBase);
+      notifySuccess("Discord disconnected");
+    } catch (error) {
+      notifyError("Failed to disconnect Discord");
+    }
+  }, [disconnectDiscord, user, gatekeeperBase]);
+
   // Hide nav on login page
   if (pathname === "/login" || pathname?.startsWith("/discord")) {
     return null;
@@ -105,6 +118,15 @@ export default function GlobalNavigation() {
             <div className="text-xs text-white/60 px-3 py-1 rounded-lg bg-[#DA9C2F]/10">
               {formattedBalance}
             </div>
+          )}
+          {discordLinked && (
+            <button
+              onClick={handleDiscordDisconnect}
+              disabled={discordUnlinking}
+              className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              {discordUnlinking ? "Disconnecting Discord..." : "Disconnect Discord"}
+            </button>
           )}
           {isConnected ? (
             <button

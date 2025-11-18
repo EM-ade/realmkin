@@ -480,6 +480,11 @@ export default function MyNFTPage() {
                               fill
                               className="object-cover transition-transform duration-300 group-hover:scale-105"
                               sizes="(max-width: 768px) 50vw, 200px"
+                              onError={(e) => {
+                                // Handle image loading errors by setting a fallback
+                                const target = e.target as HTMLImageElement;
+                                target.src = "/realmkin.png";
+                              }}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-4xl opacity-50">
@@ -582,6 +587,19 @@ export default function MyNFTPage() {
                           </p>
                         ) : null;
                       })()}
+
+                    {/* Contract Address Display */}
+                    {selectedNFT.contractAddress && (
+                      <p className="text-xs text-[#f7dca1]/60 mt-3">
+                        Contract:{" "}
+                        <span className="font-mono">
+                          {selectedNFT.contractAddress.substring(0, 6)}...
+                          {selectedNFT.contractAddress.substring(
+                            selectedNFT.contractAddress.length - 4
+                          )}
+                        </span>
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

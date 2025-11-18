@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useAuth } from "./AuthContext";
 
 export type OnboardingStep = "welcome" | "wallet" | "username" | "discord" | "verification" | "complete";
@@ -41,6 +43,8 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
   const [isNewUser, setIsNewUserState] = useState(false);
   const [startingStep, setStartingStepState] = useState<OnboardingStep>("welcome");
   const [discordLinked, setDiscordLinked] = useState(false);
+  const [usernameMappingValid, setUsernameMappingValid] = useState<boolean | null>(null);
+  const [walletMappingValid, setWalletMappingValid] = useState<boolean | null>(null);
 
   // Check Discord link status
   useEffect(() => {
@@ -63,60 +67,73 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
 
   // Determine if user should see onboarding and which step to start at
   useEffect(() => {
-    try {
-      if (user?.uid) {
-        const progressKey = `onboarding_progress_${user.uid}`;
-        const savedStep = localStorage.getItem(progressKey);
-        
-        // If already completed, don't show onboarding
-        if (savedStep === "complete") {
+    const run = async () => {
+      try {
+        if (user?.uid) {
+          const progressKey = `onboarding_progress_${user.uid}`;
+          const savedStep = localStorage.getItem(progressKey);
+          if (savedStep === "complete") {
+            setIsOnboarding(false);
+            setCurrentStep("complete");
+            // Clear incomplete setup flag when onboarding is complete
+            localStorage.removeItem("realmkin_incomplete_setup");
+            return;
+          }
+          if (isNewUser) {
+            setIsOnboarding(true);
+            setCurrentStep("welcome");
+            setStartingStepState("welcome");
+            return;
+          }
+          const hasWallet = !!userData?.walletAddress;
+          const hasUsername = !!userData?.username;
+          let unameOk: boolean | null = null;
+          let walletOk: boolean | null = null;
+          if (hasUsername) {
+            const unameRef = doc(db, "usernames", String(userData?.username).toLowerCase());
+            const unameSnap = await getDoc(unameRef);
+            unameOk = unameSnap.exists() && unameSnap.data()?.uid === user?.uid;
+          }
+          if (hasWallet) {
+            const walletRef = doc(db, "wallets", String(userData?.walletAddress).toLowerCase());
+            const walletSnap = await getDoc(walletRef);
+            walletOk = walletSnap.exists() && walletSnap.data()?.uid === user?.uid;
+          }
+          setUsernameMappingValid(unameOk);
+          setWalletMappingValid(walletOk);
+          if (hasWallet && hasUsername && discordLinked && unameOk === true && walletOk === true) {
+            setIsOnboarding(false);
+            setCurrentStep("complete");
+            // Clear incomplete setup flag when onboarding is complete
+            localStorage.removeItem("realmkin_incomplete_setup");
+            return;
+          }
+          if (hasWallet && hasUsername && !discordLinked && unameOk !== false && walletOk !== false) {
+            setIsOnboarding(true);
+            setCurrentStep("discord");
+            setStartingStepState("discord");
+            return;
+          }
+          if (walletOk === false || !hasWallet) {
+            setIsOnboarding(true);
+            setCurrentStep("wallet");
+            setStartingStepState("wallet");
+            return;
+          }
+          if (unameOk === false || !hasUsername) {
+            setIsOnboarding(true);
+            setCurrentStep("username");
+            setStartingStepState("username");
+            return;
+          }
           setIsOnboarding(false);
           setCurrentStep("complete");
-          return;
+          // Clear incomplete setup flag when onboarding is complete
+          localStorage.removeItem("realmkin_incomplete_setup");
         }
-
-        // New user: show full onboarding from welcome
-        if (isNewUser) {
-          setIsOnboarding(true);
-          setCurrentStep("welcome");
-          setStartingStepState("welcome");
-          return;
-        }
-
-        // Old user logic
-        const hasWallet = !!userData?.walletAddress;
-        const hasUsername = !!userData?.username;
-
-        // Old user with everything done: don't show onboarding
-        if (hasWallet && hasUsername && discordLinked) {
-          setIsOnboarding(false);
-          setCurrentStep("complete");
-          return;
-        }
-
-        // Old user missing Discord: show only Discord step
-        if (hasWallet && hasUsername && !discordLinked) {
-          setIsOnboarding(true);
-          setCurrentStep("discord");
-          setStartingStepState("discord");
-          return;
-        }
-
-        // Old user missing wallet or username: show from wallet step
-        if (!hasWallet || !hasUsername) {
-          setIsOnboarding(true);
-          setCurrentStep("wallet");
-          setStartingStepState("wallet");
-          return;
-        }
-
-        // Default: don't show onboarding
-        setIsOnboarding(false);
-        setCurrentStep("complete");
-      }
-    } catch (e) {
-      // localStorage not available
-    }
+      } catch {}
+    };
+    run();
   }, [user?.uid, isNewUser, userData?.walletAddress, userData?.username, discordLinked]);
 
   // Save progress whenever step changes
@@ -151,6 +168,15 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
   }, []);
 
   const skipOnboarding = useCallback(() => {
+    // Check if user has incomplete setup before allowing skip
+    const hasIncompleteSetup = localStorage.getItem("realmkin_incomplete_setup") === "true";
+    
+    if (hasIncompleteSetup) {
+      console.log("Cannot skip onboarding for users with incomplete setup");
+      // Don't skip onboarding for users with incomplete setup
+      return;
+    }
+    
     setIsOnboarding(false);
     setCurrentStep("complete");
     // Clear onboarding flag to allow auto-login
