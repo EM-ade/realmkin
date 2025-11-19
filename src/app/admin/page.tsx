@@ -3,13 +3,14 @@
 import { useState } from "react";
 import UserManagementDashboard from "@/components/UserManagementDashboard";
 import ContractManagementPanel from "@/components/ContractManagementPanelNew";
+import WalletDebugger from "@/components/WalletDebugger";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Link from "next/link";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<
-    "users" | "contracts" | "leaderboard"
+    "users" | "contracts" | "leaderboard" | "debug"
   >("users");
   const [showContractsPanel, setShowContractsPanel] = useState(false);
 
@@ -17,6 +18,7 @@ const AdminPage = () => {
     { id: "users", label: "👥 Users", icon: "👥" },
     { id: "contracts", label: "📋 Contracts", icon: "📋" },
     { id: "leaderboard", label: "🏆 Leaderboard", icon: "🏆" },
+    { id: "debug", label: "🔧 Wallet Debugger", icon: "🔧" },
   ];
 
   return (
@@ -167,6 +169,15 @@ const AdminPage = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === "debug" && (
+              <div className="bg-gradient-to-br from-[#0A0A0A] to-[#1A1A2E] text-white p-6 rounded-xl border border-[#DA9C2F]/20">
+                <h2 className="text-2xl font-bold mb-4 text-[#DA9C2F]">
+                  🔧 Wallet Debugger
+                </h2>
+                <WalletDebugger />
               </div>
             )}
           </main>

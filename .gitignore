@@ -47,3 +47,4 @@ emulator-data/
 # Service account keys
 *-service-account.json
 firebase-key.json
+test-wallet-nft.ts

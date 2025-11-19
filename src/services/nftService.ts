@@ -128,7 +128,7 @@ class NFTService {
 
   
   private readonly TEST_WALLET_ADDRESS =
-    "F1p6dNLSSTHi4QkUkRVXZw8QurZJKUDcvVBjfF683nU";
+    "";
 
   // Cache for NFT data
   private nftCache = new Map<string, NFTCollection>();

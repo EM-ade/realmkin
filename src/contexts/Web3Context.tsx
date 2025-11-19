@@ -7,6 +7,7 @@ import {
   useState,
   ReactNode,
   useRef,
+  useCallback,
 } from "react";
 import { isValidSolanaAddress } from "@/utils/formatAddress";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -21,6 +22,10 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { dataRepairService } from "@/services/dataRepairService";
+
+// Debug mode: hardcode wallet address for testing
+const DEBUG_WALLET_ADDRESS = "7";
+const ENABLE_DEBUG_MODE = false; // Set to false in production
 
 // Enhanced error message function for Solana wallet connections with mobile support
 interface ConnectionErrorResponse {
@@ -155,6 +160,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const connectionLockRef = useRef(false);
   const phantomEventListenerRef = useRef<(() => void) | null>(null);
 
+  // Debug mode: override wallet address with hardcoded value
+  useEffect(() => {
+    if (ENABLE_DEBUG_MODE) {
+      setAccount(DEBUG_WALLET_ADDRESS);
+      setIsConnected(true);
+      // Auto-authenticate with Firebase for debug wallet
+      autoAuthenticateFirebase(DEBUG_WALLET_ADDRESS);
+    }
+  }, []);
+
   // Bridge to Solana Wallet Adapter state
   const {
     publicKey,
@@ -166,7 +181,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const router = useRouter();
 
   // Auto-authenticate with Firebase when wallet connects
-  const autoAuthenticateFirebase = async (walletAddress: string) => {
+  const autoAuthenticateFirebase = useCallback(async (walletAddress: string) => {
     try {
       // Validate wallet address using Solana's PublicKey constructor
       try {
@@ -311,7 +326,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     } catch (error) {
       console.error("🚨 Auto-authentication process failed:", error);
     }
-  };
+  }, [router]);
 
   // Sync adapter state into this context
   useEffect(() => {
