@@ -230,7 +230,7 @@ class RewardsService {
     >;
   } | null = null;
 
-  private async loadContractConfigs(force = false) {
+  async loadContractConfigs(force = false) {
     const now = Date.now();
     if (
       !force &&
