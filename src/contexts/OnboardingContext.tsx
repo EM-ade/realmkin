@@ -201,6 +201,28 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
     setStartingStepState(step);
   }, []);
 
+  const resumeOnboardingAtStep = useCallback((step: OnboardingStep) => {
+    console.log(`📍 Resuming onboarding at step: ${step}`);
+    setCurrentStep(step);
+    setIsOnboarding(true);
+  }, []);
+
+  // Expose resume function globally for Web3Context to use
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__realmkin_onboarding_trigger = (step: string) => {
+        console.log(`🎯 Onboarding trigger called with step: ${step}`);
+        resumeOnboardingAtStep(step as OnboardingStep);
+      };
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete window.__realmkin_onboarding_trigger;
+      }
+    };
+  }, [resumeOnboardingAtStep]);
+
   return (
     <OnboardingContext.Provider
       value={{

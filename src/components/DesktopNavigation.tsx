@@ -246,13 +246,11 @@ export default function DesktopNavigation() {
                   <button
                     onClick={() => {
                       // If both are connected, clicking the button should show the menu
-                      // If only one is connected, clicking should disconnect that one
+                      // If only wallet is connected, show menu to allow Discord connection or wallet disconnect
                       if (isConnected && discordLinked) {
                         setShowDiscordMenu((v) => !v);
                       } else if (isConnected && !discordLinked) {
-                        disconnectWallet();
-                      } else if (!isConnected && discordLinked) {
-                        handleDiscordDisconnect();
+                        setShowDiscordMenu((v) => !v);
                       } else {
                         setShowDiscordMenu((v) => !v);
                       }
@@ -263,27 +261,38 @@ export default function DesktopNavigation() {
                       {isConnected && discordLinked
                         ? 'Connected'
                         : isConnected && !discordLinked
-                          ? 'Disconnect Wallet'
-                          : !isConnected && discordLinked
-                            ? 'Disconnect Discord'
-                            : 'Connect'}
+                          ? 'Wallet Connected'
+                          : 'Connect'}
                     </span>
                     <span className="text-[10px] xl:text-xs opacity-80">▼</span>
                   </button>
-                  {/* Dropdown - only show when both are connected */}
-                  {showDiscordMenu && isConnected && discordLinked && (
+                  {/* Dropdown - show for all states */}
+                  {showDiscordMenu && isConnected && (
                     <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#404040] bg-[#0B0B09] shadow-xl z-20 animate-fade-in">
-                      {/* Discord Option */}
-                      <button
-                        onClick={() => {
-                          handleDiscordDisconnect();
-                          setShowDiscordMenu(false);
-                        }}
-                        disabled={discordUnlinking}
-                        className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg text-xs"
-                      >
-                        {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect Discord'}
-                      </button>
+                      {/* Discord Option - Show connect or disconnect based on state */}
+                      {discordLinked ? (
+                        <button
+                          onClick={() => {
+                            handleDiscordDisconnect();
+                            setShowDiscordMenu(false);
+                          }}
+                          disabled={discordUnlinking}
+                          className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg text-xs"
+                        >
+                          {discordUnlinking ? 'DISCONNECTING…' : 'Disconnect Discord'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            handleDiscordConnect();
+                            setShowDiscordMenu(false);
+                          }}
+                          disabled={discordConnecting}
+                          className="block w-full text-left px-3 py-2 text-[#DA9C2F] hover:bg-[#1a1a1a] rounded-lg text-xs"
+                        >
+                          {discordConnecting ? 'CONNECTING…' : 'Connect Discord'}
+                        </button>
+                      )}
                       {/* Wallet Option */}
                       <button
                         onClick={() => {
