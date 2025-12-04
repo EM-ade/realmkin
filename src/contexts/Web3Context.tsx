@@ -22,6 +22,7 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { dataRepairService } from "@/services/dataRepairService";
+import { logger } from "@/lib/logger";
 
 // Debug mode: hardcode wallet address for testing
 const DEBUG_WALLET_ADDRESS = "7";
@@ -175,7 +176,11 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     publicKey,
     connected,
     connecting,
+    select: selectWallet,
+    connect: connectAdapter,
     disconnect: adapterDisconnect,
+    wallet,
+    wallets,
   } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
   const router = useRouter();
@@ -212,7 +217,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
       const tempPassword = walletAddress;
 
-      console.log(`🔐 Authenticating wallet: ${walletAddress}`);
+      logger.debug(`🔐 Authenticating wallet: ${walletAddress}`);
 
       // Check if we're in onboarding - if so, don't navigate
       const isOnboarding = localStorage.getItem("onboarding_active") === "true";
@@ -328,56 +333,107 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     }
   }, [router]);
 
-  // Sync adapter state into this context
+  // Sync adapter state into this context (with debouncing to prevent race conditions)
   useEffect(() => {
-    try {
-      setIsConnecting(Boolean(connecting));
-      if (publicKey) {
-        const address =
-          (
-            publicKey as unknown as {
-              toBase58?: () => string;
-              toString: () => string;
+    console.log("🔄 [Wallet Sync] State changed:", {
+      publicKey: publicKey?.toString(),
+      connected,
+      connecting,
+      wallet: wallet?.adapter.name,
+    });
+
+    // Debounce rapid state changes to prevent race conditions
+    const timeoutId = setTimeout(async () => {
+      try {
+        setIsConnecting(Boolean(connecting));
+        if (publicKey) {
+          console.log("✅ [Wallet Sync] Public key detected:", publicKey.toString());
+          const address =
+            (
+              publicKey as unknown as {
+                toBase58?: () => string;
+                toString: () => string;
+              }
+            ).toBase58?.() ?? publicKey.toString();
+          
+          // Validate wallet address using Solana's PublicKey constructor
+          try {
+            new PublicKey(address); // This will throw if invalid
+          } catch (e) {
+            console.error("Invalid Solana wallet address from wallet adapter:", address);
+            setAccount(null);
+            setUid(null);
+            setIsConnected(false);
+            return;
+          }
+
+          if (address && isValidSolanaAddress(address)) {
+            // Only update if address actually changed (prevent unnecessary rerenders)
+            setAccount(prevAccount => prevAccount === address ? prevAccount : address);
+            setIsConnected(true);
+
+            // Cache connection for faster reloads
+            localStorage.setItem(
+              "realmkin_cached_wallet",
+              JSON.stringify({
+                type: "adapter",
+                address,
+                timestamp: Date.now(),
+              }),
+            );
+
+            // Auto-authenticate with Firebase (AWAIT to ensure auth completes before navigation)
+            console.log("🔐 Starting Firebase authentication for wallet:", address);
+            
+            // Show toast notification for better UX
+            try {
+              const toast = (await import('react-hot-toast')).default;
+              toast.loading('Authenticating wallet...', {
+                id: 'wallet-auth',
+                duration: 2000,
+              });
+            } catch (e) {
+              console.warn("Failed to show toast:", e);
             }
-          ).toBase58?.() ?? publicKey.toString();
-        
-        // Validate wallet address using Solana's PublicKey constructor
-        try {
-          new PublicKey(address); // This will throw if invalid
-        } catch (e) {
-          console.error("Invalid Solana wallet address from wallet adapter:", address);
+            
+            await autoAuthenticateFirebase(address);
+            console.log("✅ Firebase authentication completed");
+            
+            // Show success toast
+            try {
+              const toast = (await import('react-hot-toast')).default;
+              toast.success('Wallet connected successfully!', {
+                id: 'wallet-auth',
+                duration: 2000,
+              });
+            } catch (e) {
+              console.warn("Failed to show success toast:", e);
+            }
+          }
+        } else if (connected === false) {
+          // Only clear state if adapter explicitly disconnected
           setAccount(null);
           setUid(null);
           setIsConnected(false);
-          return;
         }
-
-        if (address && isValidSolanaAddress(address)) {
-          setAccount(address);
-          setIsConnected(true);
-
-          // Cache connection for faster reloads
-          localStorage.setItem(
-            "realmkin_cached_wallet",
-            JSON.stringify({
-              type: "adapter",
-              address,
-              timestamp: Date.now(),
-            }),
-          );
-
-          // Auto-authenticate with Firebase (always authenticate, but don't redirect during onboarding)
-          autoAuthenticateFirebase(address);
-        }
-      } else {
-        setAccount(null);
-        setUid(null);
-        setIsConnected(false);
+      } catch (e) {
+        console.log("Wallet adapter sync error:", e);
       }
-    } catch (e) {
-      console.log("Wallet adapter sync error:", e);
-    }
+    }, 100); // 100ms debounce
+
+    return () => clearTimeout(timeoutId);
   }, [publicKey, connected, connecting, autoAuthenticateFirebase]);
+
+  // Cleanup event listeners on unmount
+  useEffect(() => {
+    return () => {
+      if (phantomEventListenerRef.current) {
+        console.log("🧹 Cleaning up Phantom event listeners");
+        phantomEventListenerRef.current();
+        phantomEventListenerRef.current = null;
+      }
+    };
+  }, []);
 
   // Prevent multiple simultaneous connection attempts
   const acquireConnectionLock = () => {
@@ -386,19 +442,32 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       return false;
     }
     connectionLockRef.current = true;
-    // Auto-release lock after 10 seconds to prevent deadlocks
+    // Auto-release lock after 5 seconds to prevent deadlocks
     setTimeout(() => {
       if (connectionLockRef.current) {
         console.log("🔓 Connection lock auto-released after timeout");
         connectionLockRef.current = false;
       }
-    }, 10000);
+    }, 5000);
     return true;
   };
 
   const releaseConnectionLock = () => {
     connectionLockRef.current = false;
   };
+
+  // Check connection on mount (only if not already connected via adapter)
+  useEffect(() => {
+    // Wait a bit for wallet adapter to initialize
+    const timeoutId = setTimeout(() => {
+      // Only check cached connection if adapter hasn't connected yet
+      if (!publicKey && !connected) {
+        checkConnection();
+      }
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [publicKey, connected]);
 
   // Setup Phantom event listeners
   const setupPhantomEventListeners = (phantom: PhantomWallet) => {
@@ -589,8 +658,8 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       const walletData = JSON.parse(cachedWallet);
       const cacheAge = Date.now() - walletData.timestamp;
 
-      // Only use cache if it's less than 2 hours old (more generous for mobile)
-      if (cacheAge < 7200000) {
+      // Only use cache if it's less than 15 minutes old
+      if (cacheAge < 900000) {
         const solanaWindow = window as WindowWithSolanaWallets;
 
         // Try to reconnect based on cached wallet type with retry logic
@@ -716,10 +785,29 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   };
 
   const connectWallet = async () => {
-    if (!acquireConnectionLock()) {
-      console.log("🔒 Connection already in progress");
+    // Check if already connected via adapter
+    if (publicKey && connected) {
+      logger.debug("✅ Wallet already connected via adapter");
       return;
     }
+
+    if (!acquireConnectionLock()) {
+      logger.debug("🔒 Connection already in progress");
+      // Show user feedback
+      try {
+        const toast = (await import('react-hot-toast')).default;
+        toast("Wallet connection in progress, please wait...", {
+          duration: 2000,
+          id: 'connection-in-progress',
+          icon: 'ℹ️',
+        });
+      } catch (e) {
+        console.warn("Failed to show toast:", e);
+      }
+      return;
+    }
+
+    setIsConnecting(true);
 
     try {
       if (typeof window === "undefined") {
@@ -727,6 +815,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           "🔮 REALM ACCESS DENIED",
           "Web3 functionality is not available in this environment.",
         );
+        setIsConnecting(false);
         return;
       }
 
@@ -758,11 +847,15 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       try {
         if (setWalletModalVisible) {
           console.log("🔔 Opening Solana Wallet Adapter modal via context");
+          console.log("📋 Available wallets:", wallets?.map(w => w.adapter.name));
+          console.log("🔌 Currently selected wallet:", wallet?.adapter.name);
+          
           setWalletModalVisible(true);
           opened = true;
 
-          // Add a small delay to ensure modal opens before releasing lock
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // Wait for user to select and connect a wallet
+          // The modal will handle wallet selection and connection internally
+          console.log("⏳ Waiting for user to select a wallet...");
         }
       } catch (e) {
         console.warn("⚠️ Failed to open adapter modal via context:", e);
@@ -806,6 +899,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         }, 400);
       }
     } finally {
+      setIsConnecting(false);
       releaseConnectionLock();
     }
   };
@@ -942,10 +1036,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               );
 
               // For mobile, we need to handle the connection differently
-              // Use a shorter timeout for mobile since users need to switch apps
+              // Use a longer timeout for mobile since users need to switch apps
               const connectionPromise = phantom.connect();
               const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("Connection timeout")), 8000),
+                setTimeout(() => reject(new Error("Connection timeout")), 15000),
               );
 
               const response = await Promise.race([

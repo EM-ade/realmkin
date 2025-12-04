@@ -32,6 +32,9 @@ function DiscordLinkedContent() {
   const [signedIn, setSignedIn] = useState<boolean>(false);
   const [authChecked, setAuthChecked] = useState<boolean>(false);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Check if this page is opened in a popup (for OAuth flow)
+  const isPopup = typeof window !== 'undefined' && window.opener && window.opener !== window;
 
   // Check auth state and try to restore session if needed
   useEffect(() => {
@@ -148,6 +151,11 @@ function DiscordLinkedContent() {
         console.log("[discord:linked] Got Firebase ID token");
         console.log("[discord:linked] Current user UID:", auth.currentUser.uid);
         console.log("[discord:linked] ========================");
+        
+        // If in popup, notify parent window of success
+        if (isPopup && status === "ok" && discordId) {
+          console.log("[discord:linked] Running in popup, will notify parent on success");
+        }
 
         // Get wallet address from Firebase user profile or params
         let walletAddress = walletAddressFromParams;
@@ -253,6 +261,16 @@ function DiscordLinkedContent() {
                 console.log("[discord:linked] verification response:", vRes.status, vJson);
                 setPhase("linked");
                 setMessage("Discord linked and verified.");
+                
+                // If running in popup, notify parent window and close
+                if (isPopup && window.opener) {
+                  console.log("[discord:linked] Notifying parent window of success (after join)");
+                  window.opener.postMessage(
+                    { type: 'discord-oauth-success', discordId },
+                    window.location.origin
+                  );
+                  setTimeout(() => window.close(), 1000);
+                }
               } else {
                 elapsed += 5;
                 if (elapsed >= 180) {
@@ -288,15 +306,48 @@ function DiscordLinkedContent() {
           console.log("[discord:linked] verification response:", vRes.status, vJson);
           setPhase("linked");
           setMessage("Discord linked and verified.");
+          
+          // If running in popup, notify parent window and close
+          if (isPopup && window.opener) {
+            console.log("[discord:linked] Notifying parent window of success");
+            window.opener.postMessage(
+              { type: 'discord-oauth-success', discordId },
+              window.location.origin
+            );
+            setTimeout(() => window.close(), 1000);
+            return;
+          }
         } catch (verErr) {
           console.warn("[discord:linked] auto-verify warning:", verErr);
           setPhase("linked");
           setMessage("Discord linked.");
+          
+          // If running in popup, notify parent window and close
+          if (isPopup && window.opener) {
+            console.log("[discord:linked] Notifying parent window of success (no verification)");
+            window.opener.postMessage(
+              { type: 'discord-oauth-success', discordId },
+              window.location.origin
+            );
+            setTimeout(() => window.close(), 1000);
+            return;
+          }
         }
       } catch (e: unknown) {
         console.error("[discord:linked] error:", e);
         setPhase("error");
-        setMessage((e instanceof Error ? e.message : String(e)) || "Unknown error");
+        const errorMessage = (e instanceof Error ? e.message : String(e)) || "Unknown error";
+        setMessage(errorMessage);
+        
+        // If running in popup, notify parent window of error
+        if (isPopup && window.opener) {
+          console.log("[discord:linked] Notifying parent window of error");
+          window.opener.postMessage(
+            { type: 'discord-oauth-error', error: errorMessage },
+            window.location.origin
+          );
+          setTimeout(() => window.close(), 2000);
+        }
       }
     }
     run();

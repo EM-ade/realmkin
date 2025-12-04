@@ -55,6 +55,18 @@ const nextConfig: NextConfig = {
             value: "camera=(), microphone=(), geolocation=()",
           },
           {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https: http:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://api.mainnet-beta.solana.com https://*.helius-rpc.com https://discord.com https://*.ipfs.io https://*.arweave.net https://gateway.irys.xyz https://shdw-drive.genesysgo.net https://cdn.helius.xyz https://vitals.vercel-insights.com",
+              "frame-src 'self' https://vercel.live",
+            ].join("; "),
+          },
+          {
             key: "Cache-Control",
             value: "public, max-age=31536000, immutable",
           },

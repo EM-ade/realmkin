@@ -1,5 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Removed Google Fonts import - using system fonts for better performance */
 @import "tailwindcss";
+
+/* Ensure Solana Wallet Adapter Modal is above all other elements */
+.wallet-adapter-modal-wrapper {
+  z-index: 99999 !important;
+}
+
+.wallet-adapter-modal-overlay {
+  z-index: 99998 !important;
+}
+
+.wallet-adapter-modal {
+  z-index: 99999 !important;
+}
+
+/* Ensure wallet buttons are clickable */
+.wallet-adapter-modal-list .wallet-adapter-button {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.wallet-adapter-modal-list-more {
+  pointer-events: auto !important;
+}
 
 :root {
   /* Dark theme colors */

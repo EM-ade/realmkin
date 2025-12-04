@@ -301,11 +301,14 @@ class RewardsService {
 
       console.log(`   Parsed config:`, JSON.stringify(parsedConfig, null, 2));
 
-      const addrField = typeof v.contract_address === "string" ? v.contract_address.trim() : "";
+      // Use document ID as the contract address (primary source)
+      // Fallback to contract_address field if it exists (for backward compatibility)
+      const addrField = d.id || (typeof v.contract_address === "string" ? v.contract_address.trim() : "");
       if (!addrField) {
-        // Skip configs without explicit contract_address to avoid doc ID usage
+        console.warn(`⚠️ Skipping config with no document ID or contract_address field`);
         return;
       }
+      console.log(`   ✓ Using contract address: ${addrField}`);
       map.set(addrField, parsedConfig);
     });
 

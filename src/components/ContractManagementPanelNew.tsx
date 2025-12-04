@@ -205,6 +205,7 @@ export default function ContractManagementPanel({
           editingContract.contract_address,
         );
         await updateDoc(ref, {
+          contract_address: editingContract.contract_address, // Store for consistency
           magic_eden_symbol: formData.magicEdenSymbol || null,
           name: formData.name,
           blockchain: formData.blockchain,
@@ -222,6 +223,7 @@ export default function ContractManagementPanel({
         }
         const ref = doc(db, "contractBonusConfigs", id);
         await setDoc(ref, {
+          contract_address: id, // Store for consistency (doc ID is primary source)
           magic_eden_symbol: formData.magicEdenSymbol || null,
           name: formData.name,
           blockchain: formData.blockchain,
