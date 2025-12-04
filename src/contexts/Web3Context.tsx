@@ -24,6 +24,13 @@ import { useRouter } from "next/navigation";
 import { dataRepairService } from "@/services/dataRepairService";
 import { logger } from "@/lib/logger";
 
+// Import onboarding context type
+declare global {
+  interface Window {
+    __realmkin_onboarding_trigger?: (step: string) => void;
+  }
+}
+
 // Debug mode: hardcode wallet address for testing
 const DEBUG_WALLET_ADDRESS = "7";
 const ENABLE_DEBUG_MODE = false; // Set to false in production
@@ -319,9 +326,18 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             console.log("✅ New account created successfully");
           } catch (createErr) {
             console.error("🚨 Failed to create account:", createErr);
-            // Only redirect if we're not already on the login page and not during onboarding
-            if (!window.location.pathname.includes("/login") && !isOnboarding) {
-              router.push(`/login?wallet=${walletAddress}`);
+            
+            // Instead of redirecting to login, trigger onboarding at wallet step
+            console.log("🔄 Triggering onboarding wizard at wallet connection step...");
+            
+            // Check if we have onboarding trigger available
+            if (typeof window !== 'undefined' && window.__realmkin_onboarding_trigger) {
+              window.__realmkin_onboarding_trigger('wallet');
+            } else {
+              // Fallback: Only redirect if we're not already on the login page and not during onboarding
+              if (!window.location.pathname.includes("/login") && !isOnboarding) {
+                router.push(`/login?wallet=${walletAddress}`);
+              }
             }
           }
         } else {
