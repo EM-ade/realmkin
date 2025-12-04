@@ -19,11 +19,17 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
   const [redirecting, setRedirecting] = useState(false);
   const [graceOver, setGraceOver] = useState(false);
 
-  // Start a short grace window to allow auth and wallet to hydrate after refresh
+  // Check if this is an OAuth flow (needs longer grace period)
+  const isOAuthFlow = pathname?.includes('/discord/linked') || 
+                      pathname?.includes('/oauth/callback');
+
+  // Start a grace window to allow auth and wallet to hydrate after refresh
+  // Extended for OAuth flows (10s) vs normal pages (3s)
   useEffect(() => {
-    const timeout = setTimeout(() => setGraceOver(true), 3000);
+    const graceTime = isOAuthFlow ? 10000 : 3000;
+    const timeout = setTimeout(() => setGraceOver(true), graceTime);
     return () => clearTimeout(timeout);
-  }, []);
+  }, [isOAuthFlow]);
 
   // During grace, block interactions with a loading overlay
   const inGrace = useMemo(() => !graceOver, [graceOver]);

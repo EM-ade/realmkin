@@ -48,19 +48,64 @@ export const DiscordProvider = ({ children }: DiscordProviderProps) => {
         const token = await user.getIdToken();
         console.log("🔐 Got Firebase ID token for Discord link");
         
-        // Use wallet address directly from Web3 context instead of querying Firebase
+        // Use wallet address directly from Web3 context
         console.log("💳 Wallet address for Discord link (from Web3 context):", walletAddress);
         
-        // Open Discord login with Firebase token and wallet address
+        // Build login URL with token and wallet
         const loginUrl = `/api/discord/login?token=${encodeURIComponent(token)}${walletAddress ? `&wallet=${encodeURIComponent(walletAddress)}` : ''}`;
-        window.location.href = loginUrl;
+        
+        // Open in popup instead of full redirect
+        const popup = window.open(
+          loginUrl,
+          'discord-oauth',
+          'width=500,height=700,scrollbars=yes,resizable=yes'
+        );
+        
+        if (!popup) {
+          toast.error("Popup blocked! Please allow popups for this site.");
+          setDiscordConnecting(false);
+          return;
+        }
+        
+        // Listen for success message from popup
+        const messageHandler = (event: MessageEvent) => {
+          // Verify origin for security
+          if (event.origin !== window.location.origin) return;
+          
+          if (event.data.type === 'discord-oauth-success') {
+            console.log("✅ Discord OAuth successful!");
+            setDiscordLinked(true);
+            setDiscordConnecting(false);
+            toast.success("Discord connected successfully!");
+            popup.close();
+            window.removeEventListener('message', messageHandler);
+          } else if (event.data.type === 'discord-oauth-error') {
+            console.error("❌ Discord OAuth failed:", event.data.error);
+            setDiscordConnecting(false);
+            toast.error(event.data.error || "Failed to connect Discord");
+            popup.close();
+            window.removeEventListener('message', messageHandler);
+          }
+        };
+        
+        window.addEventListener('message', messageHandler);
+        
+        // Check if popup was closed by user
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener('message', messageHandler);
+            setDiscordConnecting(false);
+          }
+        }, 500);
+        
       } catch (error) {
         toast.error("Failed to get authentication token");
         console.error("Discord connect error:", error);
         setDiscordConnecting(false);
       }
     },
-    [walletAddress] // Add walletAddress as dependency
+    [walletAddress]
   );
 
   const disconnectDiscord = useCallback(

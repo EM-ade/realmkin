@@ -8,7 +8,16 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useNFT } from "@/contexts/NFTContext";
-import NFTViewer3D from "@/components/NFTViewer3D";
+
+// Lazy load 3D viewer - Three.js is huge (~600KB)
+const NFTViewer3D = dynamic(() => import("@/components/NFTViewer3D"), {
+  loading: () => (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#DA9C2F]"></div>
+    </div>
+  ),
+  ssr: false,
+});
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import { NFTMetadata } from "@/services/nftService";
 import { getAuth } from "firebase/auth";

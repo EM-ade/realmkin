@@ -21,6 +21,8 @@ const herticalSans = localFont({
   src: "../../public/fonts/Hertical Sans Regular.otf",
   variable: "--font-hertical-sans",
   fallback: ["Helvetica", "Arial", "sans-serif"],
+  display: 'swap',
+  preload: true,
 });
 
 // Amnestia font for login page
@@ -28,6 +30,8 @@ const amnestia = localFont({
   src: "../../public/fonts/Amnestia.ttf",
   variable: "--font-amnestia",
   fallback: ["serif"],
+  display: 'swap',
+  preload: true,
 });
 
 // Impact Regular font for welcome text
@@ -35,6 +39,8 @@ const impactRegular = localFont({
   src: "../../public/fonts/Impact Regular.ttf",
   variable: "--font-impact-regular",
   fallback: ["Impact", "Arial Black", "sans-serif"],
+  display: 'swap',
+  preload: true,
 });
 
 // Gothic CG No3 Regular font for section headers
@@ -42,6 +48,8 @@ const gothicCG = localFont({
   src: "../../public/fonts/Gothic CG No3 Regular.otf",
   variable: "--font-gothic-cg",
   fallback: ["Arial", "sans-serif"],
+  display: 'swap',
+  preload: true,
 });
 
 export const metadata: Metadata = {
