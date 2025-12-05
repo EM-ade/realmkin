@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import DesktopNavigation from "@/components/DesktopNavigation";
 import withAuthGuard from "@/components/withAuthGuard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import SocialLinks from "@/components/SocialLinks";
@@ -52,8 +51,6 @@ function TraitCrushPage() {
       />
       {!isMobile && <EtherealParticles />}
       {!isMobile && <ConstellationBackground />}
-
-      <DesktopNavigation />
 
       <header className="relative z-20 flex items-center justify-between gap-3 p-4 md:p-6 lg:hidden">
         <div className="flex items-center space-x-3">

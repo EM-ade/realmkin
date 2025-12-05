@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import DesktopNavigation from "@/components/DesktopNavigation";
 import withAuthGuard from "@/components/withAuthGuard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import SocialLinks from "@/components/SocialLinks";
@@ -46,8 +45,6 @@ function Realmkin2048Page() {
       <div className="absolute inset-0 bg-gradient-to-b from-[#050302]/30 via-transparent to-[#050302]" aria-hidden="true" />
       {!isMobile && <EtherealParticles />}
       {!isMobile && <ConstellationBackground />}
-
-      <DesktopNavigation />
 
       <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20">
         <div className="flex items-center space-x-3">
