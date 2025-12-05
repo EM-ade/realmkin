@@ -184,6 +184,13 @@ export default function WalletPage() {
   const isDevelopment = process.env.NODE_ENV === "development";
   const [testMode, setTestMode] = useState(false);
   const [reloadingConfigs, setReloadingConfigs] = useState(false);
+  
+  // Admin test mode - input any wallet for testing rewards
+  const [adminTestMode, setAdminTestMode] = useState(false);
+  const [testWalletAddress, setTestWalletAddress] = useState("");
+  
+  // Use test wallet when admin test mode is enabled
+  const effectiveAccount = adminTestMode && testWalletAddress ? testWalletAddress : account;
 
   // NFT state
   const [nfts, setNfts] = useState<NFTMetadata[]>([]);
@@ -237,14 +244,14 @@ export default function WalletPage() {
   );
 
   const fetchUserNFTs = useCallback(async () => {
-    if (!account || !user) return;
+    if (!effectiveAccount || !user) return;
 
     setNftLoading(true);
     setNftError(null);
 
     try {
       // Fetch from both standard and premium contracts
-      const nftCollection = await nftService.fetchAllContractNFTs(account);
+      const nftCollection = await nftService.fetchAllContractNFTs(effectiveAccount);
 
       // Add test NFT if test mode is enabled (only in development)
       const allNFTs =
@@ -259,7 +266,7 @@ export default function WalletPage() {
         try {
           const rewards = await rewardsService.initializeUserRewards(
             user.uid,
-            account,
+            effectiveAccount,
             allNFTs.length,
             allNFTs,
           );
@@ -285,11 +292,11 @@ export default function WalletPage() {
     } finally {
       setNftLoading(false);
     }
-  }, [account, user, testMode, isDevelopment, TEST_NFT]);
+  }, [effectiveAccount, user, testMode, isDevelopment, TEST_NFT]);
 
   // Reload contract configs handler
   const handleReloadConfigs = useCallback(async () => {
-    if (!user || !account) return;
+    if (!user || !effectiveAccount) return;
 
     setReloadingConfigs(true);
     try {
@@ -303,13 +310,13 @@ export default function WalletPage() {
     } finally {
       setReloadingConfigs(false);
     }
-  }, [user, account, fetchUserNFTs]);
+  }, [user, effectiveAccount, fetchUserNFTs]);
 
   // Removed unified balance fetching
 
   // Handle withdrawal (now claims to wallet)
   const handleWithdraw = useCallback(async () => {
-    if (!user || !account) return;
+    if (!user || !effectiveAccount) return;
 
     const totalClaimable = userRewards?.totalRealmkin || 0;
     if (totalClaimable <= 0) {
@@ -322,18 +329,18 @@ export default function WalletPage() {
 
     try {
       // Call the claim service
-      const result: ClaimResponse = await claimTokens(totalClaimable, account);
+      const result: ClaimResponse = await claimTokens(totalClaimable, effectiveAccount);
 
       if (result.success) {
         // Show withdrawal confirmation
         setLastClaimAmount(totalClaimable);
-        setLastClaimWallet(account);
+        setLastClaimWallet(effectiveAccount);
         setShowWithdrawalConfirmation(true);
 
         // Save to transaction history in Firestore
         await rewardsService.saveTransactionHistory({
           userId: user.uid,
-          walletAddress: account,
+          walletAddress: effectiveAccount,
           type: "withdraw",
           amount: totalClaimable,
           description: `Claimed ${rewardsService.formatMKIN(totalClaimable)} to wallet`,
@@ -360,11 +367,11 @@ export default function WalletPage() {
     } finally {
       setWithdrawLoading(false);
     }
-  }, [user, account, userRewards]);
+  }, [user, effectiveAccount, userRewards]);
 
   // Handle transfer
   const handleTransfer = useCallback(async () => {
-    if (!account || !transferRecipient || !transferAmount) return;
+    if (!effectiveAccount || !transferRecipient || !transferAmount) return;
 
     const amount = parseFloat(transferAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -417,7 +424,7 @@ export default function WalletPage() {
       // Save to transaction history in Firestore
       await rewardsService.saveTransactionHistory({
         userId: user!.uid,
-        walletAddress: account,
+        walletAddress: effectiveAccount,
         type: "transfer",
         amount: amount,
         description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient || "")}`,
@@ -447,7 +454,7 @@ export default function WalletPage() {
       setTransferLoading(false);
     }
   }, [
-    account,
+    effectiveAccount,
     transferRecipient,
     transferAmount,
     userRewards,
@@ -481,15 +488,15 @@ export default function WalletPage() {
     fetchTransactionHistory();
   }, [user?.uid]);
 
-  // Fetch NFTs when wallet connects
+  // Fetch NFTs when wallet connects (or when admin test mode is enabled)
   useEffect(() => {
-    if (isConnected && account) {
+    if ((isConnected && account) || adminTestMode) {
       fetchUserNFTs();
     } else {
       setNfts([]);
       setNftError(null);
     }
-  }, [isConnected, account, fetchUserNFTs, testMode]);
+  }, [isConnected, account, adminTestMode, fetchUserNFTs, testMode]);
 
   // Fetch Discord link status when user session changes
   useEffect(() => {
@@ -649,6 +656,25 @@ export default function WalletPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-label">REWARD</h2>
               <div className="flex gap-2">
+                {/* Admin Test Wallet Toggle (only for admins) */}
+                {userData?.admin && (
+                  <button
+                    onClick={() => {
+                      setAdminTestMode(!adminTestMode);
+                      if (adminTestMode) {
+                        setTestWalletAddress("");
+                      }
+                    }}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                      adminTestMode
+                        ? "bg-purple-500/20 border-purple-400 text-purple-400"
+                        : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
+                    }`}
+                    title="Enter any wallet address to test rewards"
+                  >
+                    {adminTestMode ? "✓ Test Wallet ON" : "Test Wallet"}
+                  </button>
+                )}
                 {/* Reload Configs Button */}
                 {isDevelopment && (
                   <button
@@ -676,6 +702,30 @@ export default function WalletPage() {
                 )}
               </div>
             </div>
+            {userData?.admin && adminTestMode && (
+              <div className="mb-4 p-3 bg-purple-500/10 border border-purple-400/30 rounded-lg">
+                <p className="text-purple-400 text-sm font-semibold mb-2">
+                  👤 Admin Test Wallet Mode
+                </p>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Enter wallet address to test..."
+                    value={testWalletAddress}
+                    onChange={(e) => setTestWalletAddress(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#0B0B09] border border-purple-400/30 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-purple-400"
+                  />
+                  <p className="text-white/50 text-xs">
+                    Enter any Solana wallet address to test reward calculations and NFT holdings.
+                  </p>
+                  {testWalletAddress && (
+                    <p className="text-purple-400/80 text-xs font-mono">
+                      Testing: {testWalletAddress.slice(0, 8)}...{testWalletAddress.slice(-6)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
             {isDevelopment && testMode && (
               <div className="mb-4 p-3 bg-[#DA9C2F]/10 border border-[#DA9C2F]/30 rounded-lg">
                 <p className="text-[#DA9C2F] text-sm font-semibold mb-1">
@@ -706,9 +756,11 @@ export default function WalletPage() {
                 </div>
 
                 {/* Wallet Balance - Right aligned */}
-                {isConnected && (
+                {(isConnected || adminTestMode) && (
                   <div className="flex flex-col items-end gap-1">
-                    <p className="text-white/60 text-xs">Wallet Balance</p>
+                    <p className="text-white/60 text-xs">
+                      {adminTestMode ? "Test Wallet" : "Wallet Balance"}
+                    </p>
                     <div className="flex items-center gap-2 text-[#DA9C2F] font-medium">
                       <Image
                         src="/wallet.jpeg"
@@ -721,6 +773,11 @@ export default function WalletPage() {
                         {formattedWalletBalance}
                       </span>
                     </div>
+                    {adminTestMode && effectiveAccount && (
+                      <p className="text-purple-400/60 text-[10px] mt-0.5 font-mono">
+                        {effectiveAccount.slice(0, 4)}...{effectiveAccount.slice(-4)}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

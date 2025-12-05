@@ -144,13 +144,25 @@ export default function GlobalNavigation() {
               {formattedBalance}
             </div>
           )} */}
-          {discordLinked && (
+          {discordLinked ? (
             <button
               onClick={handleDiscordDisconnect}
               disabled={discordUnlinking}
               className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 text-sm font-medium transition-colors disabled:opacity-60"
             >
               {discordUnlinking ? "Disconnecting Discord..." : "Disconnect Discord"}
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                if (user) {
+                  connectDiscord(user);
+                }
+              }}
+              disabled={discordConnecting || !user}
+              className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              {discordConnecting ? "Connecting Discord..." : "Connect Discord"}
             </button>
           )}
           {isConnected ? (

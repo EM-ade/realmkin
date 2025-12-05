@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
+import { useDiscord } from "@/contexts/DiscordContext";
 import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -24,11 +25,17 @@ export default function DesktopNavigation() {
   const { user, userData } = useAuth();
   const { account, isConnected, connectWallet, disconnectWallet, isConnecting } = useWeb3();
   
-  // Discord and balance states
-  const [discordLinked, setDiscordLinked] = useState<boolean>(false);
+  // Use Discord context for proper popup handling
+  const { 
+    discordLinked, 
+    discordConnecting, 
+    discordUnlinking, 
+    connectDiscord, 
+    disconnectDiscord,
+    checkDiscordStatus 
+  } = useDiscord();
+  
   const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
-  const [discordConnecting, setDiscordConnecting] = useState(false);
-  const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   const [hideDiscordNotice, setHideDiscordNotice] = useState(false);
@@ -55,82 +62,30 @@ export default function DesktopNavigation() {
   );
 
   const handleDiscordConnect = useCallback(() => {
-    if (discordLinked || discordConnecting) return;
-    setDiscordConnecting(true);
-    if (typeof window !== "undefined") {
-      window.location.assign("/api/discord/login");
-    }
-  }, [discordLinked, discordConnecting]);
+    if (discordLinked || discordConnecting || !user) return;
+    // Use context method which opens in popup
+    connectDiscord(user);
+  }, [discordLinked, discordConnecting, user, connectDiscord]);
 
   const handleDiscordDisconnect = useCallback(async (): Promise<boolean> => {
-    if (discordUnlinking) return false;
+    if (discordUnlinking || !user) return false;
     try {
-      setDiscordUnlinking(true);
-      const auth = getAuth();
-      if (!auth.currentUser) {
-        return false;
-      }
-      const token = await auth.currentUser.getIdToken();
-      const res = await fetch(`${gatekeeperBase}/api/link/discord`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to disconnect');
-      setDiscordLinked(false);
+      // Use context method for disconnect
+      await disconnectDiscord(user, gatekeeperBase);
       setShowDiscordMenu(false);
-      try {
-        localStorage.removeItem('realmkin_discord_linked');
-      } catch {}
       return true;
     } catch (error) {
       console.error(error);
       return false;
-    } finally {
-      setDiscordUnlinking(false);
     }
-  }, [discordUnlinking, gatekeeperBase]);
+  }, [discordUnlinking, user, disconnectDiscord, gatekeeperBase]);
 
-  // Fetch Discord link status
+  // Check Discord status on mount
   useEffect(() => {
-    async function checkLink() {
-      try {
-        const auth = getAuth();
-        if (!auth.currentUser) {
-          try {
-            const cachedLinked = localStorage.getItem("realmkin_discord_linked");
-            setDiscordLinked(cachedLinked === "true");
-          } catch {
-            setDiscordLinked(false);
-          }
-          return;
-        }
-        const token = await auth.currentUser.getIdToken();
-        const res = await fetch(`${gatekeeperBase}/api/link/status`, {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          try {
-            const cachedLinked = localStorage.getItem("realmkin_discord_linked");
-            setDiscordLinked(cachedLinked === "true");
-          } catch {
-            setDiscordLinked(false);
-          }
-          return;
-        }
-        const data = await res.json();
-        setDiscordLinked(Boolean(data?.linked));
-      } catch {
-        try {
-          const cachedLinked = localStorage.getItem("realmkin_discord_linked");
-          setDiscordLinked(cachedLinked === "true");
-        } catch {
-          setDiscordLinked(false);
-        }
-      }
+    if (user?.uid) {
+      checkDiscordStatus(user.uid, gatekeeperBase);
     }
-    checkLink();
-  }, [user?.uid, gatekeeperBase]);
+  }, [user?.uid, gatekeeperBase, checkDiscordStatus]);
 
   // Fetch user rewards from Firebase
   useEffect(() => {
