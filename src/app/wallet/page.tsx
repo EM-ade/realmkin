@@ -383,7 +383,11 @@ export default function WalletPage() {
 
       // Create a connection to send the transaction
       const { Connection } = await import("@solana/web3.js");
-      const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+      // Use Helius RPC to avoid 403 errors from public RPC
+      const heliusApiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
+      const rpcUrl = heliusApiKey 
+        ? `https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`
+        : (process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com");
       const connection = new Connection(rpcUrl, "confirmed");
 
       // Get a fresh blockhash before signing (blockhashes expire after ~60 seconds)

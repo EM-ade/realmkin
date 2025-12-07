@@ -15,6 +15,12 @@ import OnboardingWizard from "@/components/OnboardingWizard";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { suppressProductionLogs } from "@/utils/devLogger";
+
+// Suppress console logs in production
+if (typeof window !== "undefined") {
+  suppressProductionLogs();
+}
 
 // Hertical Sans Regular font for header
 const herticalSans = localFont({
