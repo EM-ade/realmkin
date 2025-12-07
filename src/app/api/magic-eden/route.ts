@@ -13,6 +13,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing wallet parameter' }, { status: 400 });
     }
 
+    // Check network - Magic Eden only supports mainnet
+    const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
+    if (network !== 'mainnet' && network !== 'mainnet-beta') {
+      // On devnet/testnet, return empty array since Magic Eden doesn't support it
+      return NextResponse.json([], { status: 200 });
+    }
+
     // Build URL without forcing a collection symbol; include it only if provided
     const base = `https://api-mainnet.magiceden.dev/v2/wallets/${encodeURIComponent(wallet)}/tokens`;
     const params = new URLSearchParams({ limit, offset });

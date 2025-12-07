@@ -39,30 +39,19 @@ if (
 
 // Handle Brave Wallet interference with Phantom detection
 if (typeof window !== "undefined") {
-  interface SolanaProvider {
-    isBraveWallet?: boolean;
-    isPhantom?: boolean;
-    constructor?: { name?: string };
-  }
-
-  interface WindowWithWallets extends Window {
-    solana?: SolanaProvider;
-    phantom?: { solana?: SolanaProvider };
-  }
-
   // Detect if Brave Wallet is hijacking the window.solana object
   const checkWalletProvider = () => {
-    const solanaProvider = (window as WindowWithWallets).solana;
+    const solanaProvider = window.solana;
 
     if (solanaProvider) {
       // Check if this is Brave Wallet masquerading as the default provider
-      const isBraveWallet = solanaProvider.isBraveWallet === true;
+      const isBraveWallet = (solanaProvider as unknown as Record<string, unknown>).isBraveWallet === true;
       const isPhantom = solanaProvider.isPhantom === true;
 
       console.log("[Realmkin] Wallet detection:", {
         isBraveWallet,
         isPhantom,
-        provider: solanaProvider.constructor?.name || "unknown",
+        provider: (solanaProvider as unknown as Record<string, unknown>).constructor?.toString() || "unknown",
       });
 
       // If Brave Wallet is detected, try to access Phantom directly
@@ -70,7 +59,7 @@ if (typeof window !== "undefined") {
         console.log("[Realmkin] Brave Wallet detected, looking for Phantom...");
 
         // Phantom usually exposes itself at window.phantom.solana
-        if ((window as WindowWithWallets).phantom?.solana) {
+        if (window.phantom?.solana) {
           console.log(
             "[Realmkin] Found Phantom wallet at window.phantom.solana",
           );
@@ -152,7 +141,7 @@ function WalletModalBridge() {
 export default function SolanaWalletProvider({ children }: Props) {
   // Allow RPC URL and network to be configured via env
   const networkEnv =
-    process.env.NEXT_PUBLIC_SOLANA_NETWORK?.toLowerCase() || "mainnet";
+    process.env.NEXT_PUBLIC_SOLANA_NETWORK?.toLowerCase() || "mainnet-beta";
 
   // Map string to WalletAdapterNetwork enum
   let network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
@@ -213,7 +202,7 @@ export default function SolanaWalletProvider({ children }: Props) {
             console.error("[Realmkin] Possible fixes:");
             console.error("[Realmkin] 1. Refresh the page and try again");
             console.error("[Realmkin] 2. Unlock your Phantom wallet");
-            console.error("[Realmkin] 3. Check if Phantom is on the correct network (mainnet-beta)");
+            console.error("[Realmkin] 3. Check if Phantom is on the correct network (mainnet)");
             console.error("[Realmkin] 4. Try disconnecting and reconnecting Phantom");
             return;
           }
