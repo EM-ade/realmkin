@@ -314,28 +314,136 @@ export default function WalletPage() {
 
   // Removed unified balance fetching
 
-  // Handle withdrawal (now claims to wallet)
+  // Handle withdrawal (fee-based claiming to wallet)
   const handleWithdraw = useCallback(async () => {
     if (!user || !effectiveAccount) return;
 
     const totalClaimable = userRewards?.totalRealmkin || 0;
-    if (totalClaimable <= 0) {
-      setWithdrawError("No MKIN available to claim");
+    const MIN_WITHDRAWAL = 1000;
+    
+    // Parse withdrawal amount or use total claimable if empty
+    const requestedAmount = withdrawAmount && withdrawAmount.trim() !== "" 
+      ? parseFloat(withdrawAmount) 
+      : totalClaimable;
+    
+    // Validate withdrawal amount
+    if (isNaN(requestedAmount) || requestedAmount <= 0) {
+      setWithdrawError("Please enter a valid withdrawal amount");
+      return;
+    }
+    
+    if (requestedAmount < MIN_WITHDRAWAL) {
+      setWithdrawError(`Minimum withdrawal is ${MIN_WITHDRAWAL.toLocaleString()} MKIN`);
+      return;
+    }
+    
+    if (requestedAmount > totalClaimable) {
+      setWithdrawError(`Cannot withdraw more than available balance (${totalClaimable.toLocaleString()} MKIN)`);
       return;
     }
 
     setWithdrawLoading(true);
     setWithdrawError(null);
 
-    try {
-      // Call the claim service
-      const result: ClaimResponse = await claimTokens(totalClaimable, effectiveAccount);
+    // Debug logging
+    console.log("=== WITHDRAWAL DEBUG ===");
+    console.log("Withdraw Amount State:", withdrawAmount);
+    console.log("Total Claimable:", totalClaimable);
+    console.log("Requested Amount:", requestedAmount);
+    console.log("========================");
 
-      if (result.success) {
+    try {
+      // Step 1: Initiate withdrawal - get fee transaction
+      const { initiateWithdrawal, completeWithdrawal, deserializeTransaction } = await import("@/services/withdrawService");
+      
+      const initiateResult = await initiateWithdrawal(requestedAmount, effectiveAccount);
+
+      if (!initiateResult.success || !initiateResult.feeTransaction) {
+        setWithdrawError(initiateResult.error || "Failed to initiate withdrawal");
+        return;
+      }
+
+      console.log(`Fee: $${initiateResult.feeAmountUsd} (${initiateResult.feeAmountSol?.toFixed(6)} SOL)`);
+
+      // Step 2: Get user's wallet to sign transaction
+      if (!window.solana || !window.solana.isPhantom) {
+        setWithdrawError("Phantom wallet not found. Please install Phantom wallet.");
+        return;
+      }
+
+      // Deserialize the transaction
+      const transaction = deserializeTransaction(initiateResult.feeTransaction);
+      
+      console.log("Transaction deserialized:", {
+        signatures: transaction.signatures.length,
+        instructions: transaction.instructions.length,
+        recentBlockhash: transaction.recentBlockhash,
+        feePayer: transaction.feePayer?.toBase58()
+      });
+
+      // Create a connection to send the transaction
+      const { Connection } = await import("@solana/web3.js");
+      const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+      const connection = new Connection(rpcUrl, "confirmed");
+
+      // Get a fresh blockhash before signing (blockhashes expire after ~60 seconds)
+      console.log("Getting fresh blockhash...");
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
+      
+      console.log("Fresh blockhash:", blockhash.substring(0, 10) + "...");
+
+      // Sign the transaction with Phantom
+      console.log("Requesting wallet to sign transaction...");
+      const signedTransaction = await window.solana.signTransaction(transaction);
+      console.log("Transaction signed successfully");
+
+      // Send the signed transaction
+      console.log("Sending transaction to network...");
+      const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
+        skipPreflight: false,
+        preflightCommitment: "confirmed"
+      });
+      
+      console.log(`Fee transaction sent: ${signature}`);
+
+      // Wait for transaction to confirm (devnet can be slow)
+      console.log("Waiting for transaction confirmation...");
+      try {
+        const confirmation = await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight
+        }, "confirmed");
+        
+        if (confirmation.value.err) {
+          throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+        }
+        
+        console.log("Transaction confirmed on-chain!");
+      } catch (confirmError) {
+        console.error("Confirmation error:", confirmError);
+        throw new Error(`Transaction confirmation failed: ${confirmError instanceof Error ? confirmError.message : 'Unknown error'}`);
+      }
+      
+      // Additional wait to ensure backend can fetch it
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Step 3: Complete withdrawal with fee signature
+      console.log("Completing withdrawal with backend...");
+      const completeResult = await completeWithdrawal(signature, requestedAmount, effectiveAccount);
+      
+      console.log("Complete withdrawal result:", completeResult);
+
+      if (completeResult.success) {
         // Show withdrawal confirmation
-        setLastClaimAmount(totalClaimable);
+        setLastClaimAmount(requestedAmount);
         setLastClaimWallet(effectiveAccount);
         setShowWithdrawalConfirmation(true);
+        
+        // Clear the withdrawal amount input after success
+        setWithdrawAmount("");
 
         // Save to transaction history in Firestore
         await rewardsService.saveTransactionHistory({
@@ -343,7 +451,7 @@ export default function WalletPage() {
           walletAddress: effectiveAccount,
           type: "withdraw",
           amount: totalClaimable,
-          description: `Claimed ${rewardsService.formatMKIN(totalClaimable)} to wallet`,
+          description: `Withdrew ${rewardsService.formatMKIN(totalClaimable)} MKIN (fee: $${initiateResult.feeAmountUsd})`,
         });
 
         // Add to local state
@@ -351,23 +459,55 @@ export default function WalletPage() {
           {
             type: "withdraw",
             amount: totalClaimable,
-            description: `Claimed ${rewardsService.formatMKIN(totalClaimable)} to wallet`,
+            description: `Withdrew ${rewardsService.formatMKIN(totalClaimable)} MKIN (fee: $${initiateResult.feeAmountUsd})`,
             date: new Date(),
           },
           ...prev.slice(0, 9), // Keep only last 10 transactions
         ]);
+
+        // Refresh user rewards to show updated balance
+        if (user) {
+          try {
+            const rewards = await rewardsService.initializeUserRewards(
+              user.uid,
+              effectiveAccount,
+              nfts.length,
+              nfts,
+            );
+            setUserRewards(rewards);
+          } catch (error) {
+            console.error("Error refreshing rewards:", error);
+          }
+        }
       } else {
-        setWithdrawError(result.error || "Failed to claim tokens");
+        const errorMsg = completeResult.error || "Failed to complete withdrawal";
+        const fullMsg = completeResult.refunded 
+          ? `${errorMsg}\n\nYour MKIN balance has been refunded, but the $${initiateResult.feeAmountUsd} SOL fee was not refunded.`
+          : errorMsg;
+        setWithdrawError(fullMsg);
       }
     } catch (error) {
-      console.error("Error processing claim:", error);
-      setWithdrawError(
-        error instanceof Error ? error.message : "Failed to claim tokens",
-      );
+      console.error("Error processing withdrawal:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      
+      let errorMessage = "Failed to process withdrawal";
+      if (error instanceof Error) {
+        if (error.message.includes("User rejected") || error.message.includes("User canceled")) {
+          errorMessage = "Transaction cancelled by user";
+        } else {
+          errorMessage = error.message;
+        }
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      }
+      
+      setWithdrawError(errorMessage);
     } finally {
       setWithdrawLoading(false);
+      // Don't clear input on error - let user fix their input
     }
-  }, [user, effectiveAccount, userRewards]);
+  }, [user, effectiveAccount, userRewards, withdrawAmount]);
 
   // Handle transfer
   const handleTransfer = useCallback(async () => {
@@ -903,27 +1043,61 @@ export default function WalletPage() {
               <div className="">
                 <h3 className="text-label mb-3">WITHDRAW</h3>
                 <div className="space-y-3">
+                  {/* Info Banner */}
+                  <div className="bg-[#DA9C2F]/10 border border-[#DA9C2F]/30 rounded-lg p-3">
+                    <p className="text-[#DA9C2F] text-xs font-semibold mb-1">
+                      ⚠️ Withdrawal Requirements
+                    </p>
+                    <ul className="text-white/70 text-xs space-y-1">
+                      <li>• Minimum: 1,000 MKIN</li>
+                      <li>• Fee: $0.50 in SOL</li>
+                      <li>• Requires Solana wallet</li>
+                    </ul>
+                  </div>
+                  
                   <div>
                     <label className="text-muted text-xs block mb-1">
                       Amount
                     </label>
-                    <input
-                      type="text"
-                      placeholder="0"
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                      className="input-field w-full"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="0"
+                        value={withdrawAmount}
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          console.log("Input onChange fired:", newValue);
+                          console.log("Current withdrawAmount state before update:", withdrawAmount);
+                          setWithdrawAmount(newValue);
+                          // Force immediate log after state update (will show in next render)
+                          setTimeout(() => console.log("withdrawAmount state after setState:", withdrawAmount), 0);
+                        }}
+                        onFocus={() => console.log("Input focused. Current value:", withdrawAmount)}
+                        onBlur={() => console.log("Input blurred. Final value:", withdrawAmount)}
+                        className="input-field flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setWithdrawAmount((userRewards?.totalRealmkin || 0).toString())}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        MAX
+                      </button>
+                    </div>
+                    <p className="text-white/50 text-xs mt-1">
+                      Min: 1,000 MKIN • Available: {(userRewards?.totalRealmkin || 0).toLocaleString()} MKIN
+                    </p>
                   </div>
                   {withdrawError && (
-                    <div className="error-message warning">{withdrawError}</div>
+                    <div className="error-message warning whitespace-pre-line">{withdrawError}</div>
                   )}
                   <button
                     onClick={handleWithdraw}
-                    disabled={withdrawLoading}
-                    className={`btn-primary w-full text-sm ${withdrawLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={withdrawLoading || (userRewards?.totalRealmkin || 0) < 1000}
+                    className={`btn-primary w-full text-sm ${(withdrawLoading || (userRewards?.totalRealmkin || 0) < 1000) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={(userRewards?.totalRealmkin || 0) < 1000 ? "Minimum 1,000 MKIN required" : ""}
                   >
-                    {withdrawLoading ? "PROCESSING..." : "WITHDRAW"}
+                    {withdrawLoading ? "PROCESSING..." : (withdrawAmount && withdrawAmount.trim() !== "" ? `WITHDRAW ${parseFloat(withdrawAmount).toLocaleString()} MKIN` : "WITHDRAW ALL")}
                   </button>
                 </div>
 

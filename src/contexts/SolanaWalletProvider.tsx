@@ -152,7 +152,7 @@ function WalletModalBridge() {
 export default function SolanaWalletProvider({ children }: Props) {
   // Allow RPC URL and network to be configured via env
   const networkEnv =
-    process.env.NEXT_PUBLIC_SOLANA_NETWORK?.toLowerCase() || "mainnet";
+    process.env.NEXT_PUBLIC_SOLANA_NETWORK?.toLowerCase() || "mainnet-beta";
 
   // Map string to WalletAdapterNetwork enum
   let network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
@@ -213,7 +213,7 @@ export default function SolanaWalletProvider({ children }: Props) {
             console.error("[Realmkin] Possible fixes:");
             console.error("[Realmkin] 1. Refresh the page and try again");
             console.error("[Realmkin] 2. Unlock your Phantom wallet");
-            console.error("[Realmkin] 3. Check if Phantom is on the correct network (mainnet-beta)");
+            console.error("[Realmkin] 3. Check if Phantom is on the correct network (mainnet)");
             console.error("[Realmkin] 4. Try disconnecting and reconnecting Phantom");
             return;
           }

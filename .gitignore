@@ -48,7 +48,6 @@ emulator-data/
 *-service-account.json
 firebase-key.json
 test-wallet-nft.ts
-FIREBASE_SCHEMA_DOCUMENTATION.md
 PHASE2_WALLET_FIXES_COMPLETE.md
 PHASE3_DISCORD_FIXES_COMPLETE.md
 PHASE4_PERFORMANCE_COMPLETE.md

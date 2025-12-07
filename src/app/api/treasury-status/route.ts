@@ -6,7 +6,7 @@ import bs58 from "bs58";
 export async function GET() {
   try {
     // Get environment variables
-    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
     const treasuryPrivateKey = process.env.TREASURY_PRIVATE_KEY;
     const mintAddress = process.env.NEXT_PUBLIC_MINT_ADDRESS;
 
