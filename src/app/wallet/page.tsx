@@ -1100,11 +1100,12 @@ export default function WalletPage() {
                   {/* Info Banner */}
                   <div className="bg-[#DA9C2F]/10 border border-[#DA9C2F]/30 rounded-lg p-3">
                     <p className="text-[#DA9C2F] text-xs font-semibold mb-1">
-                      ⚠️ Withdrawal Requirements
+                      ℹ️ Withdrawal Fees
                     </p>
                     <ul className="text-white/70 text-xs space-y-1">
-                      <li>• Minimum: 1,000 MKIN</li>
-                      <li>• Fee: $0.50 in SOL</li>
+                      <li>• Under 10,000 MKIN: $0.50 in SOL</li>
+                      <li>• 10,000 MKIN or more: $1.00 in SOL</li>
+                      <li>• Withdraw any amount you have available</li>
                     </ul>
                   </div>
                   
@@ -1122,6 +1123,7 @@ export default function WalletPage() {
                           console.log("Input onChange fired:", newValue);
                           console.log("Current withdrawAmount state before update:", withdrawAmount);
                           setWithdrawAmount(newValue);
+                          setWithdrawError(null);
                           // Force immediate log after state update (will show in next render)
                           setTimeout(() => console.log("withdrawAmount state after setState:", withdrawAmount), 0);
                         }}
@@ -1137,9 +1139,16 @@ export default function WalletPage() {
                         MAX
                       </button>
                     </div>
-                    <p className="text-white/50 text-xs mt-1">
-                      Available: {(userRewards?.totalRealmkin || 0).toLocaleString()} MKIN
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-white/50 text-xs">
+                        Available: {(userRewards?.totalRealmkin || 0).toLocaleString()} MKIN
+                      </p>
+                      {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                        <p className={`text-xs font-semibold ${parseFloat(withdrawAmount) >= 10000 ? 'text-[#DA9C2F]' : 'text-green-400'}`}>
+                          Fee: ${parseFloat(withdrawAmount) >= 10000 ? '1.00' : '0.50'} SOL
+                        </p>
+                      )}
+                    </div>
                   </div>
                   {withdrawError && (
                     <div className="error-message warning whitespace-pre-line">{withdrawError}</div>
