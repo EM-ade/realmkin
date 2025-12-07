@@ -1051,7 +1051,6 @@ export default function WalletPage() {
                     <ul className="text-white/70 text-xs space-y-1">
                       <li>• Minimum: 1,000 MKIN</li>
                       <li>• Fee: $0.50 in SOL</li>
-                      <li>• Requires Solana wallet</li>
                     </ul>
                   </div>
                   

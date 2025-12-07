@@ -39,30 +39,19 @@ if (
 
 // Handle Brave Wallet interference with Phantom detection
 if (typeof window !== "undefined") {
-  interface SolanaProvider {
-    isBraveWallet?: boolean;
-    isPhantom?: boolean;
-    constructor?: { name?: string };
-  }
-
-  interface WindowWithWallets extends Window {
-    solana?: SolanaProvider;
-    phantom?: { solana?: SolanaProvider };
-  }
-
   // Detect if Brave Wallet is hijacking the window.solana object
   const checkWalletProvider = () => {
-    const solanaProvider = (window as WindowWithWallets).solana;
+    const solanaProvider = window.solana;
 
     if (solanaProvider) {
       // Check if this is Brave Wallet masquerading as the default provider
-      const isBraveWallet = solanaProvider.isBraveWallet === true;
+      const isBraveWallet = (solanaProvider as unknown as Record<string, unknown>).isBraveWallet === true;
       const isPhantom = solanaProvider.isPhantom === true;
 
       console.log("[Realmkin] Wallet detection:", {
         isBraveWallet,
         isPhantom,
-        provider: solanaProvider.constructor?.name || "unknown",
+        provider: (solanaProvider as unknown as Record<string, unknown>).constructor?.toString() || "unknown",
       });
 
       // If Brave Wallet is detected, try to access Phantom directly
@@ -70,7 +59,7 @@ if (typeof window !== "undefined") {
         console.log("[Realmkin] Brave Wallet detected, looking for Phantom...");
 
         // Phantom usually exposes itself at window.phantom.solana
-        if ((window as WindowWithWallets).phantom?.solana) {
+        if (window.phantom?.solana) {
           console.log(
             "[Realmkin] Found Phantom wallet at window.phantom.solana",
           );

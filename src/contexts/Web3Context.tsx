@@ -569,7 +569,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
     try {
       if (typeof window !== "undefined") {
-        const solanaWindow = window as WindowWithSolanaWallets;
+        const solanaWindow = window as Window & ExtendedWindow;
         let connectedAddress: string | null = null;
         let walletType: string | null = null;
 
@@ -676,7 +676,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
       // Only use cache if it's less than 15 minutes old
       if (cacheAge < 900000) {
-        const solanaWindow = window as WindowWithSolanaWallets;
+        const solanaWindow = window as Window & ExtendedWindow;
 
         // Try to reconnect based on cached wallet type with retry logic
         const maxRetries = 2;
@@ -836,7 +836,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       }
 
       // Check for Brave Wallet interference
-      const solanaWindow = window as WindowWithSolanaWallets;
+      const solanaWindow = window as Window & ExtendedWindow;
       interface SolanaProviderCheck {
         isBraveWallet?: boolean;
         isPhantom?: boolean;
@@ -954,10 +954,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     isConnected?: boolean;
   }
 
-  interface WindowWithSolanaWallets extends Window {
-    phantom?: {
-      solana?: PhantomWallet;
-    };
+  // Use global Window type with additional wallet properties
+  // Note: Window.phantom is already defined in phantom.d.ts
+  interface ExtendedWindow {
     solflare?: SolflareWallet;
     backpack?: BackpackWallet;
     glow?: GlowWallet;
@@ -1009,7 +1008,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
     try {
       let connectedAddress: string | null = null;
-      const solanaWindow = window as WindowWithSolanaWallets;
+      const solanaWindow = window as Window & ExtendedWindow;
       const maxRetries = 3;
       let retryCount = 0;
       const isMobile = isMobileDevice();

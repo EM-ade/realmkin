@@ -25,8 +25,8 @@ export interface PhantomProvider {
   
   signMessage(message: Uint8Array): Promise<{ signature: Uint8Array }>;
   
-  on(event: "connect" | "disconnect" | "accountChanged", handler: (...args: any[]) => void): void;
-  removeListener(event: "connect" | "disconnect" | "accountChanged", handler: (...args: any[]) => void): void;
+  on(event: "connect" | "disconnect" | "accountChanged", handler: (...args: unknown[]) => void): void;
+  removeListener(event: "connect" | "disconnect" | "accountChanged", handler: (...args: unknown[]) => void): void;
 }
 
 declare global {
