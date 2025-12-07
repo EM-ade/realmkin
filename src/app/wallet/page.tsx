@@ -319,7 +319,6 @@ export default function WalletPage() {
     if (!user || !effectiveAccount) return;
 
     const totalClaimable = userRewards?.totalRealmkin || 0;
-    const MIN_WITHDRAWAL = 1000;
     
     // Parse withdrawal amount or use total claimable if empty
     const requestedAmount = withdrawAmount && withdrawAmount.trim() !== "" 
@@ -328,17 +327,12 @@ export default function WalletPage() {
     
     // Validate withdrawal amount
     if (isNaN(requestedAmount) || requestedAmount <= 0) {
-      setWithdrawError("Please enter a valid withdrawal amount");
-      return;
-    }
-    
-    if (requestedAmount < MIN_WITHDRAWAL) {
-      setWithdrawError(`Minimum withdrawal is ${MIN_WITHDRAWAL.toLocaleString()} MKIN`);
+      setWithdrawError("💭 Please enter a valid amount of MKIN to withdraw");
       return;
     }
     
     if (requestedAmount > totalClaimable) {
-      setWithdrawError(`Cannot withdraw more than available balance (${totalClaimable.toLocaleString()} MKIN)`);
+      setWithdrawError(`❌ You only have ${totalClaimable.toLocaleString()} MKIN available. Please enter a lower amount.`);
       return;
     }
 
@@ -359,7 +353,22 @@ export default function WalletPage() {
       const initiateResult = await initiateWithdrawal(requestedAmount, effectiveAccount);
 
       if (!initiateResult.success || !initiateResult.feeTransaction) {
-        setWithdrawError(initiateResult.error || "Failed to initiate withdrawal");
+        // User-friendly error messages
+        const errorMsg = initiateResult.error || "Failed to initiate withdrawal";
+        
+        if (errorMsg.includes("Insufficient balance")) {
+          setWithdrawError("💰 You don't have enough MKIN available. Please try a smaller amount.");
+        } else if (errorMsg.includes("Auth not configured")) {
+          setWithdrawError("🔒 We're experiencing technical difficulties. Please try again in a moment or contact support.");
+        } else if (errorMsg.includes("User rewards not found")) {
+          setWithdrawError("🔄 We couldn't load your account data. Please refresh the page and try again.");
+        } else if (errorMsg.includes("Missing amount or walletAddress")) {
+          setWithdrawError("⚠️ Something went wrong with your request. Please refresh the page and try again.");
+        } else if (errorMsg.includes("Invalid amount")) {
+          setWithdrawError("⚠️ Please enter a valid withdrawal amount.");
+        } else {
+          setWithdrawError(`❌ Unable to process withdrawal: ${errorMsg}`);
+        }
         return;
       }
 
@@ -367,7 +376,7 @@ export default function WalletPage() {
 
       // Step 2: Get user's wallet to sign transaction
       if (!window.solana || !window.solana.isPhantom) {
-        setWithdrawError("Phantom wallet not found. Please install Phantom wallet.");
+        setWithdrawError("👛 Wallet not detected. Please make sure your Phantom or Solana wallet is installed and unlocked, then refresh the page.");
         return;
       }
 
@@ -484,26 +493,54 @@ export default function WalletPage() {
           }
         }
       } else {
+        // User-friendly completion errors
         const errorMsg = completeResult.error || "Failed to complete withdrawal";
-        const fullMsg = completeResult.refunded 
-          ? `${errorMsg}\n\nYour MKIN balance has been refunded, but the $${initiateResult.feeAmountUsd} SOL fee was not refunded.`
-          : errorMsg;
-        setWithdrawError(fullMsg);
+        
+        if (errorMsg.includes("Fee transaction failed or invalid")) {
+          setWithdrawError("❌ Payment verification failed. Your transaction may not have been confirmed yet. Please wait a moment and try again.");
+        } else if (errorMsg.includes("Fee transaction not found")) {
+          setWithdrawError("⏳ Still processing... The blockchain is taking longer than expected. Please wait 30-60 seconds and try again.");
+        } else if (errorMsg.includes("already been used")) {
+          setWithdrawError("✅ This withdrawal has already been completed. Please check your wallet or transaction history.");
+        } else if (errorMsg.includes("Failed to send MKIN tokens")) {
+          const refundMsg = completeResult.refunded 
+            ? `\n\n✅ Good news: Your MKIN balance has been automatically restored.\n⚠️ Note: The $${initiateResult.feeAmountUsd?.toFixed(2)} transaction fee cannot be refunded.`
+            : "";
+          setWithdrawError(`❌ Transfer failed. We couldn't send MKIN to your wallet due to a network issue.${refundMsg}\n\n📧 Please contact support if you need assistance.`);
+        } else {
+          const fullMsg = completeResult.refunded 
+            ? `❌ Withdrawal failed: ${errorMsg}\n\n✅ Your MKIN balance has been restored.\n⚠️ The $${initiateResult.feeAmountUsd?.toFixed(2)} transaction fee was not refunded.`
+            : `❌ Withdrawal failed: ${errorMsg}`;
+          setWithdrawError(fullMsg);
+        }
       }
     } catch (error) {
       console.error("Error processing withdrawal:", error);
       console.error("Error type:", typeof error);
       console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
       
-      let errorMessage = "Failed to process withdrawal";
+      let errorMessage = "❌ Something went wrong. Please try again.";
+      
       if (error instanceof Error) {
         if (error.message.includes("User rejected") || error.message.includes("User canceled")) {
-          errorMessage = "Transaction cancelled by user";
+          errorMessage = "🚫 Transaction cancelled. No charges were made.";
+        } else if (error.message.includes("Blockhash not found")) {
+          errorMessage = "⏰ Request timed out. Please try your withdrawal again.";
+        } else if (error.message.includes("Simulation failed")) {
+          errorMessage = "❌ Unable to process transaction. Please ensure you have enough SOL for network fees (~$0.50) and try again.";
+        } else if (error.message.includes("insufficient funds")) {
+          errorMessage = "💰 Insufficient SOL for network fees. Please add at least $0.50 worth of SOL to your wallet to cover transaction costs.";
+        } else if (error.message.includes("Network request failed")) {
+          errorMessage = "🌐 Connection lost. Please check your internet connection and try again.";
+        } else if (error.message.includes("403") || error.message.includes("forbidden")) {
+          errorMessage = "🚫 Network temporarily unavailable. Please wait a moment and try again.";
+        } else if (error.message.includes("429") || error.message.includes("Too Many Requests")) {
+          errorMessage = "⏳ Too many requests. Please wait 30-60 seconds before trying again.";
         } else {
-          errorMessage = error.message;
+          errorMessage = `❌ Error: ${error.message}`;
         }
       } else if (typeof error === "string") {
-        errorMessage = error;
+        errorMessage = `❌ ${error}`;
       }
       
       setWithdrawError(errorMessage);
@@ -1088,7 +1125,7 @@ export default function WalletPage() {
                       </button>
                     </div>
                     <p className="text-white/50 text-xs mt-1">
-                      Min: 1,000 MKIN • Available: {(userRewards?.totalRealmkin || 0).toLocaleString()} MKIN
+                      Available: {(userRewards?.totalRealmkin || 0).toLocaleString()} MKIN
                     </p>
                   </div>
                   {withdrawError && (
@@ -1096,9 +1133,9 @@ export default function WalletPage() {
                   )}
                   <button
                     onClick={handleWithdraw}
-                    disabled={withdrawLoading || (userRewards?.totalRealmkin || 0) < 1000}
-                    className={`btn-primary w-full text-sm ${(withdrawLoading || (userRewards?.totalRealmkin || 0) < 1000) ? "opacity-50 cursor-not-allowed" : ""}`}
-                    title={(userRewards?.totalRealmkin || 0) < 1000 ? "Minimum 1,000 MKIN required" : ""}
+                    disabled={withdrawLoading || (userRewards?.totalRealmkin || 0) <= 0}
+                    className={`btn-primary w-full text-sm ${(withdrawLoading || (userRewards?.totalRealmkin || 0) <= 0) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={(userRewards?.totalRealmkin || 0) <= 0 ? "No MKIN available to withdraw" : ""}
                   >
                     {withdrawLoading ? "PROCESSING..." : (withdrawAmount && withdrawAmount.trim() !== "" ? `WITHDRAW ${parseFloat(withdrawAmount).toLocaleString()} MKIN` : "WITHDRAW ALL")}
                   </button>
