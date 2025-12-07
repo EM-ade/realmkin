@@ -595,8 +595,6 @@ export default function WalletPage() {
         throw new Error(j?.error || "Transfer failed");
       }
 
-      // Balance will be refreshed automatically via userRewards state
-
       // Show transfer confirmation
       setLastTransferAmount(amount);
       setLastTransferRecipient(transferRecipient);
@@ -622,6 +620,21 @@ export default function WalletPage() {
         },
         ...prev.slice(0, 9), // Keep only last 10 transactions
       ]);
+
+      // Refresh user rewards to show updated balance
+      if (user) {
+        try {
+          const rewards = await rewardsService.initializeUserRewards(
+            user.uid,
+            effectiveAccount,
+            nfts.length,
+            nfts,
+          );
+          setUserRewards(rewards);
+        } catch (error) {
+          console.error("Error refreshing rewards:", error);
+        }
+      }
 
       // Clear input fields
       setTransferRecipient("");
