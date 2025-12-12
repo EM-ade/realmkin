@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { formatAddress } from "@/utils/formatAddress";
 import NFTCard from "@/components/NFTCard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
@@ -54,6 +55,7 @@ export default function WalletPage() {
     connectWallet,
     disconnectWallet,
   } = useWeb3();
+  const { signTransaction: walletAdapterSignTransaction } = useWallet();
   const isMobile = useIsMobile();
 
   // Discord link status
@@ -123,7 +125,7 @@ export default function WalletPage() {
       setShowMobileActions(false);
       try {
         localStorage.removeItem("realmkin_discord_linked");
-      } catch {}
+      } catch { }
       return true;
     } catch (error) {
       console.error(error);
@@ -184,11 +186,11 @@ export default function WalletPage() {
   const isDevelopment = process.env.NODE_ENV === "development";
   const [testMode, setTestMode] = useState(false);
   const [reloadingConfigs, setReloadingConfigs] = useState(false);
-  
+
   // Admin test mode - input any wallet for testing rewards
   const [adminTestMode, setAdminTestMode] = useState(false);
   const [testWalletAddress, setTestWalletAddress] = useState("");
-  
+
   // Use test wallet when admin test mode is enabled
   const effectiveAccount = adminTestMode && testWalletAddress ? testWalletAddress : account;
 
@@ -319,18 +321,18 @@ export default function WalletPage() {
     if (!user || !effectiveAccount) return;
 
     const totalClaimable = userRewards?.totalRealmkin || 0;
-    
+
     // Parse withdrawal amount or use total claimable if empty
-    const requestedAmount = withdrawAmount && withdrawAmount.trim() !== "" 
-      ? parseFloat(withdrawAmount) 
+    const requestedAmount = withdrawAmount && withdrawAmount.trim() !== ""
+      ? parseFloat(withdrawAmount)
       : totalClaimable;
-    
+
     // Validate withdrawal amount
     if (isNaN(requestedAmount) || requestedAmount <= 0) {
       setWithdrawError("💭 Please enter a valid amount of MKIN to withdraw");
       return;
     }
-    
+
     if (requestedAmount > totalClaimable) {
       setWithdrawError(`❌ You only have ${totalClaimable.toLocaleString()} MKIN available. Please enter a lower amount.`);
       return;
@@ -349,13 +351,13 @@ export default function WalletPage() {
     try {
       // Step 1: Initiate withdrawal - get fee transaction
       const { initiateWithdrawal, completeWithdrawal, deserializeTransaction } = await import("@/services/withdrawService");
-      
+
       const initiateResult = await initiateWithdrawal(requestedAmount, effectiveAccount);
 
       if (!initiateResult.success || !initiateResult.feeTransaction) {
         // User-friendly error messages
         const errorMsg = initiateResult.error || "Failed to initiate withdrawal";
-        
+
         if (errorMsg.includes("Insufficient balance")) {
           setWithdrawError("💰 You don't have enough MKIN available. Please try a smaller amount.");
         } else if (errorMsg.includes("Auth not configured")) {
@@ -374,15 +376,10 @@ export default function WalletPage() {
 
       console.log(`Fee: $${initiateResult.feeAmountUsd} (${initiateResult.feeAmountSol?.toFixed(6)} SOL)`);
 
-      // Step 2: Get user's wallet to sign transaction
-      if (!window.solana || !window.solana.isPhantom) {
-        setWithdrawError("👛 Wallet not detected. Please make sure your Phantom or Solana wallet is installed and unlocked, then refresh the page.");
-        return;
-      }
-
+      // Step 2: Prepare transaction for signing
       // Deserialize the transaction
       const transaction = deserializeTransaction(initiateResult.feeTransaction);
-      
+
       console.log("Transaction deserialized:", {
         signatures: transaction.signatures.length,
         instructions: transaction.instructions.length,
@@ -394,7 +391,7 @@ export default function WalletPage() {
       const { Connection } = await import("@solana/web3.js");
       // Use Helius RPC to avoid 403 errors from public RPC
       const heliusApiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
-      const rpcUrl = heliusApiKey 
+      const rpcUrl = heliusApiKey
         ? `https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`
         : (process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com");
       const connection = new Connection(rpcUrl, "confirmed");
@@ -404,12 +401,40 @@ export default function WalletPage() {
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
       transaction.recentBlockhash = blockhash;
       transaction.lastValidBlockHeight = lastValidBlockHeight;
-      
+
       console.log("Fresh blockhash:", blockhash.substring(0, 10) + "...");
 
-      // Sign the transaction with Phantom
+      // Sign the transaction using wallet adapter (works with all wallets: Phantom, Solflare, Backpack, etc.)
       console.log("Requesting wallet to sign transaction...");
-      const signedTransaction = await window.solana.signTransaction(transaction);
+      let signedTransaction;
+
+      // Try wallet adapter first (preferred - works with all connected wallets)
+      if (walletAdapterSignTransaction) {
+        try {
+          signedTransaction = await walletAdapterSignTransaction(transaction);
+          console.log("Transaction signed via wallet adapter");
+        } catch (adapterError) {
+          console.warn("Wallet adapter signing failed, trying fallback:", adapterError);
+          signedTransaction = null;
+        }
+      }
+
+      // Fallback to direct window.solana access (for Phantom browser extension)
+      if (!signedTransaction && window.solana?.signTransaction) {
+        try {
+          signedTransaction = await window.solana.signTransaction(transaction);
+          console.log("Transaction signed via window.solana");
+        } catch (directError) {
+          console.error("Direct wallet signing also failed:", directError);
+          throw directError;
+        }
+      }
+
+      if (!signedTransaction) {
+        setWithdrawError("👛 Wallet not connected. Please connect your wallet and try again.");
+        return;
+      }
+
       console.log("Transaction signed successfully");
 
       // Send the signed transaction
@@ -418,7 +443,7 @@ export default function WalletPage() {
         skipPreflight: false,
         preflightCommitment: "confirmed"
       });
-      
+
       console.log(`Fee transaction sent: ${signature}`);
 
       // Wait for transaction to confirm (devnet can be slow)
@@ -429,24 +454,24 @@ export default function WalletPage() {
           blockhash,
           lastValidBlockHeight
         }, "confirmed");
-        
+
         if (confirmation.value.err) {
           throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
         }
-        
+
         console.log("Transaction confirmed on-chain!");
       } catch (confirmError) {
         console.error("Confirmation error:", confirmError);
         throw new Error(`Transaction confirmation failed: ${confirmError instanceof Error ? confirmError.message : 'Unknown error'}`);
       }
-      
+
       // Additional wait to ensure backend can fetch it
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Step 3: Complete withdrawal with fee signature
       console.log("Completing withdrawal with backend...");
       const completeResult = await completeWithdrawal(signature, requestedAmount, effectiveAccount);
-      
+
       console.log("Complete withdrawal result:", completeResult);
 
       if (completeResult.success) {
@@ -454,7 +479,7 @@ export default function WalletPage() {
         setLastClaimAmount(requestedAmount);
         setLastClaimWallet(effectiveAccount);
         setShowWithdrawalConfirmation(true);
-        
+
         // Clear the withdrawal amount input after success
         setWithdrawAmount("");
 
@@ -495,7 +520,7 @@ export default function WalletPage() {
       } else {
         // User-friendly completion errors
         const errorMsg = completeResult.error || "Failed to complete withdrawal";
-        
+
         if (errorMsg.includes("Fee transaction failed or invalid")) {
           setWithdrawError("❌ Payment verification failed. Your transaction may not have been confirmed yet. Please wait a moment and try again.");
         } else if (errorMsg.includes("Fee transaction not found")) {
@@ -503,12 +528,12 @@ export default function WalletPage() {
         } else if (errorMsg.includes("already been used")) {
           setWithdrawError("✅ This withdrawal has already been completed. Please check your wallet or transaction history.");
         } else if (errorMsg.includes("Failed to send MKIN tokens")) {
-          const refundMsg = completeResult.refunded 
+          const refundMsg = completeResult.refunded
             ? `\n\n✅ Good news: Your MKIN balance has been automatically restored.\n⚠️ Note: The $${initiateResult.feeAmountUsd?.toFixed(2)} transaction fee cannot be refunded.`
             : "";
           setWithdrawError(`❌ Transfer failed. We couldn't send MKIN to your wallet due to a network issue.${refundMsg}\n\n📧 Please contact support if you need assistance.`);
         } else {
-          const fullMsg = completeResult.refunded 
+          const fullMsg = completeResult.refunded
             ? `❌ Withdrawal failed: ${errorMsg}\n\n✅ Your MKIN balance has been restored.\n⚠️ The $${initiateResult.feeAmountUsd?.toFixed(2)} transaction fee was not refunded.`
             : `❌ Withdrawal failed: ${errorMsg}`;
           setWithdrawError(fullMsg);
@@ -518,9 +543,9 @@ export default function WalletPage() {
       console.error("Error processing withdrawal:", error);
       console.error("Error type:", typeof error);
       console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      
+
       let errorMessage = "❌ Something went wrong. Please try again.";
-      
+
       if (error instanceof Error) {
         if (error.message.includes("User rejected") || error.message.includes("User canceled")) {
           errorMessage = "🚫 Transaction cancelled. No charges were made.";
@@ -542,13 +567,13 @@ export default function WalletPage() {
       } else if (typeof error === "string") {
         errorMessage = `❌ ${error}`;
       }
-      
+
       setWithdrawError(errorMessage);
     } finally {
       setWithdrawLoading(false);
       // Don't clear input on error - let user fix their input
     }
-  }, [user, effectiveAccount, userRewards, withdrawAmount]);
+  }, [user, effectiveAccount, userRewards, withdrawAmount, walletAdapterSignTransaction]);
 
   // Handle transfer
   const handleTransfer = useCallback(async () => {
@@ -859,11 +884,10 @@ export default function WalletPage() {
                         setTestWalletAddress("");
                       }
                     }}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all ${
-                      adminTestMode
-                        ? "bg-purple-500/20 border-purple-400 text-purple-400"
-                        : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
-                    }`}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all ${adminTestMode
+                      ? "bg-purple-500/20 border-purple-400 text-purple-400"
+                      : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
+                      }`}
                     title="Enter any wallet address to test rewards"
                   >
                     {adminTestMode ? "✓ Test Wallet ON" : "Test Wallet"}
@@ -884,11 +908,10 @@ export default function WalletPage() {
                 {isDevelopment && (
                   <button
                     onClick={() => setTestMode(!testMode)}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all ${
-                      testMode
-                        ? "bg-[#DA9C2F]/20 border-[#DA9C2F] text-[#DA9C2F]"
-                        : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
-                    }`}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all ${testMode
+                      ? "bg-[#DA9C2F]/20 border-[#DA9C2F] text-[#DA9C2F]"
+                      : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
+                      }`}
                     title="Enable test mode to simulate NFT from GZv3n contract"
                   >
                     {testMode ? "✓ Test Mode ON" : "Test Mode"}
@@ -991,8 +1014,8 @@ export default function WalletPage() {
                     <p className="text-white font-bold text-xl mt-1">
                       {userRewards && rewardsCalculation
                         ? rewardsService.formatMKIN(
-                            rewardsCalculation.weeklyRate || 0,
-                          )
+                          rewardsCalculation.weeklyRate || 0,
+                        )
                         : "₥0"}{" "}
                       <span className="text-sm text-white/60">MKIN/week</span>
                     </p>
@@ -1108,7 +1131,7 @@ export default function WalletPage() {
                       <li>• Withdraw any amount you have available</li>
                     </ul>
                   </div>
-                  
+
                   <div>
                     <label className="text-muted text-xs block mb-1">
                       Amount
