@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useWallet } from "@solana/wallet-adapter-react";
+import type { Transaction } from "@solana/web3.js";
 import { formatAddress } from "@/utils/formatAddress";
 import NFTCard from "@/components/NFTCard";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
@@ -411,23 +412,21 @@ export default function WalletPage() {
       // Try wallet adapter first (preferred - works with all connected wallets)
       if (walletAdapterSignTransaction) {
         try {
-          signedTransaction = await walletAdapterSignTransaction(transaction);
+          // Add 60s timeout to prevent hanging UI
+          const signPromise = walletAdapterSignTransaction(transaction);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Request timed out")), 60000)
+          );
+
+          signedTransaction = await Promise.race([signPromise, timeoutPromise]) as Transaction;
           console.log("Transaction signed via wallet adapter");
         } catch (adapterError) {
-          console.warn("Wallet adapter signing failed, trying fallback:", adapterError);
-          signedTransaction = null;
+          console.error("Wallet adapter signing failed:", adapterError);
+          throw adapterError;
         }
-      }
-
-      // Fallback to direct window.solana access (for Phantom browser extension)
-      if (!signedTransaction && window.solana?.signTransaction) {
-        try {
-          signedTransaction = await window.solana.signTransaction(transaction);
-          console.log("Transaction signed via window.solana");
-        } catch (directError) {
-          console.error("Direct wallet signing also failed:", directError);
-          throw directError;
-        }
+      } else {
+        setWithdrawError("👛 Wallet adapter not ready. Please try disconnecting and reconnecting your wallet.");
+        return;
       }
 
       if (!signedTransaction) {
@@ -503,19 +502,17 @@ export default function WalletPage() {
           ...prev.slice(0, 9), // Keep only last 10 transactions
         ]);
 
-        // Refresh user rewards to show updated balance
-        if (user) {
-          try {
-            const rewards = await rewardsService.initializeUserRewards(
-              user.uid,
-              effectiveAccount,
-              nfts.length,
-              nfts,
-            );
-            setUserRewards(rewards);
-          } catch (error) {
-            console.error("Error refreshing rewards:", error);
-          }
+        // Update local state directly to show updated balance immediately
+        if (completeResult.newBalance !== undefined) {
+          setUserRewards((prev) => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              totalRealmkin: completeResult.newBalance!,
+              totalClaimed: prev.totalClaimed + requestedAmount,
+              // We don't update pendingRewards here as that depends on time/NFTs
+            };
+          });
         }
       } else {
         // User-friendly completion errors
