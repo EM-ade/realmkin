@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rewardsService } from '@/services/rewardsService';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { serverRewardsService } from '@/services/serverRewardsService';
+import { db } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,10 +14,9 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 Starting external auto claim for all users...');
 
-    // Get all user rewards documents
-    const userRewardsRef = collection(db, "userRewards");
-    const q = query(userRewardsRef);
-    const querySnapshot = await getDocs(q);
+    // Get all user rewards documents using Admin SDK
+    const userRewardsRef = db.collection("userRewards");
+    const snapshot = await userRewardsRef.get();
 
     let totalClaims = 0;
     let totalAmount = 0;
@@ -26,38 +24,38 @@ export async function POST(request: NextRequest) {
 
     // Process users in batches to avoid timeout
     const batchSize = 20;
-    const docs = querySnapshot.docs;
+    const docs = snapshot.docs;
 
     const results = [];
 
     for (let i = 0; i < docs.length; i += batchSize) {
       const batch = docs.slice(i, i + batchSize);
-      console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(docs.length/batchSize)}`);
+      console.log(`🔄 Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(docs.length / batchSize)}`);
 
       const batchPromises = batch.map(async (docSnap) => {
         const userId = docSnap.id;
 
         try {
-          // Check if user has pending rewards using the rewards service
-          const userRewards = await rewardsService.getUserRewards(userId);
-          
+          // Check if user has pending rewards using the server rewards service
+          const userRewards = await serverRewardsService.getUserRewards(userId);
+
           if (!userRewards) {
             return { userId, amount: 0, success: false, error: 'User rewards not found' };
           }
 
-          const calculation = rewardsService.calculatePendingRewards(userRewards, userRewards.totalNFTs || 0);
+          const calculation = serverRewardsService.calculatePendingRewards(userRewards, userRewards.totalNFTs || 0);
 
           if (calculation.canClaim && calculation.pendingAmount > 0) {
-            // Use the rewards service to process the claim
-            const claimRecord = await rewardsService.claimRewards(userId, userRewards.walletAddress || '');
+            // Use the server rewards service to process the claim
+            const claimRecord = await serverRewardsService.claimRewards(userId, userRewards.walletAddress || '');
 
             // Update transaction history
-            await rewardsService.saveTransactionHistory({
+            await serverRewardsService.saveTransactionHistory({
               userId,
               walletAddress: userRewards.walletAddress,
               type: "claim" as const,
               amount: claimRecord.amount,
-              description: `Auto-claimed ${rewardsService.formatMKIN(claimRecord.amount)} via external cron`
+              description: `Auto-claimed ${serverRewardsService.formatMKIN(claimRecord.amount)} via external cron`
             });
 
             return {
@@ -85,7 +83,7 @@ export async function POST(request: NextRequest) {
 
       totalClaims += successfulClaims.length;
       totalAmount += successfulClaims.reduce((sum, result) => sum + (result.amount || 0), 0);
-      
+
       results.push(...batchResults);
     }
 
@@ -119,6 +117,7 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     environment: {
       hasCronSecret: !!process.env.CRON_SECRET_TOKEN,
+      hasFirebaseAdmin: !!process.env.FIREBASE_PRIVATE_KEY,
       nodeEnv: process.env.NODE_ENV
     }
   });
