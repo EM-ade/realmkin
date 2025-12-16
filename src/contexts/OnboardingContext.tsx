@@ -39,7 +39,7 @@ interface OnboardingProviderProps {
 export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
   const { user, userData } = useAuth();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>("welcome");
-  const [isOnboarding, setIsOnboarding] = useState(true);
+  const [isOnboarding, setIsOnboarding] = useState(false);
   const [isNewUser, setIsNewUserState] = useState(false);
   const [startingStep, setStartingStepState] = useState<OnboardingStep>("welcome");
   const [discordLinked, setDiscordLinked] = useState(false);
@@ -131,7 +131,7 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
           // Clear incomplete setup flag when onboarding is complete
           localStorage.removeItem("realmkin_incomplete_setup");
         }
-      } catch {}
+      } catch { }
     };
     run();
   }, [user?.uid, isNewUser, userData?.walletAddress, userData?.username, discordLinked]);
@@ -170,13 +170,13 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
   const skipOnboarding = useCallback(() => {
     // Check if user has incomplete setup before allowing skip
     const hasIncompleteSetup = localStorage.getItem("realmkin_incomplete_setup") === "true";
-    
+
     if (hasIncompleteSetup) {
       console.log("Cannot skip onboarding for users with incomplete setup");
       // Don't skip onboarding for users with incomplete setup
       return;
     }
-    
+
     setIsOnboarding(false);
     setCurrentStep("complete");
     // Clear onboarding flag to allow auto-login
@@ -215,7 +215,7 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
         resumeOnboardingAtStep(step as OnboardingStep);
       };
     }
-    
+
     return () => {
       if (typeof window !== 'undefined') {
         delete window.__realmkin_onboarding_trigger;

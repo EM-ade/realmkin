@@ -142,7 +142,7 @@ function GamePage() {
         console.error("Failed to load leaderboard:", error);
         setLeaderboardError("Failed to load leaderboard data");
         setIsLoadingLeaderboard(false);
-        
+
         // Fallback to mock data on error
         setLeaderboardEntries([
           {
@@ -155,7 +155,7 @@ function GamePage() {
           },
           {
             userId: "mock2",
-            username: "VoidWalker", 
+            username: "VoidWalker",
             rank: 2,
             value: 2180,
             gamesPlayed: 15,
@@ -179,7 +179,7 @@ function GamePage() {
     const totalPlayers = leaderboardEntries.length;
     const totalGames = leaderboardEntries.reduce((sum, entry) => sum + (entry.gamesPlayed || 0), 0);
     const userEntry = leaderboardEntries.find(entry => entry.userId === user?.uid);
-    
+
     return {
       totalPlayers,
       totalGames,
@@ -195,7 +195,7 @@ function GamePage() {
     const currentMonth = now.toLocaleString('default', { month: 'long', year: 'numeric' });
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const daysUntilReset = Math.ceil((nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     return {
       periodLabel: currentMonth,
       periodRange: `${currentMonth.split(' ')[0]} 1 - ${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()}`,
@@ -212,34 +212,34 @@ function GamePage() {
 
 
       <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20">
-                <div className="flex items-center space-x-3">
-                  <div className="w-14 h-14 animate-float">
-                    <Image
-                      src="/realmkin-logo.png"
-                      alt="Realmkin Logo"
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                      priority
-                    />
-                  </div>
-                  <h1 className="font-bold text-lg uppercase tracking-wider gold-gradient-text">
-                    THE REALMKIN
-                  </h1>
-                </div>
-      
-                {/* Mobile menu button - always visible */}
-                <div className="w-auto flex-shrink-0">
-                  <button
-                    onClick={() => setShowMobileActions((v) => !v)}
-                    className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
-                    aria-expanded={showMobileActions}
-                    aria-haspopup="true"
-                  >
-                    <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
-                  </button>
-                </div>
-              </header>
+        <div className="flex items-center space-x-3">
+          <div className="w-14 h-14 animate-float">
+            <Image
+              src="/realmkin-logo.png"
+              alt="Realmkin Logo"
+              width={48}
+              height={48}
+              className="w-full h-full object-cover"
+              priority
+            />
+          </div>
+          <h1 className="font-bold text-lg uppercase tracking-wider gold-gradient-text">
+            THE REALMKIN
+          </h1>
+        </div>
+
+        {/* Mobile menu button - always visible */}
+        <div className="w-auto flex-shrink-0">
+          <button
+            onClick={() => setShowMobileActions((v) => !v)}
+            className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
+            aria-expanded={showMobileActions}
+            aria-haspopup="true"
+          >
+            <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
+          </button>
+        </div>
+      </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 pb-16 pt-10 lg:px-10">
         <section className="relative overflow-hidden rounded-3xl border border-[#DA9C2F]/25 bg-[#0B0B09]/80 px-6 py-8 shadow-[0_35px_80px_rgba(0,0,0,0.55)] backdrop-blur-sm md:px-10 md:py-12">
@@ -374,4 +374,4 @@ function GamePage() {
   );
 }
 
-export default withAuthGuard(GamePage);
+export default GamePage;

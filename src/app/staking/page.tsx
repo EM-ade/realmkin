@@ -43,7 +43,7 @@ function StakingPage() {
     account,
     uid,
   } = useWeb3();
-  
+
   const {
     stakes,
     totalStaked,
@@ -54,7 +54,7 @@ function StakingPage() {
     refreshAll,
     createStake,
   } = useStaking();
-  
+
   const { setVisible: setWalletModalVisible } = useWalletModal();
 
   useEffect(() => {
@@ -124,7 +124,7 @@ function StakingPage() {
   // Handle stake button click
   const handleStake = async () => {
     if (!amount || isStaking) return;
-    
+
     let toastId: string | undefined;
     setIsStaking(true);
     try {
@@ -150,13 +150,13 @@ function StakingPage() {
       toast.error("Please ensure your wallet is connected and you are authenticated.");
       return;
     }
-    
+
     const stakeToUnstake = stakes.find(s => s.stakeEntry === stakeEntry);
     if (!stakeToUnstake) {
       toast.error("Stake not found");
       return;
     }
-    
+
     // Calculate penalty if locked
     let penaltyPercent = 0;
     if (!stakeToUnstake.isUnlocked) {
@@ -171,21 +171,21 @@ function StakingPage() {
         penaltyPercent = 20;
       }
     }
-    
+
     const penalty = (stakeToUnstake.amount * penaltyPercent) / 100;
     const amountToReturn = stakeToUnstake.amount - penalty;
     const rewardsToReturn = stakeToUnstake.isUnlocked ? stakeToUnstake.rewards : 0;
-    
+
     let confirmMessage = `Unstake ${stakeToUnstake.amount} $MKIN?\n\n`;
     if (stakeToUnstake.isUnlocked) {
       confirmMessage += `✅ Lock period ended\n\nYou will receive:\n- ${amountToReturn.toFixed(2)} $MKIN (principal)\n- ${rewardsToReturn.toFixed(2)} $MKIN (rewards)\n- Total: ${(amountToReturn + rewardsToReturn).toFixed(2)} $MKIN`;
     } else {
       confirmMessage += `⚠️ Early unstake penalty: ${penaltyPercent}%\n\nYou will receive:\n- ${amountToReturn.toFixed(2)} $MKIN (after ${penaltyPercent}% penalty)\n- $0 in rewards (forfeited)\n\nPenalty amount: ${penalty.toFixed(2)} $MKIN`;
     }
-    
+
     const confirmed = confirm(confirmMessage);
     if (!confirmed) return;
-    
+
     setIsUnstaking(true);
     try {
       // Call API to unstake and transfer tokens
@@ -199,15 +199,15 @@ function StakingPage() {
           action: "complete",
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || "Failed to unstake");
       }
-      
+
       // Immediate success feedback
-      toast.success(`Unstake initiated!\nTx: ${data.txSignature.slice(0,20)}…\n\nYou will receive:\n- ${data.amountReturned.toFixed(2)} $MKIN (principal)\n- ${data.rewardsReturned.toFixed(2)} $MKIN (rewards)\n\nTokens arriving in your wallet now!`);
+      toast.success(`Unstake initiated!\nTx: ${data.txSignature.slice(0, 20)}…\n\nYou will receive:\n- ${data.amountReturned.toFixed(2)} $MKIN (principal)\n- ${data.rewardsReturned.toFixed(2)} $MKIN (rewards)\n\nTokens arriving in your wallet now!`);
     } catch (error) {
       console.error("Unstake failed:", error);
       toast.error(`Unstaking failed: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -222,7 +222,7 @@ function StakingPage() {
     // Use real wallet balance
     setAmount((walletBalance * preset).toString());
   };
-  
+
   // Wallet data for display
   const walletData = useMemo(
     () => ({
@@ -449,17 +449,16 @@ function StakingPage() {
                       <button
                         key={preset.label}
                         onClick={() => handleBoostPreset(preset.value)}
-                        className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold uppercase tracking-[0.2em] transition ${
-                          selectedBoost === preset.value
+                        className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold uppercase tracking-[0.2em] transition ${selectedBoost === preset.value
                             ? "border-[#f4c752] bg-[#f4c752] text-black"
                             : "border-[#f4c752]/40 bg-black/40 text-[#f7dca1]/80 hover:border-[#f4c752]/70"
-                        }`}
+                          }`}
                       >
                         {preset.label}
                       </button>
                     ))}
                   </div>
-                  <button 
+                  <button
                     onClick={handleStake}
                     disabled={!isConnected || isStaking || !amount}
                     className="w-full rounded-xl bg-[#f4c752] py-3 text-sm font-semibold uppercase tracking-[0.28em] text-black transition hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -547,11 +546,10 @@ function StakingPage() {
                     <button
                       key={option.value}
                       onClick={() => setSelectedLock(option.value)}
-                      className={`rounded-xl border px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] transition ${
-                        selectedLock === option.value
+                      className={`rounded-xl border px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] transition ${selectedLock === option.value
                           ? "border-[#f4c752] bg-[#f4c752] text-black"
                           : "border-[#f4c752]/50 bg-black/40 text-[#f7dca1]/80 hover:border-[#f4c752]/70"
-                      }`}
+                        }`}
                     >
                       {option.label}
                     </button>
@@ -651,4 +649,4 @@ function StakingPage() {
   );
 }
 
-export default withAuthGuard(StakingPage);
+export default StakingPage;
