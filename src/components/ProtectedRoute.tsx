@@ -42,17 +42,7 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
 
     // Require BOTH: authenticated user AND connected wallet
     if (!user || !isConnected) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-[#050302] text-[#DA9C2F] p-4">
-          <div className="max-w-md w-full text-center space-y-6">
-            <h2 className="text-2xl font-bold uppercase tracking-wider">Access Restricted</h2>
-            <p className="text-white/70">Please connect your wallet to access this page.</p>
-            {/* The wallet button is usually in the header, but we can add a hint or a button here if needed. 
-                For now, relying on the global header or a simple message is safer to avoid circular dependencies if we try to import ConnectButton.
-            */}
-          </div>
-        </div>
-      );
+      return;
     }
 
     if (adminWallets && userData && !adminWallets.includes((userData.walletAddress ?? '').toLowerCase())) {
