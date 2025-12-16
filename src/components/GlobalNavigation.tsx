@@ -114,11 +114,10 @@ export default function GlobalNavigation() {
             <Link
               key={item.href}
               href={item.href}
-              className={`text-sm font-medium transition-colors ${
-                pathname === item.href
+              className={`text-sm font-medium transition-colors ${pathname === item.href
                   ? "text-[#DA9C2F]"
                   : "text-white/60 hover:text-[#DA9C2F]"
-              }`}
+                }`}
             >
               {item.label}
             </Link>
@@ -126,11 +125,10 @@ export default function GlobalNavigation() {
           {userData?.admin && (
             <Link
               href="/admin"
-              className={`text-sm font-medium transition-colors ${
-                pathname === "/admin"
+              className={`text-sm font-medium transition-colors ${pathname === "/admin"
                   ? "text-[#DA9C2F]"
                   : "text-white/60 hover:text-[#DA9C2F]"
-              }`}
+                }`}
             >
               Admin
             </Link>
@@ -174,6 +172,7 @@ export default function GlobalNavigation() {
             </button>
           ) : (
             <button
+              id="connect-wallet-btn"
               onClick={connectWallet}
               disabled={isConnecting}
               className="px-4 py-2 rounded-lg bg-[#DA9C2F] text-black hover:bg-[#ffbf00] text-sm font-medium transition-colors disabled:opacity-50"

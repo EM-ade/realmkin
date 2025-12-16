@@ -145,9 +145,9 @@ const Web3Context = createContext<Web3ContextType>({
   uid: null,
   isConnected: false,
   isConnecting: false,
-  connectWallet: async () => {},
-  disconnectWallet: () => {},
-  refreshWalletState: async () => {},
+  connectWallet: async () => { },
+  disconnectWallet: () => { },
+  refreshWalletState: async () => { },
   provider: null,
 });
 
@@ -208,14 +208,14 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       if (auth.currentUser) {
         if (auth.currentUser.uid) {
           setUid(auth.currentUser.uid);
-          
+
           // Repair user data if needed
           try {
             await dataRepairService.repairUsernameMapping(auth.currentUser.uid);
           } catch (repairError) {
             console.warn("Failed to repair user data:", repairError);
           }
-          
+
           return;
         }
       }
@@ -278,7 +278,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               } catch (repairError) {
                 console.warn("Failed to repair username mapping:", repairError);
               }
-              
+
               // Don't redirect during onboarding
               if (!isOnboarding) {
                 // Set a flag to indicate incomplete setup
@@ -326,10 +326,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             console.log("✅ New account created successfully");
           } catch (createErr) {
             console.error("🚨 Failed to create account:", createErr);
-            
+
             // Instead of redirecting to login, trigger onboarding at wallet step
             console.log("🔄 Triggering onboarding wizard at wallet connection step...");
-            
+
             // Check if we have onboarding trigger available
             if (typeof window !== 'undefined' && window.__realmkin_onboarding_trigger) {
               window.__realmkin_onboarding_trigger('wallet');
@@ -361,7 +361,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     // Debounce rapid state changes to prevent race conditions
     const timeoutId = setTimeout(async () => {
       try {
-        setIsConnecting(Boolean(connecting));
+        // Only show connecting state if we actually have a reason to believe we're connecting
+        // (i.e., we have a cached wallet or the adapter is truly connecting)
+        const hasCachedWallet = typeof window !== 'undefined' && !!localStorage.getItem("realmkin_cached_wallet");
+        setIsConnecting(Boolean(connecting && (hasCachedWallet || connected)));
         if (publicKey) {
           console.log("✅ [Wallet Sync] Public key detected:", publicKey.toString());
           const address =
@@ -371,7 +374,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
                 toString: () => string;
               }
             ).toBase58?.() ?? publicKey.toString();
-          
+
           // Validate wallet address using Solana's PublicKey constructor
           try {
             new PublicKey(address); // This will throw if invalid
@@ -400,7 +403,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
             // Auto-authenticate with Firebase (AWAIT to ensure auth completes before navigation)
             console.log("🔐 Starting Firebase authentication for wallet:", address);
-            
+
             // Show toast notification for better UX
             try {
               const toast = (await import('react-hot-toast')).default;
@@ -411,10 +414,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             } catch (e) {
               console.warn("Failed to show toast:", e);
             }
-            
+
             await autoAuthenticateFirebase(address);
             console.log("✅ Firebase authentication completed");
-            
+
             // Show success toast
             try {
               const toast = (await import('react-hot-toast')).default;
@@ -481,7 +484,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         checkConnection();
       }
     }, 500);
-    
+
     return () => clearTimeout(timeoutId);
   }, [publicKey, connected]);
 
@@ -865,7 +868,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           console.log("🔔 Opening Solana Wallet Adapter modal via context");
           console.log("📋 Available wallets:", wallets?.map(w => w.adapter.name));
           console.log("🔌 Currently selected wallet:", wallet?.adapter.name);
-          
+
           setWalletModalVisible(true);
           opened = true;
 

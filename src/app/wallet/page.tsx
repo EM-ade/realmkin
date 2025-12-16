@@ -777,7 +777,7 @@ export default function WalletPage() {
         {!isMobile && <ConstellationBackground />}
 
         {/* Mobile Header */}
-        <header className="lg:hidden  flex flex-row justify-between items-center gap-3 p-4 mb-6 animate-fade-in">
+        <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 mb-6 animate-fade-in relative z-50">
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14 animate-float">
               <Image
