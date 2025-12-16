@@ -372,4 +372,4 @@ function Home() {
   );
 }
 
-export default withAuthGuard(Home);
+export default Home;

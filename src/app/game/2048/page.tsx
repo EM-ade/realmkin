@@ -168,4 +168,4 @@ function Realmkin2048Page() {
   );
 }
 
-export default withAuthGuard(Realmkin2048Page);
+export default Realmkin2048Page;

@@ -20,8 +20,8 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
   const [graceOver, setGraceOver] = useState(false);
 
   // Check if this is an OAuth flow (needs longer grace period)
-  const isOAuthFlow = pathname?.includes('/discord/linked') || 
-                      pathname?.includes('/oauth/callback');
+  const isOAuthFlow = pathname?.includes('/discord/linked') ||
+    pathname?.includes('/oauth/callback');
 
   // Start a grace window to allow auth and wallet to hydrate after refresh
   // Extended for OAuth flows (10s) vs normal pages (3s)
@@ -42,10 +42,17 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
 
     // Require BOTH: authenticated user AND connected wallet
     if (!user || !isConnected) {
-      const target = encodeURIComponent(pathname || '/');
-      setRedirecting(true);
-      router.replace(`/login?redirect=${target}`);
-      return;
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#050302] text-[#DA9C2F] p-4">
+          <div className="max-w-md w-full text-center space-y-6">
+            <h2 className="text-2xl font-bold uppercase tracking-wider">Access Restricted</h2>
+            <p className="text-white/70">Please connect your wallet to access this page.</p>
+            {/* The wallet button is usually in the header, but we can add a hint or a button here if needed. 
+                For now, relying on the global header or a simple message is safer to avoid circular dependencies if we try to import ConnectButton.
+            */}
+          </div>
+        </div>
+      );
     }
 
     if (adminWallets && userData && !adminWallets.includes((userData.walletAddress ?? '').toLowerCase())) {
@@ -61,13 +68,13 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
     );
   }
 
-  // Block render if either is missing (router will redirect)
+  // Block render if either is missing (should be handled by effect above, but double check)
   if (!user || !isConnected) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black text-[#DA9C2F]">
-        <div className="flex items-center gap-3 text-sm uppercase tracking-widest">
-          <span className="h-4 w-4 rounded-full border-2 border-transparent border-t-[#DA9C2F] animate-spin" />
-          {redirecting ? 'Redirecting…' : 'Checking access…'}
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050302] text-[#DA9C2F] p-4">
+        <div className="max-w-md w-full text-center space-y-6">
+          <h2 className="text-2xl font-bold uppercase tracking-wider">Access Restricted</h2>
+          <p className="text-white/70">Please connect your wallet to access this page.</p>
         </div>
       </div>
     );

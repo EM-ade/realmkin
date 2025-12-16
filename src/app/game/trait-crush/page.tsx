@@ -157,4 +157,4 @@ function TraitCrushPage() {
   );
 }
 
-export default withAuthGuard(TraitCrushPage);
+export default TraitCrushPage;

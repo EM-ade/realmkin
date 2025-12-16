@@ -134,4 +134,4 @@ function RealmkinWordlePage() {
   );
 }
 
-export default withAuthGuard(RealmkinWordlePage);
+export default RealmkinWordlePage;
