@@ -15,7 +15,10 @@ export default function StickyFooter() {
                 <button className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-wider text-sm hover:bg-white/10 transition-colors">
                     Discord
                 </button>
-                <button className="flex-1 py-3 rounded-xl bg-[#DA9C2F] text-black font-black uppercase tracking-wider text-sm shadow-[0_0_20px_rgba(218,156,47,0.4)] hover:bg-[#F0B342] transition-colors">
+                <button
+                    onClick={() => window.open('https://www.nftlaunch.app/mint/realmkin', '_blank')}
+                    className="flex-1 py-3 rounded-xl bg-[#DA9C2F] text-black font-black uppercase tracking-wider text-sm shadow-[0_0_20px_rgba(218,156,47,0.4)] hover:bg-[#F0B342] transition-colors"
+                >
                     Mint Now
                 </button>
             </div>
