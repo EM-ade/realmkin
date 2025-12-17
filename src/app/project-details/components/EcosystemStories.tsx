@@ -1,43 +1,63 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+import Image from 'next/image';
 
 const ECOSYSTEM_STEPS = [
     {
         title: "Stake Your Realmkin",
         text: "Your Realmkin is not meant to be idle. Deploy it into the ecosystem to begin its journey. It becomes an active worker in the Realm.",
-        color: "#DA9C2F"
+        color: "#DA9C2F",
+        image: "/assets/project-details/details-carousel.jpeg"
     },
     {
         title: "Earn $MKIN",
         text: "Active Realmkin generate $MKIN weekly. This is not passive income; it is a reward for contributing to the ecosystem's stability.",
-        color: "#10B981"
+        color: "#10B981",
+        image: "/assets/project-details/details-carousel(1).jpeg"
     },
     {
         title: "Build & Upgrade",
         text: "Use your $MKIN to upgrade your Realmkin's abilities, unlock new features, and shape the future of the Realm.",
-        color: "#3B82F6"
+        color: "#3B82F6",
+        image: "/assets/project-details/details-carousel(2).jpeg"
     }
 ];
 
 export default function EcosystemStories({ onOpenWhitepaper }: { onOpenWhitepaper: () => void }) {
     const [activeStep, setActiveStep] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+
+    useEffect(() => {
+        if (isPaused) return;
+
+        const timer = setInterval(() => {
+            setActiveStep((prev) => (prev + 1) % ECOSYSTEM_STEPS.length);
+        }, 5000);
+
+        return () => clearInterval(timer);
+    }, [activeStep, isPaused]);
 
     const handleTap = () => {
         setActiveStep((prev) => (prev + 1) % ECOSYSTEM_STEPS.length);
     };
 
     return (
-        <section className="relative z-20 w-full min-h-screen bg-[#080806] py-20 pb-40">
+        <section
+            className="relative z-20 w-full min-h-screen lg:min-h-0 bg-[#080806] py-20 pb-32 sm:pb-64 lg:pb-24"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+        >
             <div className="max-w-7xl mx-auto px-6">
-                <h2 className="text-center text-3xl md:text-5xl font-black uppercase tracking-tighter mb-16 text-white">
+                <h2 className="text-center text-3xl md:text-5xl font-black uppercase tracking-tighter mb-24 text-white">
                     How It Works
                 </h2>
 
                 <div className="flex flex-col lg:flex-row gap-12 lg:gap-24">
                     {/* Left Column: Sticky Visual (Desktop) / Top (Mobile) */}
-                    <div className="lg:w-1/2 lg:h-[80vh] lg:sticky lg:top-32 flex items-center justify-center">
+                    <div className="lg:w-1/2 lg:h-[80vh] lg:sticky lg:top-36 flex items-center justify-center">
                         <div
                             onClick={handleTap}
                             className="relative w-full max-w-md aspect-[9/16] bg-[#0B0B09] border border-[#DA9C2F]/20 rounded-3xl overflow-hidden cursor-pointer group shadow-2xl"
@@ -77,16 +97,28 @@ export default function EcosystemStories({ onOpenWhitepaper }: { onOpenWhitepape
                                 </motion.div>
                             </div>
 
-                            {/* Visual Placeholder (Animated Circle) */}
-                            <div className="absolute inset-0 flex items-center justify-center z-0">
-                                <motion.div
-                                    key={activeStep}
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 0.5 }}
-                                    transition={{ duration: 1 }}
-                                    className="w-64 h-64 rounded-full blur-[80px]"
-                                    style={{ backgroundColor: ECOSYSTEM_STEPS[activeStep].color }}
-                                />
+                            {/* Background Image with Transition */}
+                            <div className="absolute inset-0 z-0">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={activeStep}
+                                        initial={{ opacity: 0, scale: 1.1 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.5 }}
+                                        className="relative w-full h-full"
+                                    >
+                                        <Image
+                                            src={ECOSYSTEM_STEPS[activeStep].image}
+                                            alt={ECOSYSTEM_STEPS[activeStep].title}
+                                            fill
+                                            className="object-cover"
+                                            priority
+                                        />
+                                        {/* Overlay for readability */}
+                                        <div className="absolute inset-0 bg-black/20" />
+                                    </motion.div>
+                                </AnimatePresence>
                             </div>
                         </div>
                     </div>
