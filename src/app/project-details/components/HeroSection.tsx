@@ -43,7 +43,7 @@ export default function HeroSection({ blur, overlayOpacity }: HeroSectionProps) 
                             src="/assets/project-details/parallax-mid.png"
                             alt="Ancient Ruins"
                             fill
-                            className="object-cover object-bottom scale-110"
+                            className="object-cover object-bottom scale-110 md:scale-125 lg:scale-150"
                             priority
                         />
                     </div>
