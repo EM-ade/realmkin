@@ -37,6 +37,8 @@ export default function ProjectDetailsPage() {
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
+    const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+
     // Scroll Progress for the whole page/container
     const { scrollYProgress } = useScroll({
         target: containerRef,
@@ -94,7 +96,7 @@ export default function ProjectDetailsPage() {
                 discordConnecting={discordConnecting}
                 discordUnlinking={discordUnlinking}
                 onDiscordConnect={() => user && connectDiscord(user)}
-                onDiscordDisconnect={() => user && disconnectDiscord(user)}
+                onDiscordDisconnect={() => user && disconnectDiscord(user, gatekeeperBase)}
                 onConnectWallet={connectWallet}
                 onDisconnectWallet={disconnectWallet}
             />
