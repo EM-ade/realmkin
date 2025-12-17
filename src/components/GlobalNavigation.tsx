@@ -115,8 +115,8 @@ export default function GlobalNavigation() {
               key={item.href}
               href={item.href}
               className={`text-sm font-medium transition-colors ${pathname === item.href
-                  ? "text-[#DA9C2F]"
-                  : "text-white/60 hover:text-[#DA9C2F]"
+                ? "text-[#DA9C2F]"
+                : "text-white/60 hover:text-[#DA9C2F]"
                 }`}
             >
               {item.label}
@@ -126,8 +126,8 @@ export default function GlobalNavigation() {
             <Link
               href="/admin"
               className={`text-sm font-medium transition-colors ${pathname === "/admin"
-                  ? "text-[#DA9C2F]"
-                  : "text-white/60 hover:text-[#DA9C2F]"
+                ? "text-[#DA9C2F]"
+                : "text-white/60 hover:text-[#DA9C2F]"
                 }`}
             >
               Admin
