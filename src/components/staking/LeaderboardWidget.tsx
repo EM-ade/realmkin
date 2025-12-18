@@ -27,7 +27,7 @@ export function LeaderboardWidget({ entries }: LeaderboardWidgetProps) {
                             <span className="text-[#f7dca1] text-sm font-medium">{entry.username}</span>
                         </div>
                         <div className="text-[#f4c752] text-sm font-mono">
-                            {entry.amountMined.toFixed(2)} MKIN
+                            {entry.amountMined.toFixed(4)} SOL
                         </div>
                     </div>
                 ))}

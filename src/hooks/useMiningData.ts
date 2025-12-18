@@ -1,42 +1,43 @@
 import { useState, useEffect } from 'react';
+import { PROJECTS, ProjectConfig } from '@/config/projects.config';
 
 export interface Booster {
     id: string;
     name: string;
     type: 'Realmkin' | 'Customized' | 'Miner';
     boostPercent: number;
-    imageUrl: string; // Placeholder for now
+    imageUrl: string;
 }
 
 export interface LeaderboardEntry {
     rank: number;
     username: string;
-    amountMined: number;
+    amountMined: number; // In SOL
 }
 
 export interface MiningData {
-    stakingRate: number; // MKIN per second
-    unclaimedRewards: number;
-    totalStaked: number;
-    weeklyMined: number;
+    stakingRate: number; // SOL per second
+    unclaimedRewards: number; // SOL
+    totalStaked: number; // Project Token (e.g., MKIN)
+    weeklyMined: number; // SOL
     boosters: Booster[];
     leaderboard: LeaderboardEntry[];
+    project: ProjectConfig;
 }
 
-export function useMiningData() {
-    // Hardcoded base values
-    const BASE_RATE = 0.00005; // MKIN/s
-    const INITIAL_REWARDS = 1.2450;
+export function useMiningData(selectedProjectId: string = 'realmkin') {
+    const project = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
 
+    // Mock data state
     const [data, setData] = useState<MiningData>({
-        stakingRate: BASE_RATE,
-        unclaimedRewards: INITIAL_REWARDS,
+        stakingRate: project.staking.baseRate,
+        unclaimedRewards: 0.0045, // Initial mock SOL
         totalStaked: 10000,
-        weeklyMined: 150.5,
+        weeklyMined: 1.5, // SOL
         boosters: [
             {
                 id: '1',
-                name: 'Realmkin #1',
+                name: `${project.name} #1`,
                 type: 'Realmkin',
                 boostPercent: 5,
                 imageUrl: '/placeholder-booster.png'
@@ -50,18 +51,30 @@ export function useMiningData() {
             }
         ],
         leaderboard: [
-            { rank: 1, username: 'UserA', amountMined: 5.2 },
-            { rank: 2, username: 'UserB', amountMined: 4.8 },
-            { rank: 3, username: 'UserC', amountMined: 4.1 },
-        ]
+            { rank: 1, username: 'UserA', amountMined: 0.52 },
+            { rank: 2, username: 'UserB', amountMined: 0.48 },
+            { rank: 3, username: 'UserC', amountMined: 0.41 },
+        ],
+        project
     });
 
-    // Effect to simulate live mining (incrementing rewards)
+    // Update data when project changes
+    useEffect(() => {
+        const newProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+        setData(prev => ({
+            ...prev,
+            project: newProject,
+            stakingRate: newProject.staking.baseRate,
+            // Reset or fetch new data for the project here
+        }));
+    }, [selectedProjectId]);
+
+    // Effect to simulate live mining (incrementing SOL rewards)
     useEffect(() => {
         const interval = setInterval(() => {
             setData(prev => ({
                 ...prev,
-                unclaimedRewards: prev.unclaimedRewards + (prev.stakingRate / 10) // Update every 100ms
+                unclaimedRewards: prev.unclaimedRewards + (prev.stakingRate * 10) // Fast forward for demo
             }));
         }, 100);
 

@@ -163,11 +163,11 @@ function StakingPage() {
               <div className="space-y-4">
                 <div>
                   <div className="text-[#f7dca1]/40 text-[10px] uppercase tracking-wider">Total Staked</div>
-                  <div className="text-xl font-bold text-[#f4c752]">{miningData.totalStaked.toLocaleString()} MKIN</div>
+                  <div className="text-xl font-bold text-[#f4c752]">{miningData.totalStaked.toLocaleString()} {miningData.project.token.symbol}</div>
                 </div>
                 <div>
                   <div className="text-[#f7dca1]/40 text-[10px] uppercase tracking-wider">Est. Weekly</div>
-                  <div className="text-xl font-bold text-[#f4c752]">{(miningData.stakingRate * 60 * 60 * 24 * 7).toFixed(2)} MKIN</div>
+                  <div className="text-xl font-bold text-[#f4c752]">{(miningData.stakingRate * 60 * 60 * 24 * 7).toFixed(4)} SOL</div>
                 </div>
               </div>
             </div>
@@ -178,7 +178,7 @@ function StakingPage() {
               </h3>
               <div>
                 <div className="text-[#f7dca1]/40 text-[10px] uppercase tracking-wider">Total Mined (Week)</div>
-                <div className="text-xl font-bold text-[#f4c752]">{miningData.weeklyMined.toLocaleString()} MKIN</div>
+                <div className="text-xl font-bold text-[#f4c752]">{miningData.weeklyMined.toLocaleString()} SOL</div>
               </div>
             </div>
           </div>
@@ -194,6 +194,7 @@ function StakingPage() {
             <StakingControls
               stakedAmount={miningData.totalStaked}
               walletBalance={50000} // Mocked wallet balance
+              tokenSymbol={miningData.project.token.symbol}
               onStake={handleStake}
               onUnstake={handleUnstake}
             />

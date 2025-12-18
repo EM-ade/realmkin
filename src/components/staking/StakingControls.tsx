@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 interface StakingControlsProps {
     stakedAmount: number;
     walletBalance: number; // Mocked for now if needed, or passed from parent
+    tokenSymbol: string;
     onStake: (amount: number) => void;
     onUnstake: (amount: number) => void;
 }
 
-export function StakingControls({ stakedAmount, walletBalance, onStake, onUnstake }: StakingControlsProps) {
+export function StakingControls({ stakedAmount, walletBalance, tokenSymbol, onStake, onUnstake }: StakingControlsProps) {
     const [amount, setAmount] = useState('');
 
     return (
@@ -19,11 +20,11 @@ export function StakingControls({ stakedAmount, walletBalance, onStake, onUnstak
             <div className="mb-6">
                 <div className="flex justify-between text-xs text-[#f7dca1]/60 mb-2 uppercase tracking-wider">
                     <span>Staked Balance</span>
-                    <span className="text-[#f4c752]">{stakedAmount.toLocaleString()} MKIN</span>
+                    <span className="text-[#f4c752]">{stakedAmount.toLocaleString()} {tokenSymbol}</span>
                 </div>
                 <div className="flex justify-between text-xs text-[#f7dca1]/60 mb-2 uppercase tracking-wider">
                     <span>Wallet Balance</span>
-                    <span>{walletBalance.toLocaleString()} MKIN</span>
+                    <span>{walletBalance.toLocaleString()} {tokenSymbol}</span>
                 </div>
             </div>
 
