@@ -573,93 +573,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     try {
       if (typeof window !== "undefined") {
         const solanaWindow = window as Window & ExtendedWindow;
-        let connectedAddress: string | null = null;
-        let walletType: string | null = null;
 
-        // Try Phantom first with better error handling
-        if (solanaWindow.phantom?.solana) {
-          try {
-            const phantom = solanaWindow.phantom.solana;
-
-            // Check if already connected
-            if (phantom.isConnected) {
-              const response = await phantom.connect();
-              const address = response.publicKey.toString();
-
-              if (address && isValidSolanaAddress(address)) {
-                connectedAddress = address;
-                walletType = "phantom";
-                setupPhantomEventListeners(phantom);
-              }
-            }
-          } catch (error) {
-            console.log("Phantom connection check failed:", error);
-            // Continue to try other wallets
-          }
-        }
-
-        // Try other wallets if Phantom didn't work
-        const walletsToTry = [
-          { name: "solflare", provider: solanaWindow.solflare },
-          { name: "backpack", provider: solanaWindow.backpack },
-          { name: "glow", provider: solanaWindow.glow },
-        ];
-
-        for (const wallet of walletsToTry) {
-          if (!connectedAddress && wallet.provider) {
-            try {
-              const response = await wallet.provider.connect();
-              let address: string | null = null;
-
-              // Handle different wallet response types
-              if (wallet.name === "solflare") {
-                // Type narrow to SolflareWallet
-                const solflareProvider = wallet.provider as SolflareWallet;
-                // Solflare returns boolean and stores publicKey on the wallet object
-                if (response === true && solflareProvider.publicKey) {
-                  address = solflareProvider.publicKey.toString();
-                }
-              } else {
-                // Other wallets return object with publicKey property
-                address =
-                  (
-                    response as { publicKey?: { toString(): string } | string }
-                  )?.publicKey?.toString() || null;
-              }
-
-              if (address && isValidSolanaAddress(address)) {
-                connectedAddress = address;
-                walletType = wallet.name;
-                break;
-              }
-            } catch (error) {
-              console.log(`${wallet.name} connection failed:`, error);
-            }
-          }
-        }
-
-        // If we found a connected wallet, set the state
-        if (connectedAddress && walletType) {
-          setAccount(connectedAddress);
-          setIsConnected(true);
-          setProvider(null);
-
-          // Update cached wallet data
-          localStorage.setItem(
-            "realmkin_cached_wallet",
-            JSON.stringify({
-              type: walletType,
-              address: connectedAddress,
-              timestamp: Date.now(),
-            }),
-          );
-
-          // Auto-authenticate with Firebase
-          await autoAuthenticateFirebase(connectedAddress);
-          return;
-        }
-
-        // Check localStorage for cached wallet connection with retry logic
+        // Only check for cached wallet connection first
+        // We do NOT want to aggressively loop through providers as that triggers popups
         await checkCachedWalletConnection();
       }
     } catch (error) {
@@ -778,13 +694,24 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               }
             }
             break; // Break if wallet type doesn't match
-          } catch (error) {
+          } catch (error: any) {
+            console.log(`Connection attempt ${retryCount + 1} failed:`, error);
+
+            // If user rejected, STOP RETRYING IMMEDIATELY and clear cache
+            if (error?.message?.includes("User rejected") || error?.name === "WalletConnectionError") {
+              console.log("🛑 User rejected connection, clearing cache and stopping retries");
+              localStorage.removeItem("realmkin_cached_wallet");
+              break;
+            }
+
             retryCount++;
             if (retryCount >= maxRetries) {
               console.log(
                 `Failed to restore ${walletData.type} connection from cache after ${maxRetries} attempts:`,
                 error,
               );
+              // Clear cache if we failed multiple times
+              localStorage.removeItem("realmkin_cached_wallet");
               break;
             }
             // Wait before retrying (exponential backoff)

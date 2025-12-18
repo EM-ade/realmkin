@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import GameTraitCrushClient from "./GameTraitCrushClient";
+import { NAV_ITEMS } from "@/config/navigation";
 
 const EtherealParticles = dynamic(
   () => import("@/components/MagicalAnimations").then((mod) => mod.EtherealParticles),
@@ -27,17 +28,6 @@ function TraitCrushPage() {
   const isMobile = useIsMobile();
   const [showMobileActions, setShowMobileActions] = useState(false);
 
-  const mobileMenuItems = useMemo(
-    () => [
-      { label: "Home", href: "/", icon: "/dashboard.png" },
-      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-      { label: "Staking", href: "/staking", icon: "/staking.png" },
-      { label: "Game", href: "/game", icon: "/game.png" },
-      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
-      { label: "Merches", href: "/merches", icon: "/merches.png" },
-    ],
-    []
-  );
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050302]">
@@ -145,7 +135,7 @@ function TraitCrushPage() {
       <MobileMenuOverlay
         isOpen={showMobileActions}
         onClose={() => setShowMobileActions(false)}
-        menuItems={mobileMenuItems}
+        menuItems={NAV_ITEMS}
         isAdmin={userData?.admin}
         isConnected={isConnected}
         account={account}

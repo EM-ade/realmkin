@@ -30,6 +30,7 @@ import QuickStartGuide from "@/components/QuickStartGuide";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
 import { claimTokens, ClaimResponse } from "@/services/backendClaimService";
+import { NAV_ITEMS } from "@/config/navigation";
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(
@@ -82,22 +83,6 @@ export default function WalletPage() {
     return userRewards ? userRewards.totalRealmkin : 0;
   }, [userRewards]);
 
-  const mobileMenuItems = useMemo(
-    () => [
-      { label: "Home", href: "/", icon: "/dashboard.png" },
-      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-      { label: "Staking", href: "/staking", icon: "/staking.png" },
-      {
-        label: "Marketplace",
-        href: "/marketplace",
-        icon: "/marketplace_logo.png",
-      },
-      { label: "Game", href: "/game", icon: "/game.png" },
-      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
-      { label: "Merches", href: "/merches", icon: "/merches.png" },
-    ],
-    [],
-  );
 
   const handleDiscordConnect = useCallback(() => {
     if (discordLinked || discordConnecting) return;
@@ -821,7 +806,7 @@ export default function WalletPage() {
         <MobileMenuOverlay
           isOpen={showMobileActions}
           onClose={() => setShowMobileActions(false)}
-          menuItems={mobileMenuItems}
+          menuItems={NAV_ITEMS}
           isAdmin={userData?.admin}
           isConnected={isConnected}
           account={account}

@@ -8,6 +8,7 @@ import MobileMenuOverlay from '@/components/MobileMenuOverlay';
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useDiscord } from "@/contexts/DiscordContext";
+import { NAV_ITEMS } from "@/config/navigation";
 
 import HeroSection from './components/HeroSection';
 import ProjectDeck from './components/ProjectDeck';
@@ -16,15 +17,6 @@ import EcosystemStories from './components/EcosystemStories';
 import WhitepaperSheet from './components/WhitepaperSheet';
 import StickyFooter from './components/StickyFooter';
 
-const NAV_ITEMS = [
-    { label: "Home", href: "/", icon: "/dashboard.png" },
-    { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-    { label: "My NFTs", href: "/my-nft", icon: "/flex-model.png" },
-    { label: "Staking", href: "/staking", icon: "/staking.png" },
-    { label: "Marketplace", href: "/marketplace", icon: "/marketplace.png" },
-    { label: "Game", href: "/game", icon: "/game.png" },
-    { label: "Merches", href: "/merches", icon: "/merches.png" },
-];
 
 export default function ProjectDetailsPage() {
     const [isWhitepaperOpen, setIsWhitepaperOpen] = useState(false);

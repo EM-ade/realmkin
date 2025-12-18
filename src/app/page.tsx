@@ -15,6 +15,7 @@ import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
+import { NAV_ITEMS } from "@/config/navigation";
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(
@@ -178,22 +179,6 @@ function Home() {
     : "0.00";
 
   // Mobile menu items
-  const mobileMenuItems = useMemo(
-    () => [
-      { label: "Home", href: "/", icon: "/dashboard.png" },
-      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-      { label: "Staking", href: "/staking", icon: "/staking.png" },
-      {
-        label: "Marketplace",
-        href: "/marketplace",
-        icon: "/marketplace_logo.png",
-      },
-      { label: "Game", href: "/game", icon: "/game.png" },
-      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
-      { label: "Merches", href: "/merches", icon: "/merches.png" },
-    ],
-    [],
-  );
 
   return (
     <div className="min-h-screen bg-[#050302] relative overflow-hidden">
@@ -355,7 +340,7 @@ function Home() {
       <MobileMenuOverlay
         isOpen={showMobileActions}
         onClose={() => setShowMobileActions(false)}
-        menuItems={mobileMenuItems}
+        menuItems={NAV_ITEMS}
         isAdmin={userData?.admin}
         isConnected={isConnected}
         account={account}

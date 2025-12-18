@@ -9,6 +9,7 @@ interface MenuItem {
   label: string;
   href: string;
   icon: string;
+  group?: string;
 }
 
 interface MobileMenuOverlayProps {
@@ -140,7 +141,9 @@ export default function MobileMenuOverlay({
         </div>
 
         {/* Navigation */}
-        <nav className="px-4 py-3 space-y-1.5">
+        {/* Navigation */}
+        <nav className="px-4 py-3 space-y-1.5 overflow-y-auto max-h-[60vh]">
+          {/* All Items Flat List */}
           {menuItems.map((item) => (
             <button
               key={item.label}
@@ -164,13 +167,14 @@ export default function MobileMenuOverlay({
               </span>
             </button>
           ))}
+
           {isAdmin && (
             <button
               onClick={() => {
                 router.push("/admin");
                 onClose();
               }}
-              className="w-full flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors text-left"
+              className="w-full flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors text-left mt-2 border-t border-[#1f1f1f] pt-3"
             >
               <span className="flex h-10 w-10 items-center justify-center">
                 <Image
@@ -188,82 +192,79 @@ export default function MobileMenuOverlay({
           )}
         </nav>
 
-        {/* Actions (Discord + Wallet) */}
-        {isConnected && account && (
-          <div className="px-5 py-4 border-t border-[#1f1f1f]">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <button
-                onClick={() => {
-                  if (!discordLinked && onDiscordConnect) {
-                    onDiscordConnect();
-                  } else if (discordLinked && onDiscordDisconnect) {
-                    onDiscordDisconnect();
-                  }
-                }}
-                disabled={discordConnecting || discordUnlinking}
-                className="flex-1 flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-black px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#1a1a1a] disabled:opacity-70"
-              >
-                <span>
-                  {discordLinked
-                    ? "Disconnect Discord"
-                    : discordConnecting
-                      ? "Connecting…"
-                      : discordUnlinking
-                        ? "Disconnecting…"
-                        : "Connect Discord"}
-                </span>
-                <span className="text-xs text-[#DA9C2F] opacity-70">
-                  {discordLinked ? "Linked" : "Secure"}
-                </span>
-              </button>
+        {/* Actions (Discord + Wallet) - Always visible */}
+        <div className="px-5 py-4 border-t border-[#1f1f1f]">
+          <div className="flex flex-col gap-3">
+            {/* Discord Button - Always visible if not linked */}
+            <button
+              onClick={() => {
+                if (!discordLinked && onDiscordConnect) {
+                  onDiscordConnect();
+                } else if (discordLinked && onDiscordDisconnect) {
+                  onDiscordDisconnect();
+                }
+              }}
+              disabled={discordConnecting || discordUnlinking}
+              className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F]/30 bg-black/40 px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#1a1a1a] disabled:opacity-70"
+            >
+              <span>
+                {discordLinked
+                  ? "Disconnect Discord"
+                  : discordConnecting
+                    ? "Connecting…"
+                    : discordUnlinking
+                      ? "Disconnecting…"
+                      : "Connect Discord"}
+              </span>
+              <span className="text-xs text-[#DA9C2F] opacity-70">
+                {discordLinked ? "Linked" : "Secure"}
+              </span>
+            </button>
 
-              <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
+            {/* Wallet Button */}
+            <div className="flex items-center justify-between gap-3 w-full">
+              {isConnected && (
                 <div
-                  className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected
-                      ? "border-[#DA9C2F] bg-[#DA9C2F]"
-                      : "border-[#DA9C2F] bg-[#0B0B09]"
-                    }`}
+                  className="relative h-10 w-16 rounded-full border border-[#DA9C2F] bg-[#DA9C2F] transition-all duration-300 ease-out"
                   aria-hidden="true"
                 >
-                  <div
-                    className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? "right-1" : "left-1"
-                      }`}
-                  />
+                  <div className="absolute top-1 right-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out" />
                 </div>
-                <button
-                  onClick={() => {
-                    if (isConnected && onDisconnectWallet) {
-                      onDisconnectWallet();
-                    } else if (!isConnected && onConnectWallet) {
-                      onConnectWallet();
-                    }
-                    onClose();
-                  }}
-                  disabled={isConnecting}
-                  className="basis-[70%] flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
-                >
-                  <span>
-                    {isConnected
-                      ? "Disconnect Wallet"
-                      : isConnecting
-                        ? "Connecting…"
-                        : "Connect Wallet"}
-                  </span>
-                  <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
-                    <Image
-                      src="/wallet.png"
-                      alt="Wallet connect"
-                      width={16}
-                      height={16}
-                      className="w-4 h-4"
-                    />
-                    {isConnecting ? "Loading…" : isConnected ? "Synced" : "Secure"}
-                  </span>
-                </button>
-              </div>
+              )}
+
+              <button
+                onClick={() => {
+                  if (isConnected && onDisconnectWallet) {
+                    onDisconnectWallet();
+                  } else if (!isConnected && onConnectWallet) {
+                    onConnectWallet();
+                  }
+                  onClose();
+                }}
+                disabled={isConnecting}
+                className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70 ${!isConnected ? 'w-full' : ''}`}
+              >
+                <span>
+                  {isConnected
+                    ? "Disconnect Wallet"
+                    : isConnecting
+                      ? "Connecting…"
+                      : "Connect Wallet"}
+                </span>
+                <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
+                  <Image
+                    src="/wallet.png"
+                    alt="Wallet connect"
+                    width={16}
+                    height={16}
+                    className="w-4 h-4"
+                  />
+                  {isConnecting ? "Loading…" : isConnected ? "Synced" : "Secure"}
+                </span>
+              </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>,
     document.body
