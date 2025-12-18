@@ -12,7 +12,10 @@ export default function StickyFooter() {
             className="fixed bottom-0 left-0 right-0 z-40 p-4 md:hidden"
         >
             <div className="flex gap-4 p-4 rounded-2xl bg-[#0B0B09]/80 backdrop-blur-xl border border-[#DA9C2F]/20 shadow-2xl">
-                <button className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-wider text-sm hover:bg-white/10 transition-colors">
+                <button
+                    onClick={() => window.open('https://discord.gg/vwwbjFb4vQ', '_blank')}
+                    className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-wider text-sm hover:bg-white/10 transition-colors"
+                >
                     Discord
                 </button>
                 <button
