@@ -15,6 +15,8 @@ import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import { NAV_ITEMS } from "@/config/navigation";
 import { useDiscord } from "@/contexts/DiscordContext";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 const LOCK_OPTIONS: Array<{ label: string; value: "flexible" | "30" | "60" | "90" }> = [
   { label: "Flexible", value: "flexible" },
   { label: "30 Days", value: "30" },
@@ -37,6 +39,8 @@ function StakingPage() {
   const [isUnstaking, setIsUnstaking] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const mobileActionsRef = useRef<HTMLDivElement | null>(null);
+
+  const { userData } = useAuth();
 
   const {
     connectWallet,
