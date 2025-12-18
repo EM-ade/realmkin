@@ -86,10 +86,10 @@ interface Props {
 function WalletModalBridge() {
   const { setVisible, visible } = useWalletModal();
   const { select, connect, wallet, wallets, connecting, connected } = useWallet();
-  
+
   useEffect(() => {
-    console.log("🌉 [Modal Bridge] State:", { 
-      visible, 
+    console.log("🌉 [Modal Bridge] State:", {
+      visible,
       wallet: wallet?.adapter.name,
       walletsAvailable: wallets?.length,
       connecting,
@@ -134,7 +134,7 @@ function WalletModalBridge() {
       window.removeEventListener("realmkin:open-wallet-modal", handler);
     };
   }, [setVisible]);
-  
+
   return null;
 }
 
@@ -165,12 +165,12 @@ export default function SolanaWalletProvider({ children }: Props) {
       new BackpackWalletAdapter(),
       new GlowWalletAdapter(),
     ];
-    
+
     // Deduplicate wallets by name to prevent React key warnings
     const uniqueWallets = walletInstances.filter((wallet, index, self) =>
       index === self.findIndex((w) => w.name === wallet.name)
     );
-    
+
     return uniqueWallets;
   }, [network]);
 
@@ -195,7 +195,7 @@ export default function SolanaWalletProvider({ children }: Props) {
             );
             return;
           }
-          
+
           // Handle "Something went wrong" errors from Phantom
           if (error?.message?.includes("Something went wrong")) {
             console.error("[Realmkin] ❌ Phantom connection error - This is usually a Phantom extension issue");
@@ -206,7 +206,7 @@ export default function SolanaWalletProvider({ children }: Props) {
             console.error("[Realmkin] 4. Try disconnecting and reconnecting Phantom");
             return;
           }
-          
+
           console.error("[Realmkin] ❌ Wallet adapter error:", error);
           console.error("[Realmkin] Error details:", {
             message: error?.message,

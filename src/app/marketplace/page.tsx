@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import MobileMenuOverlay from "@/components/MobileMenuOverlay";
+import { NAV_ITEMS } from "@/config/navigation";
 import HeroComingSoon from "@/components/marketplace/HeroComingSoon";
 import InfoCard from "@/components/marketplace/InfoCard";
 import FeatureHighlights from "@/components/marketplace/FeatureHighlights";
@@ -16,18 +17,6 @@ export default function MarketplaceComingSoonPage() {
   const { isConnected, connectWallet, disconnectWallet, account, isConnecting } = useWeb3();
   const [showMobileActions, setShowMobileActions] = useState(false);
 
-  const mobileMenuItems = useMemo(
-    () => [
-      { label: "Home", href: "/", icon: "/dashboard.png" },
-      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
-      { label: "Staking", href: "/staking", icon: "/staking.png" },
-      { label: "Marketplace", href: "/marketplace", icon: "/marketplace.png" },
-      { label: "Game", href: "/game", icon: "/game.png" },
-      { label: "Merches", href: "/merches", icon: "/merches.png" },
-    ],
-    []
-  );
 
   return (
     <main className="min-h-screen bg-[var(--background)]">
@@ -68,7 +57,7 @@ export default function MarketplaceComingSoonPage() {
       <MobileMenuOverlay
         isOpen={showMobileActions}
         onClose={() => setShowMobileActions(false)}
-        menuItems={mobileMenuItems}
+        menuItems={NAV_ITEMS}
         isAdmin={userData?.admin}
         isConnected={isConnected}
         account={account}

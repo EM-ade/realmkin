@@ -23,6 +23,7 @@ import { NFTMetadata } from "@/services/nftService";
 import { getAuth } from "firebase/auth";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { NAV_ITEMS } from "@/config/navigation";
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(
@@ -142,17 +143,6 @@ export default function MyNFTPage() {
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
 
-  const mobileMenuItems = useMemo(
-    () => [
-      { label: "Home", href: "/", icon: "/dashboard.png" },
-      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-      { label: "Staking", href: "/staking", icon: "/staking.png" },
-      { label: "Game", href: "/game", icon: "/game.png" },
-      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
-      { label: "Merches", href: "/merches", icon: "/merches.png" },
-    ],
-    [],
-  );
 
   // Merge test NFTs with real NFTs when test mode is enabled (guard undefined)
   const displayNFTs: NFTMetadata[] = useMemo(() => {
@@ -196,7 +186,7 @@ export default function MyNFTPage() {
       setShowMobileActions(false);
       try {
         localStorage.removeItem("realmkin_discord_linked");
-      } catch {}
+      } catch { }
       return true;
     } catch (error) {
       console.error(error);
@@ -353,7 +343,7 @@ export default function MyNFTPage() {
         <MobileMenuOverlay
           isOpen={showMobileActions}
           onClose={() => setShowMobileActions(false)}
-          menuItems={mobileMenuItems}
+          menuItems={NAV_ITEMS}
           isAdmin={userData?.admin}
           isConnected={isConnected}
           account={account}
@@ -410,11 +400,10 @@ export default function MyNFTPage() {
                     {isDevelopment && (
                       <button
                         onClick={() => setTestMode(!testMode)}
-                        className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                          testMode
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${testMode
                             ? "bg-[#f4c752] text-black shadow-md"
                             : "bg-[#2a1f0a] text-[#f4c752] border border-[#f4c752]/30 hover:bg-[#3a2f1a]"
-                        }`}
+                          }`}
                         title="Toggle test NFTs"
                       >
                         {testMode ? "🧪 Test ON" : "🧪 Test"}
@@ -475,11 +464,10 @@ export default function MyNFTPage() {
                       <button
                         key={`${nft.id}-${index}`}
                         onClick={() => setSelectedNFT(nft)}
-                        className={`group relative rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                          selectedNFT?.id === nft.id
+                        className={`group relative rounded-xl overflow-hidden border-2 transition-all duration-300 ${selectedNFT?.id === nft.id
                             ? "border-[#f4c752] shadow-lg shadow-[#f4c752]/30 scale-[1.02]"
                             : "border-[#f4c752]/20 hover:border-[#f4c752]/60 hover:scale-[1.02] hover:shadow-md hover:shadow-[#f4c752]/20"
-                        }`}
+                          }`}
                       >
                         <div className="aspect-square relative bg-gradient-to-br from-[#2a1f0a] to-[#1a1205]">
                           {nft.image ? (
@@ -532,11 +520,10 @@ export default function MyNFTPage() {
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-[#1b1205]/95 backdrop-blur-md border border-[#f4c752]/30 rounded-xl px-5 py-3 shadow-lg">
                   <button
                     onClick={() => setAutoRotate(!autoRotate)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-                      autoRotate
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 ${autoRotate
                         ? "bg-[#f4c752] text-black shadow-md shadow-[#f4c752]/30"
                         : "bg-[#2a1f0a] text-[#f4c752] border border-[#f4c752]/30 hover:bg-[#3a2f1a] hover:border-[#f4c752]/50"
-                    }`}
+                      }`}
                     title={autoRotate ? "Stop rotation" : "Auto rotate"}
                   >
                     {autoRotate ? "⏸ Pause" : "▶ Rotate"}

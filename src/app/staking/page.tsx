@@ -11,6 +11,11 @@ import { formatAddress } from "@/utils/formatAddress";
 import { getAPYForLockPeriod, estimateRewards } from "@/config/staking.config";
 import { toast } from "react-hot-toast";
 import { StakingError, errorMessages } from "@/errors/StakingError";
+import MobileMenuOverlay from "@/components/MobileMenuOverlay";
+import { NAV_ITEMS } from "@/config/navigation";
+import { useDiscord } from "@/contexts/DiscordContext";
+
+import { useAuth } from "@/contexts/AuthContext";
 
 const LOCK_OPTIONS: Array<{ label: string; value: "flexible" | "30" | "60" | "90" }> = [
   { label: "Flexible", value: "flexible" },
@@ -35,6 +40,8 @@ function StakingPage() {
   const [showMobileActions, setShowMobileActions] = useState(false);
   const mobileActionsRef = useRef<HTMLDivElement | null>(null);
 
+  const { userData } = useAuth();
+
   const {
     connectWallet,
     disconnectWallet,
@@ -43,6 +50,16 @@ function StakingPage() {
     account,
     uid,
   } = useWeb3();
+
+  const {
+    discordLinked,
+    discordConnecting,
+    discordUnlinking,
+    connectDiscord,
+    disconnectDiscord,
+  } = useDiscord();
+
+  const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
 
   const {
     stakes,
@@ -101,17 +118,6 @@ function StakingPage() {
     }
   };
 
-  const mobileMenuItems = useMemo(
-    () => [
-      { label: "Home", href: "/", icon: "/dashboard.png" },
-      { label: "Wallet", href: "/wallet", icon: "/wallet.png" },
-      { label: "Staking", href: "/staking", icon: "/staking.png" },
-      { label: "Game", href: "/game", icon: "/game.png" },
-      { label: "My NFT", href: "/my-nft", icon: "/flex-model.png" },
-      { label: "Merches", href: "/merches", icon: "/merches.png" },
-    ],
-    []
-  );
 
   // Calculate estimated rewards based on current inputs
   const estimatedRewards = useMemo(() => {
@@ -275,103 +281,22 @@ function StakingPage() {
       </header>
 
 
-      {/* Mobile Menu Modal */}
-      {showMobileActions && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
-            onClick={() => setShowMobileActions(false)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <div
-              ref={mobileActionsRef}
-              className="w-full max-w-sm rounded-3xl bg-[#101010] border border-[#2a2a2a] shadow-2xl overflow-hidden animate-fade-in-up"
-            >
-
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f1f1f]">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-[#1f1f1f] flex items-center justify-center">
-                    <Image
-                      src="/realmkin-logo.png"
-                      alt="Realmkin"
-                      width={36}
-                      height={36}
-                      className="w-9 h-9 object-contain"
-                    />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-lg font-semibold tracking-wide text-[#DA9C2F] uppercase">Realmkin</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowMobileActions(false)}
-                  className="text-[#DA9C2F] text-xl font-bold"
-                  aria-label="Close menu"
-                >
-                  ×
-                </button>
-              </div>
-
-              <nav className="px-4 py-3 space-y-1.5">
-                {mobileMenuItems.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onClick={() => setShowMobileActions(false)}
-                    className="flex items-center gap-3 px-3 py-1.5 rounded-2xl border border-transparent hover:border-[#2E2E2E] hover:bg-[#161616] transition-colors"
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center">
-                      <Image
-                        src={item.icon}
-                        alt={`${item.label} icon`}
-                        width={20}
-                        height={20}
-                        className="w-8 h-8 object-contain"
-                      />
-                    </span>
-                    <span className="text-sm font-medium tracking-wide text-[#DA9C2F]">
-                      {item.label}
-                    </span>
-                  </Link>
-                ))}
-              </nav>
-
-              {isConnected && account && (
-                <div className="px-5 py-4 border-t border-[#1f1f1f]">
-                  <div className="flex items-center justify-end gap-3 w-full">
-                    <div
-                      className={`relative h-10 w-16 rounded-full border transition-all duration-300 ease-out ${isConnected ? "border-[#DA9C2F] bg-[#DA9C2F]" : "border-[#DA9C2F] bg-[#0B0B09]"}`}
-                      aria-hidden="true"
-                    >
-                      <div
-                        className={`absolute top-1 h-8 w-8 rounded-full border border-[#DA9C2F] bg-black transition-all duration-300 ease-out ${isConnected ? "right-1" : "left-1"}`}
-                      />
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowMobileActions(false);
-                        if (isConnected) {
-                          disconnectWallet();
-                        } else {
-                          connectWallet();
-                        }
-                      }}
-                      disabled={isConnecting}
-                      className="flex-1 flex items-center justify-between gap-3 rounded-2xl border border-[#DA9C2F] bg-[#0B0B09] px-4 py-3 text-sm font-medium text-[#DA9C2F] transition-colors hover:bg-[#151515] disabled:opacity-70"
-                    >
-                      <span>{isConnected ? "Connected" : isConnecting ? "Connecting…" : "Connect Wallet"}</span>
-                      <span className="flex items-center gap-2 text-xs text-[#DA9C2F]">
-                        <Image src="/wallet.png" alt="Wallet connect" width={16} height={16} className="w-4 h-4" />
-                        {isConnecting ? "Loading…" : isConnected ? "Synced" : "Secure"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+      <MobileMenuOverlay
+        isOpen={showMobileActions}
+        onClose={() => setShowMobileActions(false)}
+        menuItems={NAV_ITEMS}
+        isAdmin={userData?.admin}
+        isConnected={isConnected}
+        account={account}
+        isConnecting={isConnecting}
+        discordLinked={discordLinked}
+        discordConnecting={discordConnecting}
+        discordUnlinking={discordUnlinking}
+        onDiscordConnect={() => uid && connectDiscord({ uid } as any)}
+        onDiscordDisconnect={() => uid && disconnectDiscord({ uid } as any, gatekeeperBase)}
+        onConnectWallet={connectWallet}
+        onDisconnectWallet={disconnectWallet}
+      />
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 pb-16 pt-10 lg:px-10">
 
@@ -450,8 +375,8 @@ function StakingPage() {
                         key={preset.label}
                         onClick={() => handleBoostPreset(preset.value)}
                         className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold uppercase tracking-[0.2em] transition ${selectedBoost === preset.value
-                            ? "border-[#f4c752] bg-[#f4c752] text-black"
-                            : "border-[#f4c752]/40 bg-black/40 text-[#f7dca1]/80 hover:border-[#f4c752]/70"
+                          ? "border-[#f4c752] bg-[#f4c752] text-black"
+                          : "border-[#f4c752]/40 bg-black/40 text-[#f7dca1]/80 hover:border-[#f4c752]/70"
                           }`}
                       >
                         {preset.label}
@@ -547,8 +472,8 @@ function StakingPage() {
                       key={option.value}
                       onClick={() => setSelectedLock(option.value)}
                       className={`rounded-xl border px-4 py-2 text-sm font-semibold uppercase tracking-[0.22em] transition ${selectedLock === option.value
-                          ? "border-[#f4c752] bg-[#f4c752] text-black"
-                          : "border-[#f4c752]/50 bg-black/40 text-[#f7dca1]/80 hover:border-[#f4c752]/70"
+                        ? "border-[#f4c752] bg-[#f4c752] text-black"
+                        : "border-[#f4c752]/50 bg-black/40 text-[#f7dca1]/80 hover:border-[#f4c752]/70"
                         }`}
                     >
                       {option.label}
