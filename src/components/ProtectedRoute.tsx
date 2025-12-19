@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, adminWallets }: ProtectedRouteProps) {
   const { user, userData, loading } = useAuth();
-  const { isConnected, isConnecting } = useWeb3();
+  const { isConnected, isConnecting, isAuthenticating } = useWeb3();
   const router = useRouter();
   const pathname = usePathname();
   const [redirecting, setRedirecting] = useState(false);
@@ -38,7 +38,7 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
     if (loading) return; // still hydrating auth
 
     // While within grace window or wallet is mid-connecting, do not redirect yet
-    if (inGrace || isConnecting) return;
+    if (inGrace || isConnecting || isAuthenticating) return;
 
     // Require BOTH: authenticated user AND connected wallet
     if (!user || !isConnected) {
@@ -48,7 +48,7 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
     if (adminWallets && userData && !adminWallets.includes((userData.walletAddress ?? '').toLowerCase())) {
       router.push('/');
     }
-  }, [user, userData, loading, isConnected, isConnecting, router, adminWallets, pathname, inGrace]);
+  }, [user, userData, loading, isConnected, isConnecting, isAuthenticating, router, adminWallets, pathname, inGrace]);
 
   // Render children with overlay if restricted
   return (
@@ -59,7 +59,7 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
       </div>
 
       {/* Restricted Access Overlay - z-15 to sit ABOVE content (z-0/z-10) but BELOW navbar (z-20/z-50) */}
-      {(!user || !isConnected) && !loading && !inGrace && !isConnecting && (
+      {(!user || !isConnected) && !loading && !inGrace && !isConnecting && !isAuthenticating && (
         <div className="fixed inset-0 z-[15] flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px] p-4 animate-fade-in">
           <div className="max-w-md w-full text-center space-y-8 p-8 rounded-2xl bg-[#050302]/90 border border-[#DA9C2F]/20 shadow-[0_0_30px_rgba(218,156,47,0.1)]">
             <div className="space-y-4">
@@ -102,7 +102,7 @@ export default function ProtectedRoute({ children, adminWallets }: ProtectedRout
       )}
 
       {/* Loading Overlay */}
-      {(loading || inGrace || isConnecting) && (
+      {(loading || inGrace || isConnecting || isAuthenticating) && (
         <div className="fixed inset-0 z-[9998]">
           <RealmTransition active={true} />
         </div>
