@@ -138,6 +138,7 @@ interface Web3ContextType {
   disconnectWallet: () => void;
   refreshWalletState: () => Promise<void>;
   provider: null;
+  isAuthenticating: boolean;
 }
 
 const Web3Context = createContext<Web3ContextType>({
@@ -149,6 +150,7 @@ const Web3Context = createContext<Web3ContextType>({
   disconnectWallet: () => { },
   refreshWalletState: async () => { },
   provider: null,
+  isAuthenticating: false,
 });
 
 export const useWeb3 = () => {
@@ -164,6 +166,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const [uid, setUid] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [provider, setProvider] = useState<null>(null);
   const connectionLockRef = useRef(false);
   const phantomEventListenerRef = useRef<(() => void) | null>(null);
@@ -225,6 +228,8 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       const tempPassword = walletAddress;
 
       logger.debug(`🔐 Authenticating wallet: ${walletAddress}`);
+
+      setIsAuthenticating(true);
 
       // Check if we're in onboarding - if so, don't navigate
       const isOnboarding = localStorage.getItem("onboarding_active") === "true";
@@ -344,8 +349,24 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           console.error("🚨 Firebase sign-in error:", error);
         }
       }
+      setIsAuthenticating(false);
     } catch (error) {
       console.error("🚨 Auto-authentication process failed:", error);
+      setIsAuthenticating(false);
+
+      // If auth failed, we must disconnect the wallet to prevent "connected but restricted" state
+      // This handles the user's concern about "access restricted" loops
+      disconnectWallet();
+
+      try {
+        const toast = (await import('react-hot-toast')).default;
+        toast.error('Authentication failed. Please try connecting again.', {
+          id: 'auth-error',
+          duration: 4000,
+        });
+      } catch (e) {
+        // ignore
+      }
     }
   }, [router]);
 
@@ -434,6 +455,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           setAccount(null);
           setUid(null);
           setIsConnected(false);
+          setIsAuthenticating(false);
         }
       } catch (e) {
         console.log("Wallet adapter sync error:", e);
@@ -1416,6 +1438,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     uid,
     isConnected,
     isConnecting,
+    isAuthenticating,
     connectWallet,
     disconnectWallet,
     refreshWalletState,
