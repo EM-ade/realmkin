@@ -45,13 +45,18 @@ if (typeof window !== "undefined") {
 
     if (solanaProvider) {
       // Check if this is Brave Wallet masquerading as the default provider
-      const isBraveWallet = (solanaProvider as unknown as Record<string, unknown>).isBraveWallet === true;
+      const isBraveWallet =
+        (solanaProvider as unknown as Record<string, unknown>).isBraveWallet ===
+        true;
       const isPhantom = solanaProvider.isPhantom === true;
 
       console.log("[Realmkin] Wallet detection:", {
         isBraveWallet,
         isPhantom,
-        provider: (solanaProvider as unknown as Record<string, unknown>).constructor?.toString() || "unknown",
+        provider:
+          (
+            solanaProvider as unknown as Record<string, unknown>
+          ).constructor?.toString() || "unknown",
       });
 
       // If Brave Wallet is detected, try to access Phantom directly
@@ -61,14 +66,14 @@ if (typeof window !== "undefined") {
         // Phantom usually exposes itself at window.phantom.solana
         if (window.phantom?.solana) {
           console.log(
-            "[Realmkin] Found Phantom wallet at window.phantom.solana",
+            "[Realmkin] Found Phantom wallet at window.phantom.solana"
           );
         } else {
           console.warn(
-            "[Realmkin] Phantom not found. Brave Wallet may be blocking it.",
+            "[Realmkin] Phantom not found. Brave Wallet may be blocking it."
           );
           console.warn(
-            "[Realmkin] Please disable Brave Wallet at brave://settings/wallet",
+            "[Realmkin] Please disable Brave Wallet at brave://settings/wallet"
           );
         }
       }
@@ -85,7 +90,8 @@ interface Props {
 
 function WalletModalBridge() {
   const { setVisible, visible } = useWalletModal();
-  const { select, connect, wallet, wallets, connecting, connected } = useWallet();
+  const { select, connect, wallet, wallets, connecting, connected } =
+    useWallet();
 
   useEffect(() => {
     console.log("🌉 [Modal Bridge] State:", {
@@ -98,27 +104,39 @@ function WalletModalBridge() {
   }, [visible, wallet, wallets, connecting, connected]);
 
   // Auto-connect when wallet is selected and modal is closed
+  // Only if the wallet adapter isn't already handling it
   useEffect(() => {
     const attemptConnection = async () => {
-      // If wallet is selected, not yet connected, not currently connecting, and modal just closed
+      // Only auto-connect if:
+      // 1. Wallet is selected
+      // 2. Not already connected
+      // 3. Not currently connecting
+      // 4. Modal was just closed (not visible)
+      // 5. Wallet wasn't previously connected (to avoid re-connecting on every render)
       if (wallet && !connected && !connecting && !visible) {
-        try {
-          console.log("🔌 [Modal Bridge] Wallet selected, attempting auto-connect:", wallet.adapter.name);
-          await connect();
-          console.log("✅ [Modal Bridge] Auto-connect successful!");
-        } catch (error) {
-          console.error("❌ [Modal Bridge] Auto-connect failed:", error);
-          // Re-open modal on failure so user can try again
-          setTimeout(() => {
-            console.log("🔄 [Modal Bridge] Reopening modal after connection failure");
-            setVisible(true);
-          }, 1000);
+        // Add a small delay to let the adapter handle auto-connect first
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Check again after delay - adapter might have connected
+        if (wallet && !connected && !connecting) {
+          try {
+            console.log(
+              "🔌 [Modal Bridge] Wallet selected, attempting auto-connect:",
+              wallet.adapter.name
+            );
+            await connect();
+            console.log("✅ [Modal Bridge] Auto-connect successful!");
+          } catch (error) {
+            console.error("❌ [Modal Bridge] Auto-connect failed:", error);
+            // Don't re-open modal automatically - let user retry manually
+            // This prevents annoying popup loops
+          }
         }
       }
     };
 
     attemptConnection();
-  }, [wallet, connected, connecting, visible, connect, setVisible]);
+  }, [wallet, connected, connecting, visible, connect]);
 
   useEffect(() => {
     const handler = () => {
@@ -167,8 +185,9 @@ export default function SolanaWalletProvider({ children }: Props) {
     ];
 
     // Deduplicate wallets by name to prevent React key warnings
-    const uniqueWallets = walletInstances.filter((wallet, index, self) =>
-      index === self.findIndex((w) => w.name === wallet.name)
+    const uniqueWallets = walletInstances.filter(
+      (wallet, index, self) =>
+        index === self.findIndex((w) => w.name === wallet.name)
     );
 
     return uniqueWallets;
@@ -178,7 +197,7 @@ export default function SolanaWalletProvider({ children }: Props) {
   useEffect(() => {
     console.log(
       "[Realmkin] Initialized wallet adapters:",
-      wallets.map((w) => w.name),
+      wallets.map((w) => w.name)
     );
   }, [wallets]);
 
@@ -186,24 +205,30 @@ export default function SolanaWalletProvider({ children }: Props) {
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider
         wallets={wallets}
-        autoConnect={false}
+        autoConnect={true}
         onError={(error) => {
           // Suppress "Invalid public key input" errors from wallet adapters
           if (error?.message?.includes("Invalid public key")) {
             console.debug(
-              "[Realmkin] Suppressed wallet adapter public key error",
+              "[Realmkin] Suppressed wallet adapter public key error"
             );
             return;
           }
 
           // Handle "Something went wrong" errors from Phantom
           if (error?.message?.includes("Something went wrong")) {
-            console.error("[Realmkin] ❌ Phantom connection error - This is usually a Phantom extension issue");
+            console.error(
+              "[Realmkin] ❌ Phantom connection error - This is usually a Phantom extension issue"
+            );
             console.error("[Realmkin] Possible fixes:");
             console.error("[Realmkin] 1. Refresh the page and try again");
             console.error("[Realmkin] 2. Unlock your Phantom wallet");
-            console.error("[Realmkin] 3. Check if Phantom is on the correct network (mainnet)");
-            console.error("[Realmkin] 4. Try disconnecting and reconnecting Phantom");
+            console.error(
+              "[Realmkin] 3. Check if Phantom is on the correct network (mainnet)"
+            );
+            console.error(
+              "[Realmkin] 4. Try disconnecting and reconnecting Phantom"
+            );
             return;
           }
 

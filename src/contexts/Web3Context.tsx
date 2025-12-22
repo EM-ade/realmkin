@@ -380,6 +380,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
     });
 
     // Debounce rapid state changes to prevent race conditions
+    // Increased from 100ms to 200ms for better stability
     const timeoutId = setTimeout(async () => {
       try {
         // Only show connecting state if we actually have a reason to believe we're connecting
@@ -460,10 +461,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       } catch (e) {
         console.log("Wallet adapter sync error:", e);
       }
-    }, 100); // 100ms debounce
+    }, 200); // 200ms debounce (increased for stability)
 
     return () => clearTimeout(timeoutId);
-  }, [publicKey, connected, connecting, autoAuthenticateFirebase]);
+  }, [publicKey, connected, connecting, wallet, autoAuthenticateFirebase]);
 
   // Cleanup event listeners on unmount
   useEffect(() => {
@@ -483,13 +484,14 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       return false;
     }
     connectionLockRef.current = true;
-    // Auto-release lock after 5 seconds to prevent deadlocks
+    // Auto-release lock after 30 seconds to prevent deadlocks
+    // (increased from 5s to handle slow wallet interactions)
     setTimeout(() => {
       if (connectionLockRef.current) {
         console.log("🔓 Connection lock auto-released after timeout");
         connectionLockRef.current = false;
       }
-    }, 5000);
+    }, 30000);
     return true;
   };
 
@@ -499,16 +501,20 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
   // Check connection on mount (only if not already connected via adapter)
   useEffect(() => {
-    // Wait a bit for wallet adapter to initialize
+    // Wait longer for wallet adapter to initialize and auto-connect
     const timeoutId = setTimeout(() => {
       // Only check cached connection if adapter hasn't connected yet
-      if (!publicKey && !connected) {
+      // This prevents competing with adapter's built-in autoConnect
+      if (!publicKey && !connected && !connecting) {
+        console.log("🔍 Adapter didn't auto-connect, checking cached connection...");
         checkConnection();
+      } else {
+        console.log("✅ Adapter already connected or connecting, skipping cache check");
       }
-    }, 500);
+    }, 2000); // Increased from 500ms to 2s
 
     return () => clearTimeout(timeoutId);
-  }, [publicKey, connected]);
+  }, [publicKey, connected, connecting]);
 
   // Setup Phantom event listeners
   const setupPhantomEventListeners = (phantom: PhantomWallet) => {
@@ -609,11 +615,20 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
   const checkCachedWalletConnection = async () => {
     const cachedWallet = localStorage.getItem("realmkin_cached_wallet");
-    if (!cachedWallet) return;
+    if (!cachedWallet) {
+      console.log("📭 No cached wallet found");
+      return;
+    }
 
     try {
       const walletData = JSON.parse(cachedWallet);
       const cacheAge = Date.now() - walletData.timestamp;
+
+      console.log("📦 Found cached wallet:", {
+        type: walletData.type,
+        age: `${Math.floor(cacheAge / 1000)}s`,
+        address: walletData.address?.substring(0, 8) + "..."
+      });
 
       // Only use cache if it's less than 15 minutes old
       if (cacheAge < 900000) {
@@ -720,9 +735,14 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             console.log(`Connection attempt ${retryCount + 1} failed:`, error);
 
             // If user rejected, STOP RETRYING IMMEDIATELY and clear cache
-            if (error?.message?.includes("User rejected") || error?.name === "WalletConnectionError") {
+            if (
+              error?.message?.includes("User rejected") || 
+              error?.message?.includes("User denied") ||
+              error?.name === "WalletConnectionError"
+            ) {
               console.log("🛑 User rejected connection, clearing cache and stopping retries");
               localStorage.removeItem("realmkin_cached_wallet");
+              // Don't show error toast for user rejection (it's intentional)
               break;
             }
 
