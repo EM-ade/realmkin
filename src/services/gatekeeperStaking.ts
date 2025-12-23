@@ -1,7 +1,7 @@
 import { getAuth } from "firebase/auth";
 
 const GATEKEEPER_URL =
-  process.env.NEXT_PUBLIC_GATEKEEPER_URL || "http://localhost:3001";
+  process.env.NEXT_PUBLIC_GATEKEEPER_URL || "https://gatekeeper-bot.fly.dev";
 
 async function getAuthHeaders() {
   try {

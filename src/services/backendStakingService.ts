@@ -14,7 +14,7 @@ export interface StakeResponse {
  */
 export async function stakeNFT(
   nftId: string,
-  walletAddress: string,
+  walletAddress: string
 ): Promise<StakeResponse> {
   try {
     // Validate inputs
@@ -47,7 +47,8 @@ export async function stakeNFT(
 
     // Get backend service URL from environment variables
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
+      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL ||
+      "https://gatekeeper-bot.fly.dev";
 
     // Call the new backend service
     const response = await fetch(`${backendUrl}/api/staking/stake`, {
@@ -123,7 +124,8 @@ export async function unstakeNFT(stakeId: string): Promise<StakeResponse> {
 
     // Get backend service URL from environment variables
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
+      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL ||
+      "https://gatekeeper-bot.fly.dev";
 
     // Call the new backend service
     const response = await fetch(`${backendUrl}/api/staking/unstake`, {
@@ -176,7 +178,7 @@ export async function unstakeNFT(stakeId: string): Promise<StakeResponse> {
  */
 export async function getStakingHistory(
   userId: string,
-  limit: number = 10,
+  limit: number = 10
 ): Promise<unknown> {
   try {
     // Get Firebase auth token for authentication
@@ -191,7 +193,8 @@ export async function getStakingHistory(
 
     // Get backend service URL from environment variables
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL || "http://localhost:3001";
+      process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL ||
+      "https://gatekeeper-bot.fly.dev";
 
     // Call the new backend service
     const response = await fetch(
@@ -201,13 +204,13 @@ export async function getStakingHistory(
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      },
+      }
     );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`,
+        errorData.error || `HTTP error! status: ${response.status}`
       );
     }
 

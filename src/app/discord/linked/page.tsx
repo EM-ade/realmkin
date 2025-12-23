@@ -2,7 +2,12 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithCustomToken } from "firebase/auth";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithCustomToken,
+} from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../config/firebaseClient"; // ensure Firebase app is initialized
 
@@ -24,7 +29,7 @@ function DiscordLinkedContent() {
   const walletAddressFromParams = sp?.get("wallet") ?? null;
   const firebaseTokenFromParams = sp?.get("firebase_token") ?? null;
   const gatekeeperBase =
-    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "http://localhost:3001";
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
   const inviteUrl = process.env.NEXT_PUBLIC_DISCORD_URL || "";
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -32,59 +37,80 @@ function DiscordLinkedContent() {
   const [signedIn, setSignedIn] = useState<boolean>(false);
   const [authChecked, setAuthChecked] = useState<boolean>(false);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Check if this page is opened in a popup (for OAuth flow)
-  const isPopup = typeof window !== 'undefined' && window.opener && window.opener !== window;
+  const isPopup =
+    typeof window !== "undefined" && window.opener && window.opener !== window;
 
   // Check auth state and try to restore session if needed
   useEffect(() => {
     const auth = getAuth();
-    
+
     // Check if user is already authenticated
     if (auth.currentUser) {
       setSignedIn(true);
       setAuthChecked(true);
       return;
     }
-    
+
     // Try to restore session from localStorage or params
     const tryRestoreSession = async () => {
       try {
-        const walletAddress = walletAddressFromParams || sessionStorage.getItem('realmkin_wallet_address');
-        const firebaseToken = firebaseTokenFromParams || sessionStorage.getItem('realmkin_firebase_token');
-        
+        const walletAddress =
+          walletAddressFromParams ||
+          sessionStorage.getItem("realmkin_wallet_address");
+        const firebaseToken =
+          firebaseTokenFromParams ||
+          sessionStorage.getItem("realmkin_firebase_token");
+
         if (walletAddress && firebaseToken) {
           setPhase("restoringSession");
-          console.log("[discord:linked] Attempting to restore session for wallet:", walletAddress);
-          
+          console.log(
+            "[discord:linked] Attempting to restore session for wallet:",
+            walletAddress
+          );
+
           // Store token for future use
-          sessionStorage.setItem('realmkin_firebase_token', firebaseToken);
-          
+          sessionStorage.setItem("realmkin_firebase_token", firebaseToken);
+
           // Try to refresh the token to verify it's still valid
           try {
             // Note: Firebase ID tokens are different from custom tokens
             // We'll verify the token and sign in with it
-            const userCredential = await signInWithCustomToken(auth, firebaseToken);
-            console.log("[discord:linked] Session restored with custom token successfully");
+            const userCredential = await signInWithCustomToken(
+              auth,
+              firebaseToken
+            );
+            console.log(
+              "[discord:linked] Session restored with custom token successfully"
+            );
             setSignedIn(true);
             return;
           } catch (tokenError) {
-            console.warn("[discord:linked] Custom token invalid, trying email/password:", tokenError);
+            console.warn(
+              "[discord:linked] Custom token invalid, trying email/password:",
+              tokenError
+            );
           }
         }
-        
+
         // Fallback to email/password if we have wallet address
         if (walletAddress) {
           setPhase("restoringSession");
-          console.log("[discord:linked] Attempting to restore session with email/password for wallet:", walletAddress);
-          
+          console.log(
+            "[discord:linked] Attempting to restore session with email/password for wallet:",
+            walletAddress
+          );
+
           // Create temporary credentials
           const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
           const tempPassword = walletAddress;
-          
+
           // Try to sign in with temporary credentials
           await signInWithEmailAndPassword(auth, tempEmail, tempPassword);
-          console.log("[discord:linked] Session restored successfully with email/password");
+          console.log(
+            "[discord:linked] Session restored successfully with email/password"
+          );
           setSignedIn(true);
         }
       } catch (error) {
@@ -94,16 +120,16 @@ function DiscordLinkedContent() {
         setAuthChecked(true);
       }
     };
-    
+
     // Set up auth state listener
     const unsub = onAuthStateChanged(auth, (user) => {
       setSignedIn(!!user);
       setAuthChecked(true);
     });
-    
+
     // Try to restore session
     tryRestoreSession();
-    
+
     return () => unsub();
   }, [walletAddressFromParams, firebaseTokenFromParams]);
 
@@ -112,25 +138,42 @@ function DiscordLinkedContent() {
     if (!authChecked) return; // Wait for auth check to complete
     if (status !== "ok" || !discordId) return;
     if (signedIn) return;
-    
-    const ret = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/discord/linked';
+
+    const ret =
+      typeof window !== "undefined"
+        ? window.location.pathname + window.location.search
+        : "/discord/linked";
     // Store the return URL in sessionStorage so it persists across redirects
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('discord_return_url', ret);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("discord_return_url", ret);
       // Store wallet address and token for session restoration
       if (walletAddressFromParams) {
-        sessionStorage.setItem('realmkin_wallet_address', walletAddressFromParams);
+        sessionStorage.setItem(
+          "realmkin_wallet_address",
+          walletAddressFromParams
+        );
       }
       if (firebaseTokenFromParams) {
-        sessionStorage.setItem('realmkin_firebase_token', firebaseTokenFromParams);
+        sessionStorage.setItem(
+          "realmkin_firebase_token",
+          firebaseTokenFromParams
+        );
       }
     }
-    
+
     const t = setTimeout(() => {
       router.push(`/login?return=${encodeURIComponent(ret)}`);
     }, 800);
     return () => clearTimeout(t);
-  }, [status, discordId, signedIn, authChecked, router, walletAddressFromParams, firebaseTokenFromParams]);
+  }, [
+    status,
+    discordId,
+    signedIn,
+    authChecked,
+    router,
+    walletAddressFromParams,
+    firebaseTokenFromParams,
+  ]);
 
   useEffect(() => {
     if (!authChecked) return; // Wait for auth check to complete
@@ -151,55 +194,77 @@ function DiscordLinkedContent() {
         console.log("[discord:linked] Got Firebase ID token");
         console.log("[discord:linked] Current user UID:", auth.currentUser.uid);
         console.log("[discord:linked] ========================");
-        
+
         // If in popup, notify parent window of success
         if (isPopup && status === "ok" && discordId) {
-          console.log("[discord:linked] Running in popup, will notify parent on success");
+          console.log(
+            "[discord:linked] Running in popup, will notify parent on success"
+          );
         }
 
         // Get wallet address from Firebase user profile or params
         let walletAddress = walletAddressFromParams;
-        
+
         // Validate wallet address if provided
         if (walletAddress) {
           // Basic validation - check if it looks like a Solana address
           if (walletAddress.length < 32 || walletAddress.length > 44) {
-            console.warn("[discord:linked] Invalid wallet address length:", walletAddress.length);
+            console.warn(
+              "[discord:linked] Invalid wallet address length:",
+              walletAddress.length
+            );
             walletAddress = null;
           } else {
             // Check if it contains only valid base58 characters
-            const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+            const base58Regex =
+              /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
             if (!base58Regex.test(walletAddress)) {
-              console.warn("[discord:linked] Wallet address contains invalid characters");
+              console.warn(
+                "[discord:linked] Wallet address contains invalid characters"
+              );
               walletAddress = null;
             }
           }
         }
-        
+
         if (!walletAddress) {
           try {
-            const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+            const userDoc = await getDoc(
+              doc(db, "users", auth.currentUser.uid)
+            );
             if (userDoc.exists()) {
               const userData = userDoc.data();
               walletAddress = userData.walletAddress;
-              console.log("[discord:linked] Wallet address from user profile:", walletAddress);
-              
+              console.log(
+                "[discord:linked] Wallet address from user profile:",
+                walletAddress
+              );
+
               // Validate wallet address from Firebase as well
               if (walletAddress) {
                 if (walletAddress.length < 32 || walletAddress.length > 44) {
-                  console.warn("[discord:linked] Invalid wallet address length from Firebase:", walletAddress.length);
+                  console.warn(
+                    "[discord:linked] Invalid wallet address length from Firebase:",
+                    walletAddress.length
+                  );
                   walletAddress = null;
                 } else {
-                  const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+                  const base58Regex =
+                    /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
                   if (!base58Regex.test(walletAddress)) {
-                    console.warn("[discord:linked] Wallet address from Firebase contains invalid characters");
+                    console.warn(
+                      "[discord:linked] Wallet address from Firebase contains invalid characters"
+                    );
                     walletAddress = null;
                   }
                 }
               }
             }
           } catch (walletError) {
-            console.warn("[discord:linked] Failed to get wallet address:", walletError);
+            console.warn(
+              "[discord:linked] Failed to get wallet address:",
+              walletError
+            );
           }
         }
 
@@ -211,15 +276,23 @@ function DiscordLinkedContent() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             discordId,
-            ...(walletAddress && { walletAddress }) // Include wallet address if available
+            ...(walletAddress && { walletAddress }), // Include wallet address if available
           }),
         });
-        const linkJson = await linkRes.json().catch(() => ({} as Record<string, unknown>));
-        console.log("[discord:linked] link response:", linkRes.status, linkJson);
+        const linkJson = await linkRes
+          .json()
+          .catch(() => ({} as Record<string, unknown>));
+        console.log(
+          "[discord:linked] link response:",
+          linkRes.status,
+          linkJson
+        );
         if (!linkRes.ok) {
-          throw new Error(linkJson?.error || `Failed to link (${linkRes.status})`);
+          throw new Error(
+            linkJson?.error || `Failed to link (${linkRes.status})`
+          );
         }
 
         // Step 2: Ensure user is in guild before verification
@@ -229,7 +302,9 @@ function DiscordLinkedContent() {
             headers: { Authorization: `Bearer ${token}` },
             cache: "no-store",
           });
-          const mJson = await mRes.json().catch(() => ({} as Record<string, unknown>));
+          const mJson = await mRes
+            .json()
+            .catch(() => ({} as Record<string, unknown>));
           console.log("[discord:linked] is-member:", mRes.status, mJson);
           return Boolean((mJson as Record<string, unknown>)?.member);
         };
@@ -246,27 +321,38 @@ function DiscordLinkedContent() {
                 if (pollRef.current) clearInterval(pollRef.current);
                 // Proceed to verification with wallet address
                 setPhase("verifying");
-                const vRes = await fetch(`${gatekeeperBase}/api/verification/auto`, {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({ 
-                    discordId,
-                    ...(walletAddress && { walletAddress }) // Include wallet address if available
-                  }),
-                });
-                const vJson = await vRes.json().catch(() => ({} as Record<string, unknown>));
-                console.log("[discord:linked] verification response:", vRes.status, vJson);
+                const vRes = await fetch(
+                  `${gatekeeperBase}/api/verification/auto`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      discordId,
+                      ...(walletAddress && { walletAddress }), // Include wallet address if available
+                    }),
+                  }
+                );
+                const vJson = await vRes
+                  .json()
+                  .catch(() => ({} as Record<string, unknown>));
+                console.log(
+                  "[discord:linked] verification response:",
+                  vRes.status,
+                  vJson
+                );
                 setPhase("linked");
                 setMessage("Discord linked and verified.");
-                
+
                 // If running in popup, notify parent window and close
                 if (isPopup && window.opener) {
-                  console.log("[discord:linked] Notifying parent window of success (after join)");
+                  console.log(
+                    "[discord:linked] Notifying parent window of success (after join)"
+                  );
                   window.opener.postMessage(
-                    { type: 'discord-oauth-success', discordId },
+                    { type: "discord-oauth-success", discordId },
                     window.location.origin
                   );
                   setTimeout(() => window.close(), 1000);
@@ -276,7 +362,9 @@ function DiscordLinkedContent() {
                 if (elapsed >= 180) {
                   if (pollRef.current) clearInterval(pollRef.current);
                   setPhase("error");
-                  setMessage("Join the Discord server to continue. Timed out waiting for membership.");
+                  setMessage(
+                    "Join the Discord server to continue. Timed out waiting for membership."
+                  );
                 }
               }
             } catch (e) {
@@ -290,28 +378,37 @@ function DiscordLinkedContent() {
         // Step 3: Already in guild → run verification with wallet address
         try {
           setPhase("verifying");
-          console.log("[discord:linked] POST /api/verification/auto", gatekeeperBase);
+          console.log(
+            "[discord:linked] POST /api/verification/auto",
+            gatekeeperBase
+          );
           const vRes = await fetch(`${gatekeeperBase}/api/verification/auto`, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               discordId,
-              ...(walletAddress && { walletAddress }) // Include wallet address if available
+              ...(walletAddress && { walletAddress }), // Include wallet address if available
             }),
           });
-          const vJson = await vRes.json().catch(() => ({} as Record<string, unknown>));
-          console.log("[discord:linked] verification response:", vRes.status, vJson);
+          const vJson = await vRes
+            .json()
+            .catch(() => ({} as Record<string, unknown>));
+          console.log(
+            "[discord:linked] verification response:",
+            vRes.status,
+            vJson
+          );
           setPhase("linked");
           setMessage("Discord linked and verified.");
-          
+
           // If running in popup, notify parent window and close
           if (isPopup && window.opener) {
             console.log("[discord:linked] Notifying parent window of success");
             window.opener.postMessage(
-              { type: 'discord-oauth-success', discordId },
+              { type: "discord-oauth-success", discordId },
               window.location.origin
             );
             setTimeout(() => window.close(), 1000);
@@ -321,12 +418,14 @@ function DiscordLinkedContent() {
           console.warn("[discord:linked] auto-verify warning:", verErr);
           setPhase("linked");
           setMessage("Discord linked.");
-          
+
           // If running in popup, notify parent window and close
           if (isPopup && window.opener) {
-            console.log("[discord:linked] Notifying parent window of success (no verification)");
+            console.log(
+              "[discord:linked] Notifying parent window of success (no verification)"
+            );
             window.opener.postMessage(
-              { type: 'discord-oauth-success', discordId },
+              { type: "discord-oauth-success", discordId },
               window.location.origin
             );
             setTimeout(() => window.close(), 1000);
@@ -336,14 +435,15 @@ function DiscordLinkedContent() {
       } catch (e: unknown) {
         console.error("[discord:linked] error:", e);
         setPhase("error");
-        const errorMessage = (e instanceof Error ? e.message : String(e)) || "Unknown error";
+        const errorMessage =
+          (e instanceof Error ? e.message : String(e)) || "Unknown error";
         setMessage(errorMessage);
-        
+
         // If running in popup, notify parent window of error
         if (isPopup && window.opener) {
           console.log("[discord:linked] Notifying parent window of error");
           window.opener.postMessage(
-            { type: 'discord-oauth-error', error: errorMessage },
+            { type: "discord-oauth-error", error: errorMessage },
             window.location.origin
           );
           setTimeout(() => window.close(), 2000);
@@ -351,7 +451,15 @@ function DiscordLinkedContent() {
       }
     }
     run();
-    }, [status, discordId, gatekeeperBase, signedIn, authChecked, walletAddressFromParams, firebaseTokenFromParams]);
+  }, [
+    status,
+    discordId,
+    gatekeeperBase,
+    signedIn,
+    authChecked,
+    walletAddressFromParams,
+    firebaseTokenFromParams,
+  ]);
 
   // Redirect to home after successful linking
   useEffect(() => {
@@ -381,10 +489,14 @@ function DiscordLinkedContent() {
         {/* Status banner */}
         <div className="rounded-lg border border-[#DA9C2F]/30 bg-[#141414] px-4 py-3 text-sm">
           {status === "error" && (
-            <span className="text-red-400">An error occurred during Discord authorization.</span>
+            <span className="text-red-400">
+              An error occurred during Discord authorization.
+            </span>
           )}
           {status === "ok" && (
-            <span className="text-[#DA9C2F]">Authorization complete. Finalizing link…</span>
+            <span className="text-[#DA9C2F]">
+              Authorization complete. Finalizing link…
+            </span>
           )}
         </div>
 
@@ -400,7 +512,10 @@ function DiscordLinkedContent() {
             <p className="mb-3 text-red-400">Please sign in first.</p>
             <button
               onClick={() => {
-                const ret = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/discord/linked';
+                const ret =
+                  typeof window !== "undefined"
+                    ? window.location.pathname + window.location.search
+                    : "/discord/linked";
                 router.push(`/login?return=${encodeURIComponent(ret)}`);
               }}
               className="inline-flex items-center justify-center rounded-lg bg-[#DA9C2F] px-4 py-2 text-black font-semibold hover:bg-[#ffbf00]"
@@ -414,17 +529,25 @@ function DiscordLinkedContent() {
         {authChecked && signedIn && (
           <div className="mt-4 grid gap-3">
             {phase === "restoringSession" && (
-              <div className="rounded-lg border border-[#404040] bg-[#121212] p-4">Restoring your session...</div>
+              <div className="rounded-lg border border-[#404040] bg-[#121212] p-4">
+                Restoring your session...
+              </div>
             )}
             {phase === "linking" && (
-              <div className="rounded-lg border border-[#404040] bg-[#121212] p-4">Linking your Discord…</div>
+              <div className="rounded-lg border border-[#404040] bg-[#121212] p-4">
+                Linking your Discord…
+              </div>
             )}
             {phase === "checkingMember" && (
-              <div className="rounded-lg border border-[#404040] bg-[#121212] p-4">Checking if you have joined the Discord server…</div>
+              <div className="rounded-lg border border-[#404040] bg-[#121212] p-4">
+                Checking if you have joined the Discord server…
+              </div>
             )}
             {phase === "join" && (
               <div className="rounded-lg border border-[#404040] bg-[#121212] p-4 text-center">
-                <p className="mb-3">You&apos;re not in the Discord server yet.</p>
+                <p className="mb-3">
+                  You&apos;re not in the Discord server yet.
+                </p>
                 {inviteUrl ? (
                   <a
                     href={inviteUrl}
@@ -435,22 +558,32 @@ function DiscordLinkedContent() {
                     Join Discord
                   </a>
                 ) : (
-                  <p className="text-sm text-white/60">Invite URL not configured (set NEXT_PUBLIC_DISCORD_URL).</p>
+                  <p className="text-sm text-white/60">
+                    Invite URL not configured (set NEXT_PUBLIC_DISCORD_URL).
+                  </p>
                 )}
-                <p className="mt-2 text-xs text-white/50">Once you join, this page will continue automatically.</p>
+                <p className="mt-2 text-xs text-white/50">
+                  Once you join, this page will continue automatically.
+                </p>
               </div>
             )}
             {phase === "verifying" && (
-              <div className="rounded-lg border border-[#404040] bg-[#121212] p-4">Verifying your NFTs…</div>
+              <div className="rounded-lg border border-[#404040] bg-[#121212] p-4">
+                Verifying your NFTs…
+              </div>
             )}
             {phase === "linked" && (
               <div className="rounded-lg border border-[#2E7D32] bg-[#0f1a12] p-4 text-emerald-400">
                 <p className="mb-3">✅ Discord linked successfully!</p>
-                <p className="text-sm">Redirecting to dashboard in 3 seconds...</p>
+                <p className="text-sm">
+                  Redirecting to dashboard in 3 seconds...
+                </p>
               </div>
             )}
             {phase === "error" && (
-              <div className="rounded-lg border border-red-900 bg-[#1a0f0f] p-4 text-red-400">{message || "Internal error"}</div>
+              <div className="rounded-lg border border-red-900 bg-[#1a0f0f] p-4 text-red-400">
+                {message || "Internal error"}
+              </div>
             )}
           </div>
         )}
@@ -461,7 +594,13 @@ function DiscordLinkedContent() {
 
 export default function DiscordLinkedPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#0B0F14] text-white">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#0B0F14] text-white">
+          Loading...
+        </div>
+      }
+    >
       <DiscordLinkedContent />
     </Suspense>
   );
