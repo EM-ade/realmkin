@@ -7,16 +7,18 @@ import WalletDebugger from "@/components/WalletDebugger";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Link from "next/link";
+import GoalTrackerPanel from "./components/GoalTrackerPanel";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<
-    "users" | "contracts" | "leaderboard" | "debug"
+    "users" | "contracts" | "goal" | "leaderboard" | "debug"
   >("users");
   const [showContractsPanel, setShowContractsPanel] = useState(false);
 
   const tabs = [
     { id: "users", label: "👥 Users", icon: "👥" },
     { id: "contracts", label: "📋 Contracts", icon: "📋" },
+    { id: "goal", label: "🎯 Goal", icon: "🎯" },
     { id: "leaderboard", label: "🏆 Leaderboard", icon: "🏆" },
     { id: "debug", label: "🔧 Wallet Debugger", icon: "🔧" },
   ];
@@ -114,6 +116,23 @@ const AdminPage = () => {
                       Open Manager
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Goal Tab */}
+            {activeTab === "goal" && (
+              <div className="space-y-4">
+                <div className="card premium-card interactive-element p-6">
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-[#DA9C2F] mb-1">
+                      NFT Launch Goal
+                    </h2>
+                    <p className="text-white/60 text-sm">
+                      Manage the NFT sale goal that gates staking rewards
+                    </p>
+                  </div>
+                  <GoalTrackerPanel />
                 </div>
               </div>
             )}

@@ -50,6 +50,7 @@ function StakingPage() {
     user: stakingUser,
     pool: stakingPool,
     walletBalance,
+    isRewardsPaused,
     loading: stakingLoading,
     isStaking,
     isClaiming,
@@ -232,6 +233,7 @@ function StakingPage() {
               stakingRate={stakingUser?.totalMiningRate || 0}
               unclaimedRewards={stakingUser?.pendingRewards || 0}
               onClaim={handleClaim}
+              isRewardsPaused={isRewardsPaused}
             />
 
             <StakingControls

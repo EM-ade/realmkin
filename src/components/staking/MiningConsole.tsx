@@ -7,6 +7,7 @@ interface MiningConsoleProps {
   lastUpdateTime?: number; // Server timestamp of last update
   stakeStartTime?: number; // When user first staked (milliseconds)
   totalClaimedSol?: number; // Total SOL claimed lifetime
+  isRewardsPaused?: boolean; // Whether rewards are paused (goal not completed)
 }
 
 export function MiningConsole({
@@ -16,6 +17,7 @@ export function MiningConsole({
   lastUpdateTime,
   stakeStartTime,
   totalClaimedSol = 0,
+  isRewardsPaused = false,
 }: MiningConsoleProps) {
   const [liveRewards, setLiveRewards] = useState(unclaimedRewards);
   const [actualRate, setActualRate] = useState(0); // Rate derived from server deltas
@@ -130,27 +132,36 @@ export function MiningConsole({
       <div className="flex flex-col items-center gap-2 mb-8 z-10">
         <div className="text-[#f7dca1]/80 text-xs uppercase tracking-widest flex items-center gap-2">
           Unclaimed Rewards
-          {actualRate > 0 && (
+          {isRewardsPaused ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-400 text-[10px]">
+              <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
+              PAUSED
+            </span>
+          ) : actualRate > 0 ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/10 border border-green-500/20 rounded text-green-400 text-[10px]">
               <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
               LIVE
             </span>
-          )}
+          ) : null}
         </div>
         <div className="text-4xl md:text-5xl font-bold text-white font-mono tracking-tight drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
           {formatRewards(liveRewards)}{" "}
           <span className="text-lg text-[#f4c752]">SOL</span>
         </div>
-        {actualRate > 0 && (
+        {isRewardsPaused ? (
+          <div className="text-xs text-yellow-400/80 text-center max-w-xs">
+            Complete the NFT launch goal to activate rewards
+          </div>
+        ) : actualRate > 0 ? (
           <div className="text-xs text-[#f7dca1]/40">
             Year total: ~{(actualRate * 365 * 24 * 60 * 60).toFixed(4)} SOL
           </div>
-        )}
+        ) : null}
       </div>
 
       <button
         onClick={onClaim}
-        disabled={liveRewards <= 0}
+        disabled={liveRewards <= 0 || isRewardsPaused}
         className={`z-10 px-8 py-3 font-bold uppercase tracking-[0.2em] rounded-full transition-all active:scale-95 ${
           liveRewards > 0
             ? "bg-[#f4c752] text-black hover:scale-105 hover:shadow-[0_0_20px_rgba(244,199,82,0.4)]"

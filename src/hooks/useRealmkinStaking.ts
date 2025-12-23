@@ -403,6 +403,8 @@ export function useRealmkinStaking() {
     data, // Full response from backend
     user: data?.user,
     pool: data?.pool,
+    config: data?.config,
+    isRewardsPaused: data?.config?.isRewardsPaused ?? false,
     walletBalance, // On-chain MKIN token balance
     loading: loading && !data, // Only initial load
     isStaking,

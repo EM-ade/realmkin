@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getGoal, type Goal } from "@/services/goalService";
 
 export default function DynamicIsland({
   mobile = false,
@@ -11,15 +12,31 @@ export default function DynamicIsland({
   className?: string;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [goal, setGoal] = useState<Goal | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock Data for Design Phase
-  const goal = {
-    title: "NFT Launch Phase 1",
-    current: 42,
-    target: 100,
-    unit: "Sold",
-    isPaused: true, // Simulating the "Mining Paused" state
-  };
+  // Fetch goal data on mount
+  useEffect(() => {
+    async function fetchGoal() {
+      try {
+        const data = await getGoal();
+        setGoal(data);
+      } catch (error) {
+        console.error("Failed to fetch goal:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchGoal();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchGoal, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading || !goal) {
+    return null; // Or a loading skeleton
+  }
 
   const progress = Math.min((goal.current / goal.target) * 100, 100);
   const isExpandedWidth = mobile ? 240 : 260;
@@ -34,7 +51,7 @@ export default function DynamicIsland({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[9999] pointer-events-auto cursor-default"
+            className="fixed inset-0 bg-black/40 z-[9999] pointer-events-auto cursor-default"
             onClick={() => setIsExpanded(false)}
           />
         )}
@@ -43,13 +60,11 @@ export default function DynamicIsland({
       <div
         className={`
         flex justify-center items-center pointer-events-auto
-        ${isExpanded ? "z-[10000]" : "z-40"}
+        ${isExpanded ? "z-[20000]" : "z-40"}
         ${className}
       `}
       >
         <motion.div
-          layout
-          initial={{ borderRadius: 50 }}
           animate={{
             width: isExpanded ? isExpandedWidth : isCollapsedWidth,
             height: isExpanded ? "auto" : mobile ? 32 : 36,
@@ -58,11 +73,14 @@ export default function DynamicIsland({
           transition={{
             type: "spring",
             stiffness: 400,
-            damping: 30,
+            damping: 35,
           }}
-          className="bg-[#0B0B09]/95 backdrop-blur-2xl border border-[#DA9C2F]/40 shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden cursor-pointer relative"
+          className="bg-[#111111] border border-[#DA9C2F]/40 shadow-xl overflow-hidden cursor-pointer relative"
           style={{
             transformOrigin: "top center",
+            WebkitFontSmoothing: "antialiased",
+            backgroundColor: "#111111", // Force solid color
+            opacity: 1, // Force full opacity
           }}
           onClick={() => setIsExpanded(!isExpanded)}
         >
@@ -77,11 +95,12 @@ export default function DynamicIsland({
                 className={`flex items-center justify-center ${
                   mobile ? "gap-2 px-2" : "gap-3 px-4"
                 } h-full w-full`}
+                style={{ height: mobile ? 32 : 36 }}
               >
                 <div
                   className={`${
                     mobile ? "w-1.5 h-1.5" : "w-2 h-2"
-                  } rounded-full bg-[#DA9C2F] animate-pulse shadow-[0_0_10px_#DA9C2F]`}
+                  } rounded-full bg-[#DA9C2F]`}
                 />
                 <span
                   className={`${
@@ -105,22 +124,22 @@ export default function DynamicIsland({
               // Expanded State
               <motion.div
                 key="expanded"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="p-5 flex flex-col gap-5"
               >
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-[11px] font-bold text-[#DA9C2F] uppercase tracking-[0.2em] mb-3 text-center">
-                      Mint 100 NFTS
+                      {goal.title}
                     </h4>
                     <div className="w-full h-3.5 bg-[#DA9C2F]/10 rounded-full overflow-hidden border border-[#DA9C2F]/20">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 1, ease: "circOut" }}
-                        className="h-full bg-gradient-to-r from-[#DA9C2F] to-[#F4C752] shadow-[0_0_15px_rgba(218,156,47,0.6)]"
+                        className="h-full bg-gradient-to-r from-[#DA9C2F] to-[#F4C752]"
                       />
                     </div>
                   </div>
