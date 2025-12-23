@@ -3,7 +3,8 @@ import { BN } from "@coral-xyz/anchor";
 export const STAKING_CONFIG = {
   // Fixed staking parameters
   FIXED_APR: 30, // 30% annual percentage rate (fixed)
-  BASE_MINING_RATE: 0.000000009512937595, // ~9.51e-9 SOL per second per MKIN staked (achieves 30% APR)
+  BASE_MINING_RATE: 0.000000000000025, // 2.5e-14 SOL per second (Matches spec)
+  // Note: For 30% APR at $150 SOL, 1 MKIN is valued at ~$0.0003943
 
   // Mining Boosters (increase mining rate above base)
   BOOSTER_MULTIPLIERS: {
@@ -143,6 +144,7 @@ export function isStakeUnlocked(
   durationSeconds: number
 ): boolean {
   const unlockTime = stakeTimestamp + durationSeconds;
+  const now = Math.floor(Date.now() / 1000);
   return now >= unlockTime;
 }
 

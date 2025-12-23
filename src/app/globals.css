@@ -28,9 +28,9 @@
   /* Dark theme colors */
   --background: #080806;
   --foreground: #f5f5f5;
-  --card-bg: #0B0B09;
+  --card-bg: #0b0b09;
   --border-color: #404040;
-  --accent-gold: #DA9C2F;
+  --accent-gold: #da9c2f;
   --accent-amber: #ffbf00;
   --text-primary: #ffffff;
   --text-secondary: #cccccc;
@@ -43,8 +43,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
     "Courier New", monospace;
 }
@@ -61,7 +61,7 @@ body {
   /* Smooth scrolling on mobile */
   -webkit-overflow-scrolling: touch;
   color: var(--foreground);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
@@ -73,9 +73,12 @@ body {
     transition-duration: 0s !important;
     transition-delay: 0s !important;
   }
-  
+
   /* Except for essential transitions */
-  button, input, select, textarea {
+  button,
+  input,
+  select,
+  textarea {
     transition-duration: 0.15s !important;
   }
 }
@@ -123,7 +126,8 @@ html.hydrated body {
 
 /* Premium loading animations */
 @keyframes realmkin-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -134,11 +138,13 @@ html.hydrated body {
 }
 
 @keyframes realmkin-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
   }
   50% {
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.6), 0 0 30px rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.6),
+      0 0 30px rgba(212, 175, 55, 0.3);
   }
 }
 
@@ -200,7 +206,8 @@ html.hydrated body {
   height: 24px;
   border: 2px solid transparent;
   border-radius: 50%;
-  animation: realmkin-spin 1.5s linear infinite, realmkin-glow 2s ease-in-out infinite;
+  animation: realmkin-spin 1.5s linear infinite,
+    realmkin-glow 2s ease-in-out infinite;
 }
 
 .loading-realmkin-particles {
@@ -333,7 +340,7 @@ html.hydrated body {
 
 .text-label {
   font-weight: 500;
-  color: #DA9C2F;
+  color: #da9c2f;
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -436,22 +443,22 @@ html.hydrated body {
     padding: 16px;
     border-radius: 8px;
   }
-  
+
   .btn-primary,
   .btn-secondary {
     padding: 10px 20px;
     font-size: 13px;
   }
-  
+
   .input-field {
     padding: 10px 14px;
     font-size: 13px;
   }
-  
+
   .section {
     margin-bottom: 20px;
   }
-  
+
   .section-title {
     font-size: 14px;
     margin-bottom: 12px;
@@ -462,13 +469,13 @@ html.hydrated body {
   .card {
     padding: 12px;
   }
-  
+
   .btn-primary,
   .btn-secondary {
     padding: 8px 16px;
     font-size: 12px;
   }
-  
+
   .input-field {
     padding: 8px 12px;
   }
@@ -476,7 +483,8 @@ html.hydrated body {
 
 /* Premium Animations for Sleek Modern Theme */
 @keyframes subtle-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 20px rgba(218, 156, 47, 0.1);
   }
   50% {
@@ -485,7 +493,8 @@ html.hydrated body {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -516,9 +525,9 @@ html.hydrated body {
   }
 }
 
-
 @keyframes gold-sparkle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0;
     transform: scale(0) rotate(0deg);
   }
@@ -535,15 +544,22 @@ html.hydrated body {
 }
 
 .animated-background::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 20%, rgba(218, 156, 47, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(218, 156, 47, 0.03) 0%, transparent 50%);
+  background: radial-gradient(
+      circle at 20% 20%,
+      rgba(218, 156, 47, 0.05) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(218, 156, 47, 0.03) 0%,
+      transparent 50%
+    );
   pointer-events: none;
   animation: subtle-glow 4s ease-in-out infinite;
 }
@@ -576,7 +592,11 @@ html.hydrated body {
 /* Particle effects */
 .particle {
   position: absolute;
-  background: radial-gradient(circle, rgba(218, 156, 47, 0.3) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(218, 156, 47, 0.3) 0%,
+    transparent 70%
+  );
   border-radius: 50%;
   pointer-events: none;
   animation: particle-trail 2s ease-out infinite;
@@ -587,7 +607,7 @@ html.hydrated body {
   position: absolute;
   width: 4px;
   height: 4px;
-  background: radial-gradient(circle, #DA9C2F 0%, transparent 70%);
+  background: radial-gradient(circle, #da9c2f 0%, transparent 70%);
   border-radius: 50%;
   animation: gold-sparkle 3s ease-in-out infinite;
 }
@@ -610,7 +630,7 @@ html.hydrated body {
 }
 
 .premium-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
@@ -631,12 +651,7 @@ html.hydrated body {
 
 /* Modern loading states */
 .loading-shimmer {
-  background: linear-gradient(
-    90deg,
-    #0B0B09 0%,
-    #1a1a18 50%,
-    #0B0B09 100%
-  );
+  background: linear-gradient(90deg, #0b0b09 0%, #1a1a18 50%, #0b0b09 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -646,7 +661,7 @@ html.hydrated body {
   .animate-float {
     animation: float 4s ease-in-out infinite;
   }
-  
+
   .premium-card::before {
     animation: none; /* Reduce motion on mobile */
   }
@@ -665,7 +680,7 @@ html.hydrated body {
 
 /* Premium text effects */
 .gold-gradient-text {
-  background: linear-gradient(135deg, #DA9C2F 0%, #FFD700 50%, #DA9C2F 100%);
+  background: linear-gradient(135deg, #da9c2f 0%, #ffd700 50%, #da9c2f 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -687,8 +702,8 @@ html.hydrated body {
 .animated-border {
   position: relative;
   border: 1px solid transparent;
-  background: linear-gradient(#0B0B09, #0B0B09) padding-box,
-              linear-gradient(135deg, #DA9C2F, transparent) border-box;
+  background: linear-gradient(#0b0b09, #0b0b09) padding-box,
+    linear-gradient(135deg, #da9c2f, transparent) border-box;
   animation: subtle-glow 3s ease-in-out infinite;
 }
 
@@ -715,19 +730,19 @@ html.hydrated body {
     animation: none !important;
     opacity: 0.2 !important;
   }
-  
+
   /* Simplify card animations */
   .home-card::before {
     animation: none !important;
   }
-  
+
   /* Faster transitions on mobile */
   .transition-all,
   .transition-colors,
   .transition-transform {
     transition-duration: 0.15s !important;
   }
-  
+
   /* Reduce motion for better performance */
   @media (prefers-reduced-motion: reduce) {
     * {
@@ -742,7 +757,7 @@ html.hydrated body {
 .premium-focus:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(218, 156, 47, 0.3);
-  border-color: #DA9C2F;
+  border-color: #da9c2f;
 }
 
 /* WordLink Game Animations */
@@ -758,7 +773,8 @@ html.hydrated body {
 }
 
 @keyframes sparkle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0;
     transform: scale(0) translateY(0);
   }
@@ -769,9 +785,23 @@ html.hydrated body {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
 }
 
 .animate-scale-in {
@@ -789,7 +819,7 @@ html.hydrated body {
 /* Custom scrollbar for WordLink */
 .wordlink-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(218, 156, 47, 0.4) #0B0B09;
+  scrollbar-color: rgba(218, 156, 47, 0.4) #0b0b09;
 }
 
 .wordlink-scrollbar::-webkit-scrollbar {
@@ -806,5 +836,5 @@ html.hydrated body {
 }
 
 .wordlink-scrollbar::-webkit-scrollbar-track {
-  background-color: #0B0B09;
+  background-color: #0b0b09;
 }

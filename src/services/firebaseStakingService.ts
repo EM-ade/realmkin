@@ -11,7 +11,12 @@ import {
   increment,
 } from "firebase/firestore";
 import { db } from "@/config/firebaseServer";
-import { getAPYForLockPeriod, getDurationForLockPeriod, calculateStakeWeight } from "@/config/staking.config";
+import {
+  getAPYForLockPeriod,
+  getDurationForLockPeriod,
+  calculateStakeWeight,
+  calculateMiningRewards,
+} from "@/config/staking.config";
 
 export interface UserStakingData {
   wallet: string;
@@ -40,7 +45,9 @@ export interface StakeRecord {
 /**
  * Initialize or get user staking record
  */
-export async function initializeUser(walletAddress: string): Promise<UserStakingData> {
+export async function initializeUser(
+  walletAddress: string
+): Promise<UserStakingData> {
   const userRef = doc(collection(db, "users"), walletAddress);
   const userSnap = await getDoc(userRef);
 
@@ -74,13 +81,17 @@ export async function createStake(
 ): Promise<StakeRecord> {
   // TODO: Verify transaction when RPC indexing is working
   // For now, just trust the frontend sent a valid tx
-  console.log(`Creating stake for ${walletAddress}: ${amount} MKIN, tx: ${txSignature}`);
+  console.log(
+    `Creating stake for ${walletAddress}: ${amount} MKIN, tx: ${txSignature}`
+  );
 
   // Initialize user if needed
   await initializeUser(walletAddress);
 
   // Create stake record
-  const stakeId = `${walletAddress}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const stakeId = `${walletAddress}-${Date.now()}-${Math.random()
+    .toString(36)
+    .substr(2, 9)}`;
   const durationSeconds = getDurationForLockPeriod(lockPeriod);
   const now = Timestamp.now();
   const unlockDate = new Timestamp(
@@ -130,7 +141,9 @@ export async function getUserStakes(uid: string): Promise<StakeRecord[]> {
 /**
  * Get user staking data
  */
-export async function getUserStakingData(walletAddress: string): Promise<UserStakingData | null> {
+export async function getUserStakingData(
+  walletAddress: string
+): Promise<UserStakingData | null> {
   const userRef = doc(collection(db, "users"), walletAddress);
   const userSnap = await getDoc(userRef);
   return userSnap.exists() ? (userSnap.data() as UserStakingData) : null;
@@ -143,25 +156,22 @@ export function calculatePendingRewards(
   stake: StakeRecord,
   currentTimestamp: number = Date.now() / 1000
 ): number {
-  const apy = getAPYForLockPeriod(stake.lock_period);
-  const dailyRate = apy / 365 / 100;
-
   const stakeStartSeconds = stake.start_date.seconds;
   const secondsStaked = currentTimestamp - stakeStartSeconds;
-  const daysStaked = secondsStaked / 86400;
 
-  // Calculate weight multiplier based on lock period
-  const durationSeconds = getDurationForLockPeriod(stake.lock_period);
-  const weight = calculateStakeWeight(durationSeconds);
-
-  const pendingRewards = stake.amount * dailyRate * daysStaked * weight;
-  return Math.max(0, pendingRewards - stake.rewards_earned);
+  // Use centralized calculation logic
+  // TODO: Add support for boosters if stored in stake.metadata or user profile
+  const totalRewards = calculateMiningRewards(stake.amount, secondsStaked, 1.0);
+  return Math.max(0, totalRewards - stake.rewards_earned);
 }
 
 /**
  * Update rewards for a stake
  */
-export async function updateStakeRewards(uid: string, stakeId: string): Promise<number> {
+export async function updateStakeRewards(
+  uid: string,
+  stakeId: string
+): Promise<number> {
   const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   const stakeSnap = await getDoc(stakeRef);
 
@@ -193,7 +203,10 @@ export async function updateStakeRewards(uid: string, stakeId: string): Promise<
 /**
  * Claim rewards for a stake
  */
-export async function claimStakeRewards(uid: string, stakeId: string): Promise<number> {
+export async function claimStakeRewards(
+  uid: string,
+  stakeId: string
+): Promise<number> {
   const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   const stakeSnap = await getDoc(stakeRef);
 
@@ -230,7 +243,10 @@ export async function claimStakeRewards(uid: string, stakeId: string): Promise<n
 /**
  * Initiate unstake request
  */
-export async function initiateUnstake(uid: string, stakeId: string): Promise<void> {
+export async function initiateUnstake(
+  uid: string,
+  stakeId: string
+): Promise<void> {
   const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   const stakeSnap = await getDoc(stakeRef);
 
@@ -259,7 +275,11 @@ export async function initiateUnstake(uid: string, stakeId: string): Promise<voi
 /**
  * Complete unstake (after withdrawal transaction)
  */
-export async function completeUnstake(uid: string, stakeId: string, txSignature: string): Promise<void> {
+export async function completeUnstake(
+  uid: string,
+  stakeId: string,
+  txSignature: string
+): Promise<void> {
   const stakeRef = doc(db, "users", uid, "stakes", stakeId);
   const stakeSnap = await getDoc(stakeRef);
 
@@ -299,7 +319,11 @@ export async function getGlobalMetrics(): Promise<{
   const statsRef = doc(db, "meta", "stats");
   const statsSnap = await getDoc(statsRef);
   if (statsSnap.exists()) {
-    return statsSnap.data() as { totalValueLocked: number; totalStakers: number; activeStakes: number };
+    return statsSnap.data() as {
+      totalValueLocked: number;
+      totalStakers: number;
+      activeStakes: number;
+    };
   }
   // Fallback to zeros if stats doc missing
   return { totalValueLocked: 0, totalStakers: 0, activeStakes: 0 };
