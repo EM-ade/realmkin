@@ -36,16 +36,16 @@ import { NAV_ITEMS } from "@/config/navigation";
 const EtherealParticles = dynamic(
   () =>
     import("@/components/MagicalAnimations").then(
-      (mod) => mod.EtherealParticles,
+      (mod) => mod.EtherealParticles
     ),
-  { ssr: false },
+  { ssr: false }
 );
 const ConstellationBackground = dynamic(
   () =>
     import("@/components/MagicalAnimations").then(
-      (mod) => mod.ConstellationBackground,
+      (mod) => mod.ConstellationBackground
     ),
-  { ssr: false },
+  { ssr: false }
 );
 
 export default function WalletPage() {
@@ -83,7 +83,6 @@ export default function WalletPage() {
     return userRewards ? userRewards.totalRealmkin : 0;
   }, [userRewards]);
 
-
   const handleDiscordConnect = useCallback(() => {
     if (discordLinked || discordConnecting) return;
     setDiscordConnecting(true);
@@ -111,7 +110,7 @@ export default function WalletPage() {
       setShowMobileActions(false);
       try {
         localStorage.removeItem("realmkin_discord_linked");
-      } catch { }
+      } catch {}
       return true;
     } catch (error) {
       console.error(error);
@@ -178,7 +177,8 @@ export default function WalletPage() {
   const [testWalletAddress, setTestWalletAddress] = useState("");
 
   // Use test wallet when admin test mode is enabled
-  const effectiveAccount = adminTestMode && testWalletAddress ? testWalletAddress : account;
+  const effectiveAccount =
+    adminTestMode && testWalletAddress ? testWalletAddress : account;
 
   // NFT state
   const [nfts, setNfts] = useState<NFTMetadata[]>([]);
@@ -228,7 +228,7 @@ export default function WalletPage() {
         { trait_type: "Purpose", value: "Rewards Testing" },
       ],
     }),
-    [],
+    []
   );
 
   const fetchUserNFTs = useCallback(async () => {
@@ -239,7 +239,9 @@ export default function WalletPage() {
 
     try {
       // Fetch from both standard and premium contracts
-      const nftCollection = await nftService.fetchAllContractNFTs(effectiveAccount);
+      const nftCollection = await nftService.fetchAllContractNFTs(
+        effectiveAccount
+      );
 
       // Add test NFT if test mode is enabled (only in development)
       const allNFTs =
@@ -256,14 +258,14 @@ export default function WalletPage() {
             user.uid,
             effectiveAccount,
             allNFTs.length,
-            allNFTs,
+            allNFTs
           );
           setUserRewards(rewards);
 
           // Calculate current pending rewards with contract-aware calculation
           const calculation = rewardsService.calculatePendingRewards(
             rewards,
-            allNFTs.length,
+            allNFTs.length
           );
           setRewardsCalculation(calculation);
         } catch (error) {
@@ -309,9 +311,10 @@ export default function WalletPage() {
     const totalClaimable = userRewards?.totalRealmkin || 0;
 
     // Parse withdrawal amount or use total claimable if empty
-    const requestedAmount = withdrawAmount && withdrawAmount.trim() !== ""
-      ? parseFloat(withdrawAmount)
-      : totalClaimable;
+    const requestedAmount =
+      withdrawAmount && withdrawAmount.trim() !== ""
+        ? parseFloat(withdrawAmount)
+        : totalClaimable;
 
     // Validate withdrawal amount
     if (isNaN(requestedAmount) || requestedAmount <= 0) {
@@ -320,7 +323,9 @@ export default function WalletPage() {
     }
 
     if (requestedAmount > totalClaimable) {
-      setWithdrawError(`❌ You only have ${totalClaimable.toLocaleString()} MKIN available. Please enter a lower amount.`);
+      setWithdrawError(
+        `❌ You only have ${totalClaimable.toLocaleString()} MKIN available. Please enter a lower amount.`
+      );
       return;
     }
 
@@ -336,22 +341,35 @@ export default function WalletPage() {
 
     try {
       // Step 1: Initiate withdrawal - get fee transaction
-      const { initiateWithdrawal, completeWithdrawal, deserializeTransaction } = await import("@/services/withdrawService");
+      const { initiateWithdrawal, completeWithdrawal, deserializeTransaction } =
+        await import("@/services/withdrawService");
 
-      const initiateResult = await initiateWithdrawal(requestedAmount, effectiveAccount);
+      const initiateResult = await initiateWithdrawal(
+        requestedAmount,
+        effectiveAccount
+      );
 
       if (!initiateResult.success || !initiateResult.feeTransaction) {
         // User-friendly error messages
-        const errorMsg = initiateResult.error || "Failed to initiate withdrawal";
+        const errorMsg =
+          initiateResult.error || "Failed to initiate withdrawal";
 
         if (errorMsg.includes("Insufficient balance")) {
-          setWithdrawError("💰 You don't have enough MKIN available. Please try a smaller amount.");
+          setWithdrawError(
+            "💰 You don't have enough MKIN available. Please try a smaller amount."
+          );
         } else if (errorMsg.includes("Auth not configured")) {
-          setWithdrawError("🔒 We're experiencing technical difficulties. Please try again in a moment or contact support.");
+          setWithdrawError(
+            "🔒 We're experiencing technical difficulties. Please try again in a moment or contact support."
+          );
         } else if (errorMsg.includes("User rewards not found")) {
-          setWithdrawError("🔄 We couldn't load your account data. Please refresh the page and try again.");
+          setWithdrawError(
+            "🔄 We couldn't load your account data. Please refresh the page and try again."
+          );
         } else if (errorMsg.includes("Missing amount or walletAddress")) {
-          setWithdrawError("⚠️ Something went wrong with your request. Please refresh the page and try again.");
+          setWithdrawError(
+            "⚠️ Something went wrong with your request. Please refresh the page and try again."
+          );
         } else if (errorMsg.includes("Invalid amount")) {
           setWithdrawError("⚠️ Please enter a valid withdrawal amount.");
         } else {
@@ -360,7 +378,11 @@ export default function WalletPage() {
         return;
       }
 
-      console.log(`Fee: $${initiateResult.feeAmountUsd} (${initiateResult.feeAmountSol?.toFixed(6)} SOL)`);
+      console.log(
+        `Fee: $${
+          initiateResult.feeAmountUsd
+        } (${initiateResult.feeAmountSol?.toFixed(6)} SOL)`
+      );
 
       // Step 2: Prepare transaction for signing
       // Deserialize the transaction
@@ -370,7 +392,7 @@ export default function WalletPage() {
         signatures: transaction.signatures.length,
         instructions: transaction.instructions.length,
         recentBlockhash: transaction.recentBlockhash,
-        feePayer: transaction.feePayer?.toBase58()
+        feePayer: transaction.feePayer?.toBase58(),
       });
 
       // Create a connection to send the transaction
@@ -379,12 +401,14 @@ export default function WalletPage() {
       const heliusApiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
       const rpcUrl = heliusApiKey
         ? `https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`
-        : (process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com");
+        : process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+          "https://api.mainnet-beta.solana.com";
       const connection = new Connection(rpcUrl, "confirmed");
 
       // Get a fresh blockhash before signing (blockhashes expire after ~60 seconds)
       console.log("Getting fresh blockhash...");
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash("confirmed");
       transaction.recentBlockhash = blockhash;
       transaction.lastValidBlockHeight = lastValidBlockHeight;
 
@@ -403,19 +427,26 @@ export default function WalletPage() {
             setTimeout(() => reject(new Error("Request timed out")), 60000)
           );
 
-          signedTransaction = await Promise.race([signPromise, timeoutPromise]) as Transaction;
+          signedTransaction = (await Promise.race([
+            signPromise,
+            timeoutPromise,
+          ])) as Transaction;
           console.log("Transaction signed via wallet adapter");
         } catch (adapterError) {
           console.error("Wallet adapter signing failed:", adapterError);
           throw adapterError;
         }
       } else {
-        setWithdrawError("👛 Wallet adapter not ready. Please try disconnecting and reconnecting your wallet.");
+        setWithdrawError(
+          "👛 Wallet adapter not ready. Please try disconnecting and reconnecting your wallet."
+        );
         return;
       }
 
       if (!signedTransaction) {
-        setWithdrawError("👛 Wallet not connected. Please connect your wallet and try again.");
+        setWithdrawError(
+          "👛 Wallet not connected. Please connect your wallet and try again."
+        );
         return;
       }
 
@@ -423,38 +454,56 @@ export default function WalletPage() {
 
       // Send the signed transaction
       console.log("Sending transaction to network...");
-      const signature = await connection.sendRawTransaction(signedTransaction.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: "confirmed"
-      });
+      const signature = await connection.sendRawTransaction(
+        signedTransaction.serialize(),
+        {
+          skipPreflight: false,
+          preflightCommitment: "confirmed",
+        }
+      );
 
       console.log(`Fee transaction sent: ${signature}`);
 
       // Wait for transaction to confirm (devnet can be slow)
       console.log("Waiting for transaction confirmation...");
       try {
-        const confirmation = await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight
-        }, "confirmed");
+        const confirmation = await connection.confirmTransaction(
+          {
+            signature,
+            blockhash,
+            lastValidBlockHeight,
+          },
+          "confirmed"
+        );
 
         if (confirmation.value.err) {
-          throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+          throw new Error(
+            `Transaction failed: ${JSON.stringify(confirmation.value.err)}`
+          );
         }
 
         console.log("Transaction confirmed on-chain!");
       } catch (confirmError) {
         console.error("Confirmation error:", confirmError);
-        throw new Error(`Transaction confirmation failed: ${confirmError instanceof Error ? confirmError.message : 'Unknown error'}`);
+        throw new Error(
+          `Transaction confirmation failed: ${
+            confirmError instanceof Error
+              ? confirmError.message
+              : "Unknown error"
+          }`
+        );
       }
 
       // Additional wait to ensure backend can fetch it
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Step 3: Complete withdrawal with fee signature
       console.log("Completing withdrawal with backend...");
-      const completeResult = await completeWithdrawal(signature, requestedAmount, effectiveAccount);
+      const completeResult = await completeWithdrawal(
+        signature,
+        requestedAmount,
+        effectiveAccount
+      );
 
       console.log("Complete withdrawal result:", completeResult);
 
@@ -473,7 +522,9 @@ export default function WalletPage() {
           walletAddress: effectiveAccount,
           type: "withdraw",
           amount: totalClaimable,
-          description: `Withdrew ${rewardsService.formatMKIN(totalClaimable)} MKIN (fee: $${initiateResult.feeAmountUsd})`,
+          description: `Withdrew ${rewardsService.formatMKIN(
+            totalClaimable
+          )} MKIN (fee: $${initiateResult.feeAmountUsd})`,
         });
 
         // Add to local state
@@ -481,7 +532,9 @@ export default function WalletPage() {
           {
             type: "withdraw",
             amount: totalClaimable,
-            description: `Withdrew ${rewardsService.formatMKIN(totalClaimable)} MKIN (fee: $${initiateResult.feeAmountUsd})`,
+            description: `Withdrew ${rewardsService.formatMKIN(
+              totalClaimable
+            )} MKIN (fee: $${initiateResult.feeAmountUsd})`,
             date: new Date(),
           },
           ...prev.slice(0, 9), // Keep only last 10 transactions
@@ -501,22 +554,35 @@ export default function WalletPage() {
         }
       } else {
         // User-friendly completion errors
-        const errorMsg = completeResult.error || "Failed to complete withdrawal";
+        const errorMsg =
+          completeResult.error || "Failed to complete withdrawal";
 
         if (errorMsg.includes("Fee transaction failed or invalid")) {
-          setWithdrawError("❌ Payment verification failed. Your transaction may not have been confirmed yet. Please wait a moment and try again.");
+          setWithdrawError(
+            "❌ Payment verification failed. Your transaction may not have been confirmed yet. Please wait a moment and try again."
+          );
         } else if (errorMsg.includes("Fee transaction not found")) {
-          setWithdrawError("⏳ Still processing... The blockchain is taking longer than expected. Please wait 30-60 seconds and try again.");
+          setWithdrawError(
+            "⏳ Still processing... The blockchain is taking longer than expected. Please wait 30-60 seconds and try again."
+          );
         } else if (errorMsg.includes("already been used")) {
-          setWithdrawError("✅ This withdrawal has already been completed. Please check your wallet or transaction history.");
+          setWithdrawError(
+            "✅ This withdrawal has already been completed. Please check your wallet or transaction history."
+          );
         } else if (errorMsg.includes("Failed to send MKIN tokens")) {
           const refundMsg = completeResult.refunded
-            ? `\n\n✅ Good news: Your MKIN balance has been automatically restored.\n⚠️ Note: The $${initiateResult.feeAmountUsd?.toFixed(2)} transaction fee cannot be refunded.`
+            ? `\n\n✅ Good news: Your MKIN balance has been automatically restored.\n⚠️ Note: The $${initiateResult.feeAmountUsd?.toFixed(
+                2
+              )} transaction fee cannot be refunded.`
             : "";
-          setWithdrawError(`❌ Transfer failed. We couldn't send MKIN to your wallet due to a network issue.${refundMsg}\n\n📧 Please contact support if you need assistance.`);
+          setWithdrawError(
+            `❌ Transfer failed. We couldn't send MKIN to your wallet due to a network issue.${refundMsg}\n\n📧 Please contact support if you need assistance.`
+          );
         } else {
           const fullMsg = completeResult.refunded
-            ? `❌ Withdrawal failed: ${errorMsg}\n\n✅ Your MKIN balance has been restored.\n⚠️ The $${initiateResult.feeAmountUsd?.toFixed(2)} transaction fee was not refunded.`
+            ? `❌ Withdrawal failed: ${errorMsg}\n\n✅ Your MKIN balance has been restored.\n⚠️ The $${initiateResult.feeAmountUsd?.toFixed(
+                2
+              )} transaction fee was not refunded.`
             : `❌ Withdrawal failed: ${errorMsg}`;
           setWithdrawError(fullMsg);
         }
@@ -524,25 +590,42 @@ export default function WalletPage() {
     } catch (error) {
       console.error("Error processing withdrawal:", error);
       console.error("Error type:", typeof error);
-      console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      console.error(
+        "Error details:",
+        JSON.stringify(error, Object.getOwnPropertyNames(error))
+      );
 
       let errorMessage = "❌ Something went wrong. Please try again.";
 
       if (error instanceof Error) {
-        if (error.message.includes("User rejected") || error.message.includes("User canceled")) {
+        if (
+          error.message.includes("User rejected") ||
+          error.message.includes("User canceled")
+        ) {
           errorMessage = "🚫 Transaction cancelled. No charges were made.";
         } else if (error.message.includes("Blockhash not found")) {
-          errorMessage = "⏰ Request timed out. Please try your withdrawal again.";
+          errorMessage =
+            "⏰ Request timed out. Please try your withdrawal again.";
         } else if (error.message.includes("Simulation failed")) {
-          errorMessage = "❌ Unable to process transaction. Please ensure you have enough SOL for network fees (~$0.50) and try again.";
+          errorMessage = `❌ Unable to process transaction. Please ensure you have enough SOL for network fees and try again.`;
         } else if (error.message.includes("insufficient funds")) {
-          errorMessage = "💰 Insufficient SOL for network fees. Please add at least $0.50 worth of SOL to your wallet to cover transaction costs.";
+          errorMessage =
+            "💰 Insufficient SOL for network fees. Please add more SOL to your wallet to cover transaction costs.";
         } else if (error.message.includes("Network request failed")) {
-          errorMessage = "🌐 Connection lost. Please check your internet connection and try again.";
-        } else if (error.message.includes("403") || error.message.includes("forbidden")) {
-          errorMessage = "🚫 Network temporarily unavailable. Please wait a moment and try again.";
-        } else if (error.message.includes("429") || error.message.includes("Too Many Requests")) {
-          errorMessage = "⏳ Too many requests. Please wait 30-60 seconds before trying again.";
+          errorMessage =
+            "🌐 Connection lost. Please check your internet connection and try again.";
+        } else if (
+          error.message.includes("403") ||
+          error.message.includes("forbidden")
+        ) {
+          errorMessage =
+            "🚫 Network temporarily unavailable. Please wait a moment and try again.";
+        } else if (
+          error.message.includes("429") ||
+          error.message.includes("Too Many Requests")
+        ) {
+          errorMessage =
+            "⏳ Too many requests. Please wait 30-60 seconds before trying again.";
         } else {
           errorMessage = `❌ Error: ${error.message}`;
         }
@@ -555,7 +638,13 @@ export default function WalletPage() {
       setWithdrawLoading(false);
       // Don't clear input on error - let user fix their input
     }
-  }, [user, effectiveAccount, userRewards, withdrawAmount, walletAdapterSignTransaction]);
+  }, [
+    user,
+    effectiveAccount,
+    userRewards,
+    withdrawAmount,
+    walletAdapterSignTransaction,
+  ]);
 
   // Handle transfer
   const handleTransfer = useCallback(async () => {
@@ -583,7 +672,9 @@ export default function WalletPage() {
         return;
       }
       const token = await auth.currentUser.getIdToken();
-      const refId = `transfer:${auth.currentUser.uid}:${transferRecipient}:${Date.now()}`;
+      const refId = `transfer:${
+        auth.currentUser.uid
+      }:${transferRecipient}:${Date.now()}`;
       const res = await fetch(`${gatekeeperBase}/api/transfer`, {
         method: "POST",
         headers: {
@@ -613,7 +704,9 @@ export default function WalletPage() {
         walletAddress: effectiveAccount,
         type: "transfer",
         amount: amount,
-        description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient || "")}`,
+        description: `Sent ${rewardsService.formatMKIN(
+          amount
+        )} to ${formatAddress(transferRecipient || "")}`,
         recipientAddress: transferRecipient,
       });
 
@@ -622,7 +715,9 @@ export default function WalletPage() {
         {
           type: "transfer",
           amount: amount,
-          description: `Sent ${rewardsService.formatMKIN(amount)} to ${formatAddress(transferRecipient || "")}`,
+          description: `Sent ${rewardsService.formatMKIN(
+            amount
+          )} to ${formatAddress(transferRecipient || "")}`,
           date: new Date(),
         },
         ...prev.slice(0, 9), // Keep only last 10 transactions
@@ -635,7 +730,7 @@ export default function WalletPage() {
             user.uid,
             effectiveAccount,
             nfts.length,
-            nfts,
+            nfts
           );
           setUserRewards(rewards);
         } catch (error) {
@@ -649,7 +744,7 @@ export default function WalletPage() {
     } catch (error) {
       console.error("Error processing transfer:", error);
       setTransferError(
-        error instanceof Error ? error.message : "Transfer failed",
+        error instanceof Error ? error.message : "Transfer failed"
       );
     } finally {
       setTransferLoading(false);
@@ -671,7 +766,7 @@ export default function WalletPage() {
         try {
           const history = await rewardsService.getTransactionHistory(
             user.uid,
-            10,
+            10
           );
           const formattedHistory = history.map((transaction) => ({
             type: transaction.type as "claim" | "withdraw" | "transfer",
@@ -708,7 +803,7 @@ export default function WalletPage() {
           // Fall back to local cache
           try {
             const cachedLinked = localStorage.getItem(
-              "realmkin_discord_linked",
+              "realmkin_discord_linked"
             );
             setDiscordLinked(cachedLinked === "true");
           } catch {
@@ -725,7 +820,7 @@ export default function WalletPage() {
           // 404 or other error: fall back to local cache
           try {
             const cachedLinked = localStorage.getItem(
-              "realmkin_discord_linked",
+              "realmkin_discord_linked"
             );
             setDiscordLinked(cachedLinked === "true");
           } catch {
@@ -752,7 +847,7 @@ export default function WalletPage() {
 
   const formattedWalletBalance = useMemo(
     () => `${rewardsService.formatMKIN(walletDisplayValue)} MKIN`,
-    [walletDisplayValue],
+    [walletDisplayValue]
   );
 
   return (
@@ -794,7 +889,9 @@ export default function WalletPage() {
               aria-haspopup="true"
             >
               <span
-                className={`text-xs transition-transform ${showMobileActions ? "rotate-180" : ""}`}
+                className={`text-xs transition-transform ${
+                  showMobileActions ? "rotate-180" : ""
+                }`}
               >
                 ⋯
               </span>
@@ -866,10 +963,11 @@ export default function WalletPage() {
                         setTestWalletAddress("");
                       }
                     }}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all ${adminTestMode
-                      ? "bg-purple-500/20 border-purple-400 text-purple-400"
-                      : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
-                      }`}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                      adminTestMode
+                        ? "bg-purple-500/20 border-purple-400 text-purple-400"
+                        : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
+                    }`}
                     title="Enter any wallet address to test rewards"
                   >
                     {adminTestMode ? "✓ Test Wallet ON" : "Test Wallet"}
@@ -890,10 +988,11 @@ export default function WalletPage() {
                 {isDevelopment && (
                   <button
                     onClick={() => setTestMode(!testMode)}
-                    className={`text-xs px-3 py-1 rounded-full border transition-all ${testMode
-                      ? "bg-[#DA9C2F]/20 border-[#DA9C2F] text-[#DA9C2F]"
-                      : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
-                      }`}
+                    className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                      testMode
+                        ? "bg-[#DA9C2F]/20 border-[#DA9C2F] text-[#DA9C2F]"
+                        : "bg-white/5 border-white/20 text-white/60 hover:border-white/40"
+                    }`}
                     title="Enable test mode to simulate NFT from GZv3n contract"
                   >
                     {testMode ? "✓ Test Mode ON" : "Test Mode"}
@@ -915,11 +1014,13 @@ export default function WalletPage() {
                     className="w-full px-3 py-2 bg-[#0B0B09] border border-purple-400/30 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-purple-400"
                   />
                   <p className="text-white/50 text-xs">
-                    Enter any Solana wallet address to test reward calculations and NFT holdings.
+                    Enter any Solana wallet address to test reward calculations
+                    and NFT holdings.
                   </p>
                   {testWalletAddress && (
                     <p className="text-purple-400/80 text-xs font-mono">
-                      Testing: {testWalletAddress.slice(0, 8)}...{testWalletAddress.slice(-6)}
+                      Testing: {testWalletAddress.slice(0, 8)}...
+                      {testWalletAddress.slice(-6)}
                     </p>
                   )}
                 </div>
@@ -974,7 +1075,8 @@ export default function WalletPage() {
                     </div>
                     {adminTestMode && effectiveAccount && (
                       <p className="text-purple-400/60 text-[10px] mt-0.5 font-mono">
-                        {effectiveAccount.slice(0, 4)}...{effectiveAccount.slice(-4)}
+                        {effectiveAccount.slice(0, 4)}...
+                        {effectiveAccount.slice(-4)}
                       </p>
                     )}
                   </div>
@@ -996,14 +1098,16 @@ export default function WalletPage() {
                     <p className="text-white font-bold text-xl mt-1">
                       {userRewards && rewardsCalculation
                         ? rewardsService.formatMKIN(
-                          rewardsCalculation.weeklyRate || 0,
-                        )
+                            rewardsCalculation.weeklyRate || 0
+                          )
                         : "₥0"}{" "}
                       <span className="text-sm text-white/60">MKIN/week</span>
                     </p>
                   </div>
                   <span
-                    className={`text-[#DA9C2F] text-lg transition-transform ${showMiningRateDetails ? "rotate-180" : ""}`}
+                    className={`text-[#DA9C2F] text-lg transition-transform ${
+                      showMiningRateDetails ? "rotate-180" : ""
+                    }`}
                   >
                     ▼
                   </span>
@@ -1068,7 +1172,7 @@ export default function WalletPage() {
                         >
                           Earning{" "}
                           {rewardsService.formatMKIN(
-                            rewardsCalculation.weeklyRate,
+                            rewardsCalculation.weeklyRate
                           )}{" "}
                           MKIN/week
                         </span>
@@ -1086,7 +1190,7 @@ export default function WalletPage() {
                     <div className="text-xs text-center w-full text-[#DA9C2F]">
                       Next claim available in{" "}
                       {rewardsService.getTimeUntilNextClaim(
-                        rewardsCalculation.nextClaimDate,
+                        rewardsCalculation.nextClaimDate
                       )}
                     </div>
                   )}
@@ -1108,8 +1212,10 @@ export default function WalletPage() {
                       ℹ️ Withdrawal Fees
                     </p>
                     <ul className="text-white/70 text-xs space-y-1">
-                      <li>• Under 10,000 MKIN: $0.50 in SOL</li>
-                      <li>• 10,000 MKIN or more: $1.00 in SOL</li>
+                      <li>• Under 5,000 MKIN: $0.50 in SOL</li>
+                      <li>• 5,000 - 7,499 MKIN: $1.00 in SOL</li>
+                      <li>• 7,500 - 9,999 MKIN: $2.00 in SOL</li>
+                      <li>• 10,000 MKIN or more: $5.00 in SOL</li>
                       <li>• Withdraw any amount you have available</li>
                     </ul>
                   </div>
@@ -1126,19 +1232,43 @@ export default function WalletPage() {
                         onChange={(e) => {
                           const newValue = e.target.value;
                           console.log("Input onChange fired:", newValue);
-                          console.log("Current withdrawAmount state before update:", withdrawAmount);
+                          console.log(
+                            "Current withdrawAmount state before update:",
+                            withdrawAmount
+                          );
                           setWithdrawAmount(newValue);
                           setWithdrawError(null);
                           // Force immediate log after state update (will show in next render)
-                          setTimeout(() => console.log("withdrawAmount state after setState:", withdrawAmount), 0);
+                          setTimeout(
+                            () =>
+                              console.log(
+                                "withdrawAmount state after setState:",
+                                withdrawAmount
+                              ),
+                            0
+                          );
                         }}
-                        onFocus={() => console.log("Input focused. Current value:", withdrawAmount)}
-                        onBlur={() => console.log("Input blurred. Final value:", withdrawAmount)}
+                        onFocus={() =>
+                          console.log(
+                            "Input focused. Current value:",
+                            withdrawAmount
+                          )
+                        }
+                        onBlur={() =>
+                          console.log(
+                            "Input blurred. Final value:",
+                            withdrawAmount
+                          )
+                        }
                         className="input-field flex-1"
                       />
                       <button
                         type="button"
-                        onClick={() => setWithdrawAmount((userRewards?.totalRealmkin || 0).toString())}
+                        onClick={() =>
+                          setWithdrawAmount(
+                            (userRewards?.totalRealmkin || 0).toString()
+                          )
+                        }
                         className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
                       >
                         MAX
@@ -1146,25 +1276,59 @@ export default function WalletPage() {
                     </div>
                     <div className="flex justify-between items-center mt-1">
                       <p className="text-white/50 text-xs">
-                        Available: {(userRewards?.totalRealmkin || 0).toLocaleString()} MKIN
+                        Available:{" "}
+                        {(userRewards?.totalRealmkin || 0).toLocaleString()}{" "}
+                        MKIN
                       </p>
                       {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-                        <p className={`text-xs font-semibold ${parseFloat(withdrawAmount) >= 10000 ? 'text-[#DA9C2F]' : 'text-green-400'}`}>
-                          Fee: ${parseFloat(withdrawAmount) >= 10000 ? '1.00' : '0.50'} SOL
+                        <p
+                          className={`text-xs font-semibold ${
+                            parseFloat(withdrawAmount) >= 5000
+                              ? "text-[#DA9C2F]"
+                              : "text-green-400"
+                          }`}
+                        >
+                          Fee: $
+                          {(function () {
+                            const val = parseFloat(withdrawAmount);
+                            if (val >= 10000) return "5.00";
+                            if (val >= 7500) return "2.00";
+                            if (val >= 5000) return "1.00";
+                            return "0.50";
+                          })()}{" "}
+                          SOL
                         </p>
                       )}
                     </div>
                   </div>
                   {withdrawError && (
-                    <div className="error-message warning whitespace-pre-line">{withdrawError}</div>
+                    <div className="error-message warning whitespace-pre-line">
+                      {withdrawError}
+                    </div>
                   )}
                   <button
                     onClick={handleWithdraw}
-                    disabled={withdrawLoading || (userRewards?.totalRealmkin || 0) <= 0}
-                    className={`btn-primary w-full text-sm ${(withdrawLoading || (userRewards?.totalRealmkin || 0) <= 0) ? "opacity-50 cursor-not-allowed" : ""}`}
-                    title={(userRewards?.totalRealmkin || 0) <= 0 ? "No MKIN available to withdraw" : ""}
+                    disabled={
+                      withdrawLoading || (userRewards?.totalRealmkin || 0) <= 0
+                    }
+                    className={`btn-primary w-full text-sm ${
+                      withdrawLoading || (userRewards?.totalRealmkin || 0) <= 0
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                    title={
+                      (userRewards?.totalRealmkin || 0) <= 0
+                        ? "No MKIN available to withdraw"
+                        : ""
+                    }
                   >
-                    {withdrawLoading ? "PROCESSING..." : (withdrawAmount && withdrawAmount.trim() !== "" ? `WITHDRAW ${parseFloat(withdrawAmount).toLocaleString()} MKIN` : "WITHDRAW ALL")}
+                    {withdrawLoading
+                      ? "PROCESSING..."
+                      : withdrawAmount && withdrawAmount.trim() !== ""
+                      ? `WITHDRAW ${parseFloat(
+                          withdrawAmount
+                        ).toLocaleString()} MKIN`
+                      : "WITHDRAW ALL"}
                   </button>
                 </div>
 

@@ -11,26 +11,25 @@ import { useNFT } from "@/contexts/NFTContext";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import SocialLinks from "@/components/SocialLinks";
 import QuickAccessCard from "@/components/QuickAccessCard";
-import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { rewardsService, UserRewards } from "@/services/rewardsService";
-import { NAV_ITEMS } from "@/config/navigation";
+// MobileMenu and NAV_ITEMS removed as they are handled globally now
 
 // Lazy load background effects for better performance
 const EtherealParticles = dynamic(
   () =>
     import("@/components/MagicalAnimations").then(
-      (mod) => mod.EtherealParticles,
+      (mod) => mod.EtherealParticles
     ),
-  { ssr: false },
+  { ssr: false }
 );
 const ConstellationBackground = dynamic(
   () =>
     import("@/components/MagicalAnimations").then(
-      (mod) => mod.ConstellationBackground,
+      (mod) => mod.ConstellationBackground
     ),
-  { ssr: false },
+  { ssr: false }
 );
 
 // Lazy load carousel
@@ -108,7 +107,7 @@ function Home() {
       if (user?.uid) {
         try {
           const response = await fetch(
-            `${gatekeeperBase}/api/discord/status/${user.uid}`,
+            `${gatekeeperBase}/api/discord/status/${user.uid}`
           );
           if (response.ok) {
             const data = await response.json();
@@ -130,7 +129,7 @@ function Home() {
     const win = window.open(
       "/api/discord/login",
       "_blank",
-      "noopener,noreferrer",
+      "noopener,noreferrer"
     );
     if (!win) {
       // Fallback if pop-up blocked
@@ -194,36 +193,7 @@ function Home() {
       {!isMobile && <EtherealParticles />}
       {!isMobile && <ConstellationBackground />}
 
-      {/* Mobile Header - Compact */}
-      <header className="lg:hidden flex items-center justify-between px-4 py-3 relative z-20">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10">
-            <Image
-              src="/realmkin-logo.png"
-              alt="Realmkin Logo"
-              width={40}
-              height={40}
-              className="w-full h-full object-cover"
-              priority
-            />
-          </div>
-          <h1 className="text-sm font-bold uppercase tracking-wider text-[#DA9C2F]">
-            THE REALMKIN
-          </h1>
-        </div>
-        <button
-          onClick={() => setShowMobileActions((v) => !v)}
-          className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
-          aria-expanded={showMobileActions}
-          aria-haspopup="true"
-        >
-          <span
-            className={`text-xs transition-transform ${showMobileActions ? "rotate-180" : ""}`}
-          >
-            ⋯
-          </span>
-        </button>
-      </header>
+      {/* Mobile Header is now global in layout.tsx */}
 
       {/* Main Content */}
       <main className="relative z-10 px-4 lg:px-10 pb-6 max-w-7xl mx-auto">
@@ -335,24 +305,6 @@ function Home() {
           />
         </section>
       </main>
-
-      {/* Mobile Menu Overlay */}
-      <MobileMenuOverlay
-        isOpen={showMobileActions}
-        onClose={() => setShowMobileActions(false)}
-        menuItems={NAV_ITEMS}
-        isAdmin={userData?.admin}
-        isConnected={isConnected}
-        account={account}
-        isConnecting={isConnecting}
-        discordLinked={discordLinked}
-        discordConnecting={discordConnecting}
-        discordUnlinking={discordUnlinking}
-        onDiscordConnect={handleDiscordConnect}
-        onDiscordDisconnect={handleDiscordDisconnect}
-        onConnectWallet={connectWallet}
-        onDisconnectWallet={handleWalletDisconnect}
-      />
     </div>
   );
 }

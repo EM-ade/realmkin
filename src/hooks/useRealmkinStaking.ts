@@ -17,12 +17,12 @@ import { toast } from "react-hot-toast";
 
 // Token mint addresses - dynamically from env
 const MKIN_MINT_MAINNET = new PublicKey(
-  process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 
-  "BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA"
+  process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET ||
+    "BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA"
 );
 const MKIN_MINT_DEVNET = new PublicKey(
   process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET ||
-  "CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm"
+    "CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm"
 );
 
 // Use devnet for testing, mainnet for production
@@ -104,20 +104,26 @@ export function useRealmkinStaking() {
   const fetchDynamicFee = async (): Promise<number> => {
     try {
       // Fetch SOL price from multiple sources
-      const response = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT");
+      const response = await fetch(
+        "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
+      );
       const data = await response.json();
       const solPrice = parseFloat(data.price);
-      
+
       if (isNaN(solPrice) || solPrice <= 0) {
         throw new Error("Invalid SOL price");
       }
-      
+
       // Calculate SOL needed for $2 USD
       const targetUSD = 2.0;
       const feeInSol = targetUSD / solPrice;
-      
-      console.log(`💵 Dynamic fee: $${targetUSD} = ${feeInSol.toFixed(4)} SOL (SOL price: $${solPrice})`);
-      
+
+      console.log(
+        `💵 Dynamic fee: $${targetUSD} = ${feeInSol.toFixed(
+          4
+        )} SOL (SOL price: $${solPrice})`
+      );
+
       return feeInSol;
     } catch (e) {
       console.warn("Failed to fetch dynamic fee, using fallback:", e);
@@ -174,20 +180,19 @@ export function useRealmkinStaking() {
 
       // 1. Calculate 5% entry fee
       toast.loading("Calculating entry fee...", { id: "stake-fee" });
-      const feeResponse = await fetch("/api/calculate-stake-fee", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
-      });
-      
-      if (!feeResponse.ok) {
-        throw new Error("Failed to calculate entry fee");
-      }
-      
-      const feeData = await feeResponse.json();
-      console.log(`💰 Entry fee: ${feeData.feeInSol.toFixed(6)} SOL (${feeData.feeInMkin} MKIN value at $${feeData.mkinPriceUsd})`);
-      
-      toast.loading(`Entry fee: ${feeData.feeInSol.toFixed(6)} SOL. Creating transaction...`, { id: "stake-fee" });
+      const feeData = await StakingAPI.calculateFee(amount, 5);
+      console.log(
+        `💰 Entry fee: ${feeData.feeInSol.toFixed(6)} SOL (${
+          feeData.feeInMkin
+        } MKIN value at $${feeData.mkinPriceUsd})`
+      );
+
+      toast.loading(
+        `Entry fee: ${feeData.feeInSol.toFixed(
+          6
+        )} SOL. Creating transaction...`,
+        { id: "stake-fee" }
+      );
 
       // 2. Get vault address and ATAs for token transfer
       const vaultAddress = new PublicKey(data.config.stakingWalletAddress);
@@ -203,13 +208,19 @@ export function useRealmkinStaking() {
         const userTokenAccount = await getAccount(connection, userATA);
         const balance = Number(userTokenAccount.amount) / 1e9;
         console.log("  User token balance:", balance, "MKIN");
-        
+
         if (balance < amount) {
-          throw new Error(`Insufficient balance. You have ${balance.toFixed(2)} MKIN but trying to stake ${amount} MKIN`);
+          throw new Error(
+            `Insufficient balance. You have ${balance.toFixed(
+              2
+            )} MKIN but trying to stake ${amount} MKIN`
+          );
         }
       } catch (e: any) {
         if (e.message.includes("could not find account")) {
-          throw new Error("You don't have any MKIN tokens in your wallet. Token account doesn't exist.");
+          throw new Error(
+            "You don't have any MKIN tokens in your wallet. Token account doesn't exist."
+          );
         }
         throw e;
       }
@@ -220,7 +231,9 @@ export function useRealmkinStaking() {
         console.log("  ✅ Vault token account exists");
       } catch (e: any) {
         if (e.message.includes("could not find account")) {
-          throw new Error("Vault token account doesn't exist yet. Please contact support to initialize the vault.");
+          throw new Error(
+            "Vault token account doesn't exist yet. Please contact support to initialize the vault."
+          );
         }
         throw e;
       }
@@ -252,10 +265,14 @@ export function useRealmkinStaking() {
       transaction.recentBlockhash = latestBlockhash.blockhash;
       transaction.feePayer = publicKey;
 
-      console.log("  Combined transaction ready, sending to wallet for approval...");
+      console.log(
+        "  Combined transaction ready, sending to wallet for approval..."
+      );
 
       // 4. Send combined transaction (ONE signature for both!)
-      toast.loading("Please approve transaction in wallet...", { id: "stake-fee" });
+      toast.loading("Please approve transaction in wallet...", {
+        id: "stake-fee",
+      });
       const signature = await sendTransaction(transaction, connection);
 
       console.log("  ✅ Combined transaction sent! Signature:", signature);
@@ -272,7 +289,9 @@ export function useRealmkinStaking() {
       console.log("  ✅ Stake registered with backend!");
 
       toast.success(
-        `Successfully staked ${amount} MKIN! Entry fee: ${feeData.feeInSol.toFixed(6)} SOL`, 
+        `Successfully staked ${amount} MKIN! Entry fee: ${feeData.feeInSol.toFixed(
+          6
+        )} SOL`,
         { id: "stake-fee", duration: 5000 }
       );
       fetchData();
@@ -281,20 +300,25 @@ export function useRealmkinStaking() {
       console.error("❌ Stake failed:", e);
       console.error("  Error name:", e.name);
       console.error("  Error message:", e.message);
-      
+
       // Dismiss any loading toasts
       toast.dismiss("stake-fee");
-      
+
       // Handle specific error types
       let errorMessage = e.message;
-      
-      if (e.message?.includes("User rejected") || e.message?.includes("User denied") || e.name === "WalletSignTransactionError") {
+
+      if (
+        e.message?.includes("User rejected") ||
+        e.message?.includes("User denied") ||
+        e.name === "WalletSignTransactionError"
+      ) {
         errorMessage = "Transaction cancelled";
         toast.error(errorMessage, { duration: 3000 });
       } else if (e.message?.includes("Insufficient")) {
         toast.error(errorMessage, { duration: 5000 });
       } else if (e.message?.includes("Unexpected error")) {
-        errorMessage = "Transaction failed. Please check: 1) You have enough SOL for fees, 2) You have MKIN tokens, 3) Your wallet is unlocked.";
+        errorMessage =
+          "Transaction failed. Please check: 1) You have enough SOL for fees, 2) You have MKIN tokens, 3) Your wallet is unlocked.";
         toast.error(errorMessage, { duration: 5000 });
       } else {
         toast.error(errorMessage, { duration: 5000 });
@@ -314,14 +338,24 @@ export function useRealmkinStaking() {
       // Fetch dynamic fee (~$2 USD in SOL)
       toast.loading("Calculating fee...", { id: "claim-fee" });
       const feeAmount = await fetchDynamicFee();
-      
-      toast.loading(`Paying $2 fee (${feeAmount.toFixed(4)} SOL)...`, { id: "claim-fee" });
-      const signature = await paySolFee(feeAmount, data.config.stakingWalletAddress);
-      
+
+      toast.loading(`Paying $2 fee (${feeAmount.toFixed(4)} SOL)...`, {
+        id: "claim-fee",
+      });
+      const signature = await paySolFee(
+        feeAmount,
+        data.config.stakingWalletAddress
+      );
+
       toast.loading("Claiming rewards...", { id: "claim-fee" });
       const res = await StakingAPI.claim(signature);
-      
-      toast.success(`Claimed ${res.amount.toFixed(4)} SOL! (Fee: ${feeAmount.toFixed(4)} SOL)`, { id: "claim-fee" });
+
+      toast.success(
+        `Claimed ${res.amount.toFixed(4)} SOL! (Fee: ${feeAmount.toFixed(
+          4
+        )} SOL)`,
+        { id: "claim-fee" }
+      );
       fetchData();
     } catch (e: any) {
       toast.error(e.message, { id: "claim-fee" });
@@ -340,14 +374,22 @@ export function useRealmkinStaking() {
       // Fetch dynamic fee (~$2 USD in SOL)
       toast.loading("Calculating fee...", { id: "unstake-fee" });
       const feeAmount = await fetchDynamicFee();
-      
-      toast.loading(`Paying $2 fee (${feeAmount.toFixed(4)} SOL)...`, { id: "unstake-fee" });
-      const signature = await paySolFee(feeAmount, data.config.stakingWalletAddress);
+
+      toast.loading(`Paying $2 fee (${feeAmount.toFixed(4)} SOL)...`, {
+        id: "unstake-fee",
+      });
+      const signature = await paySolFee(
+        feeAmount,
+        data.config.stakingWalletAddress
+      );
 
       toast.loading("Unstaking tokens...", { id: "unstake-fee" });
       await StakingAPI.unstake(amount, signature);
-      
-      toast.success(`Unstaked ${amount} MKIN! (Fee: ${feeAmount.toFixed(4)} SOL)`, { id: "unstake-fee" });
+
+      toast.success(
+        `Unstaked ${amount} MKIN! (Fee: ${feeAmount.toFixed(4)} SOL)`,
+        { id: "unstake-fee" }
+      );
       fetchData();
       fetchWalletBalance(); // Refresh wallet balance
     } catch (e: any) {
@@ -361,6 +403,8 @@ export function useRealmkinStaking() {
     data, // Full response from backend
     user: data?.user,
     pool: data?.pool,
+    config: data?.config,
+    isRewardsPaused: data?.config?.isRewardsPaused ?? false,
     walletBalance, // On-chain MKIN token balance
     loading: loading && !data, // Only initial load
     isStaking,
