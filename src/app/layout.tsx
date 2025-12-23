@@ -12,6 +12,8 @@ import SolanaWalletProvider from "@/contexts/SolanaWalletProvider";
 import RouteTransition from "@/components/RouteTransition";
 import GlobalNavigation from "@/components/GlobalNavigation";
 import OnboardingWizard from "@/components/OnboardingWizard";
+import GlobalMobileNavigation from "@/components/GlobalMobileNavigation";
+import DynamicIsland from "@/components/DynamicIsland";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -27,7 +29,7 @@ const herticalSans = localFont({
   src: "../../public/fonts/Hertical Sans Regular.otf",
   variable: "--font-hertical-sans",
   fallback: ["Helvetica", "Arial", "sans-serif"],
-  display: 'swap',
+  display: "swap",
   preload: true,
 });
 
@@ -36,7 +38,7 @@ const amnestia = localFont({
   src: "../../public/fonts/Amnestia.ttf",
   variable: "--font-amnestia",
   fallback: ["serif"],
-  display: 'swap',
+  display: "swap",
   preload: true,
 });
 
@@ -45,7 +47,7 @@ const impactRegular = localFont({
   src: "../../public/fonts/Impact Regular.ttf",
   variable: "--font-impact-regular",
   fallback: ["Impact", "Arial Black", "sans-serif"],
-  display: 'swap',
+  display: "swap",
   preload: true,
 });
 
@@ -54,7 +56,7 @@ const gothicCG = localFont({
   src: "../../public/fonts/Gothic CG No3 Regular.otf",
   variable: "--font-gothic-cg",
   fallback: ["Arial", "sans-serif"],
-  display: 'swap',
+  display: "swap",
   preload: true,
 });
 
@@ -78,16 +80,30 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
         <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="/favicon-32x32.png"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="/favicon-16x16.png"
+        />
       </head>
       <body
         className={`${herticalSans.variable} ${amnestia.variable} ${impactRegular.variable} ${gothicCG.variable} antialiased`}
       >
-        <style dangerouslySetInnerHTML={{
-          __html: `
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
             #__next-loading-screen {
               position: fixed;
               inset: 0;
@@ -100,59 +116,69 @@ export default function RootLayout({
             .hydrated #__next-loading-screen {
               display: none;
             }
-          `
-        }} />
+          `,
+          }}
+        />
         <div id="__next-loading-screen">
-          <div style={{
-            width: '60px',
-            height: '60px',
-            border: '3px solid #DA9C2F',
-            borderTopColor: 'transparent',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }}></div>
+          <div
+            style={{
+              width: "60px",
+              height: "60px",
+              border: "3px solid #DA9C2F",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+            }}
+          ></div>
         </div>
-        <style dangerouslySetInnerHTML={{
-          __html: `
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
             @keyframes spin {
               to { transform: rotate(360deg); }
             }
-          `
-        }} />
+          `,
+          }}
+        />
         <AuthProvider>
           <SolanaWalletProvider>
             <Web3Provider>
               <DiscordProvider>
                 <OnboardingProvider>
                   <StakingProvider>
-                    <Toaster 
-                      position="top-right" 
+                    <Toaster
+                      position="top-right"
                       toastOptions={{
-                        className: 'bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]',
+                        className:
+                          "bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]",
                         success: {
-                          className: 'bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]',
+                          className:
+                            "bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]",
                           iconTheme: {
-                            primary: '#DA9C2F',
-                            secondary: '#000000',
+                            primary: "#DA9C2F",
+                            secondary: "#000000",
                           },
                         },
                         error: {
-                          className: 'bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]',
+                          className:
+                            "bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]",
                           iconTheme: {
-                            primary: '#DA9C2F',
-                            secondary: '#000000',
+                            primary: "#DA9C2F",
+                            secondary: "#000000",
                           },
                         },
                         loading: {
-                          className: 'bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]',
+                          className:
+                            "bg-black text-[#DA9C2F] font-medium border-2 border-[#DA9C2F]",
                           iconTheme: {
-                            primary: '#DA9C2F',
-                            secondary: '#000000',
+                            primary: "#DA9C2F",
+                            secondary: "#000000",
                           },
                         },
-                      }} 
+                      }}
                     />
                     <GlobalNavigation />
+                    <GlobalMobileNavigation />
                     <OnboardingWizard />
                     <RouteTransition>
                       <NFTProvider>{children}</NFTProvider>

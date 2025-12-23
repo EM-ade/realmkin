@@ -1,27 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
-import { Connection, PublicKey, Transaction, Keypair, sendAndConfirmTransaction } from "@solana/web3.js";
-import { createTransferInstruction, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { getAPYForLockPeriod, getDurationForLockPeriod } from "@/config/staking.config";
-
-// Initialize Firebase Admin SDK (emulator-friendly)
-if (!getApps().length) {
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-    : undefined;
-
-  if (serviceAccountJson) {
-    initializeApp({
-      credential: cert(serviceAccountJson),
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    });
-  } else {
-    initializeApp({ projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID });
-  }
-}
-
-const adminDb = getFirestore();
+import { db as adminDb, Timestamp, FieldValue } from "@/lib/firebase-admin";
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  Keypair,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import {
+  createTransferInstruction,
+  getOrCreateAssociatedTokenAccount,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import {
+  getAPYForLockPeriod,
+  getDurationForLockPeriod,
+} from "@/config/staking.config";
 
 interface StakeData {
   lock_period: "flexible" | "30" | "60" | "90";
@@ -37,16 +31,25 @@ function calcPendingRewards(stake: StakeData, nowSeconds: number): number {
   const dailyRate = apy / 365 / 100;
   const secondsStaked = nowSeconds - stake.start_date.seconds;
   const daysStaked = secondsStaked / 86400;
-  const weight = getDurationForLockPeriod(stake.lock_period) === 0
-    ? 1.0
-    : 1 + ((2.0 - 1) * getDurationForLockPeriod(stake.lock_period) / getDurationForLockPeriod("90"));
+  const weight =
+    getDurationForLockPeriod(stake.lock_period) === 0
+      ? 1.0
+      : 1 +
+        ((2.0 - 1) * getDurationForLockPeriod(stake.lock_period)) /
+          getDurationForLockPeriod("90");
   const accrued = stake.amount * dailyRate * daysStaked * weight;
   return Math.max(0, accrued - (stake.rewards_earned || 0));
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as { uid: string; wallet: string; stakeId: string; txSignature?: string; action: string };
+    const body = (await request.json()) as {
+      uid: string;
+      wallet: string;
+      stakeId: string;
+      txSignature?: string;
+      action: string;
+    };
     const { uid, wallet, stakeId, action } = body;
 
     // Validate input
@@ -59,7 +62,11 @@ export async function POST(request: NextRequest) {
 
     if (action === "initiate") {
       // Load stake via Admin SDK
-      const stakeRef = adminDb.collection("users").doc(uid).collection("stakes").doc(stakeId);
+      const stakeRef = adminDb
+        .collection("users")
+        .doc(uid)
+        .collection("stakes")
+        .doc(stakeId);
       const stakeSnap = await stakeRef.get();
       if (!stakeSnap.exists) {
         return NextResponse.json({ error: "Stake not found" }, { status: 404 });
@@ -67,7 +74,10 @@ export async function POST(request: NextRequest) {
       const stake = stakeSnap.data() as StakeData;
       const now = Math.floor(Date.now() / 1000);
       if (now < stake.unlock_date.seconds) {
-        return NextResponse.json({ error: "Stake is still locked" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Stake is still locked" },
+          { status: 400 }
+        );
       }
 
       // Optional: update rewards before marking unstaking
@@ -81,7 +91,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          message: "Unstake initiated. Please complete the withdrawal transaction.",
+          message:
+            "Unstake initiated. Please complete the withdrawal transaction.",
           stakeId,
         },
         { status: 200 }
@@ -89,17 +100,24 @@ export async function POST(request: NextRequest) {
     } else if (action === "complete") {
       try {
         // Load stake document directly
-        const stakeRef = adminDb.collection("users").doc(uid).collection("stakes").doc(stakeId);
+        const stakeRef = adminDb
+          .collection("users")
+          .doc(uid)
+          .collection("stakes")
+          .doc(stakeId);
         const stakeSnap = await stakeRef.get();
         if (!stakeSnap.exists) {
-          return NextResponse.json({ error: "Stake not found" }, { status: 404 });
+          return NextResponse.json(
+            { error: "Stake not found" },
+            { status: 404 }
+          );
         }
         const stake = stakeSnap.data() as StakeData;
 
         // Calculate amounts to return
         const now = Math.floor(Date.now() / 1000);
         const isUnlocked = now >= stake.unlock_date.seconds;
-        
+
         let penaltyPercent = 0;
         if (!isUnlocked) {
           if (stake.lock_period === "30") penaltyPercent = 10;
@@ -109,7 +127,7 @@ export async function POST(request: NextRequest) {
 
         const penalty = (stake.amount * penaltyPercent) / 100;
         const amountToReturn = stake.amount - penalty;
-        
+
         // Calculate pending rewards that have accrued since last update
         const pendingRewards = calcPendingRewards(stake, now);
         const totalRewardsEarned = (stake.rewards_earned || 0) + pendingRewards;
@@ -117,7 +135,8 @@ export async function POST(request: NextRequest) {
 
         // Create transfer transaction from treasury wallet
         const connection = new Connection(
-          process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
+          process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+            "https://api.mainnet-beta.solana.com",
           "confirmed"
         );
 
@@ -129,7 +148,8 @@ export async function POST(request: NextRequest) {
         const secretKeyBytes = Buffer.from(treasuryPrivateKeyBase64, "base64");
         const treasuryKeypair = Keypair.fromSecretKey(secretKeyBytes);
 
-        const configuredStakingPubkey = process.env.NEXT_PUBLIC_STAKING_WALLET_ADDRESS;
+        const configuredStakingPubkey =
+          process.env.NEXT_PUBLIC_STAKING_WALLET_ADDRESS;
         if (!configuredStakingPubkey) {
           throw new Error("NEXT_PUBLIC_STAKING_WALLET_ADDRESS not configured");
         }
@@ -143,8 +163,12 @@ export async function POST(request: NextRequest) {
         }
 
         const userPublicKey = new PublicKey(wallet);
-        const tokenMintPublicKey = new PublicKey(process.env.NEXT_PUBLIC_TOKEN_MINT!);
-        const TOKEN_DECIMALS = parseInt(process.env.NEXT_PUBLIC_TOKEN_DECIMALS || "9");
+        const tokenMintPublicKey = new PublicKey(
+          process.env.NEXT_PUBLIC_TOKEN_MINT!
+        );
+        const TOKEN_DECIMALS = parseInt(
+          process.env.NEXT_PUBLIC_TOKEN_DECIMALS || "9"
+        );
 
         // Ensure source (funding) and destination (user) token accounts exist
         // Staking (source) ATA – should exist; create if missing just in case
@@ -165,8 +189,12 @@ export async function POST(request: NextRequest) {
 
         // Build transaction
         const transaction = new Transaction();
-        const amountInSmallestUnit = Math.floor(amountToReturn * Math.pow(10, TOKEN_DECIMALS));
-        const rewardsInSmallestUnit = Math.floor(rewardsToReturn * Math.pow(10, TOKEN_DECIMALS));
+        const amountInSmallestUnit = Math.floor(
+          amountToReturn * Math.pow(10, TOKEN_DECIMALS)
+        );
+        const rewardsInSmallestUnit = Math.floor(
+          rewardsToReturn * Math.pow(10, TOKEN_DECIMALS)
+        );
 
         // Transfer principal
         transaction.add(
@@ -196,23 +224,35 @@ export async function POST(request: NextRequest) {
 
         // Set fee payer and recent blockhash
         transaction.feePayer = treasuryKeypair.publicKey;
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+        const { blockhash, lastValidBlockHeight } =
+          await connection.getLatestBlockhash("confirmed");
         transaction.recentBlockhash = blockhash;
 
         // Check treasury balance first
-        const treasuryBalance = await connection.getBalance(treasuryKeypair.publicKey);
-        
-        if (treasuryBalance < 10000000) { // Less than 0.01 SOL
+        const treasuryBalance = await connection.getBalance(
+          treasuryKeypair.publicKey
+        );
+
+        if (treasuryBalance < 10000000) {
+          // Less than 0.01 SOL
           return NextResponse.json(
-            { error: "Treasury wallet has insufficient SOL for transaction fees" },
+            {
+              error:
+                "Treasury wallet has insufficient SOL for transaction fees",
+            },
             { status: 500 }
           );
         }
 
         // Send and confirm (no skipPreflight) so we only return a valid, landed signature
-        const confirmedSig = await sendAndConfirmTransaction(connection, transaction, [treasuryKeypair], {
-          commitment: "confirmed",
-        });
+        const confirmedSig = await sendAndConfirmTransaction(
+          connection,
+          transaction,
+          [treasuryKeypair],
+          {
+            commitment: "confirmed",
+          }
+        );
 
         // Mark as unstaked and update user totals via Admin SDK
         await stakeRef.update({
@@ -252,10 +292,8 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error processing unstake:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

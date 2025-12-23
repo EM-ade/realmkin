@@ -37,6 +37,26 @@ export const StakingAPI = {
     return res.json();
   },
 
+  async calculateFee(amount: number, feePercent: number = 5) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${GATEKEEPER_URL}/api/staking/calculate-fee`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ amount, feePercent }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Fee calculation failed");
+    }
+    return res.json() as Promise<{
+      feeInSol: number;
+      feeInMkin: number;
+      feePercent: number;
+      mkinPriceUsd: number;
+      solPriceUsd: number;
+    }>;
+  },
+
   async stake(amount: number, txSignature: string, feeSignature: string) {
     const headers = await getAuthHeaders();
     const res = await fetch(`${GATEKEEPER_URL}/api/staking/stake`, {

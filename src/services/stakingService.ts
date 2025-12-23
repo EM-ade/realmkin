@@ -33,15 +33,17 @@ export interface GlobalMetrics {
 
 class StakingService {
   private connection: Connection;
-  
+
   constructor() {
-    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+    const rpcUrl =
+      process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+      "https://api.mainnet-beta.solana.com";
     this.connection = new Connection(rpcUrl, "confirmed");
   }
-  
+
   /**
    * Stake tokens - Creates a new stake in Firebase
-   * 
+   *
    */
   async stake(
     uid: string,
@@ -55,14 +57,17 @@ class StakingService {
       const verification = await verifyTransaction(txSignature);
       if (!verification.isValid) {
         throw new Error(
-          `Invalid stake transaction: ${verification.error || "failed validation"}`
+          `Invalid stake transaction: ${
+            verification.error || "failed validation"
+          }`
         );
       }
 
       // 2. Persist stake record in Firestore
-      const walletAddress = typeof wallet === 'string' 
-        ? wallet 
-        : (wallet.publicKey?.toString?.() || '');
+      const walletAddress =
+        typeof wallet === "string"
+          ? wallet
+          : wallet.publicKey?.toString?.() || "";
       const stakeRecord = await fbCreateStake(
         uid,
         walletAddress,
@@ -80,10 +85,10 @@ class StakingService {
       throw error;
     }
   }
-  
+
   /**
    * Claim rewards from a stake
-   * 
+   *
    * @param wallet - User's wallet
    * @param stakeEntry - Stake entry ID
    * @returns Transaction ID and rewards claimed
@@ -104,10 +109,10 @@ class StakingService {
       throw error;
     }
   }
-  
+
   /**
    * Unstake tokens
-   * 
+   *
    * @param wallet - User's wallet
    * @param stakeEntry - Stake entry ID
    * @returns Transaction ID and amount returned
@@ -119,12 +124,15 @@ class StakingService {
   ): Promise<{ txId: string; amountReturned: number }> {
     try {
       await initiateUnstake(uid, stakeEntry);
-      
+
       // Get the stake to return the amount
-      const walletAddress = typeof wallet === 'string' ? wallet : (wallet.publicKey?.toString?.() || '');
+      const walletAddress =
+        typeof wallet === "string"
+          ? wallet
+          : wallet.publicKey?.toString?.() || "";
       const stakes = await fbGetUserStakes(walletAddress);
       const stake = stakes.find((s) => s.id === stakeEntry);
-      
+
       return {
         txId: `unstake-${stakeEntry}-${Date.now()}`,
         amountReturned: stake?.amount || 0,
@@ -134,20 +142,23 @@ class StakingService {
       throw error;
     }
   }
-  
+
   /**
    * Get user's stakes
-   * 
+   *
    * @param walletAddress - User's wallet address
    * @returns Array of stake info
    */
   async getUserStakes(uid: string): Promise<StakeInfo[]> {
     try {
       const fbStakes = await fbGetUserStakes(uid);
-      
+
       const now = Date.now() / 1000;
       return fbStakes.map((stake) => {
-        const daysUntilUnlock = Math.max(0, Math.ceil((stake.unlock_date.seconds - now) / 86400));
+        const daysUntilUnlock = Math.max(
+          0,
+          Math.ceil((stake.unlock_date.seconds - now) / 86400)
+        );
         return {
           stakeEntry: stake.id,
           id: stake.id,
@@ -155,7 +166,9 @@ class StakingService {
           duration: stake.unlock_date.seconds - stake.start_date.seconds,
           stakeTimestamp: stake.start_date.seconds,
           unlockTime: stake.unlock_date.seconds,
-          weight: calculateStakeWeight(stake.unlock_date.seconds - stake.start_date.seconds),
+          weight: calculateStakeWeight(
+            stake.unlock_date.seconds - stake.start_date.seconds
+          ),
           rewards: stake.rewards_earned + calculatePendingRewards(stake, now),
           nonce: 0,
           lockPeriod: stake.lock_period,
@@ -168,10 +181,10 @@ class StakingService {
       return [];
     }
   }
-  
+
   /**
    * Get global staking metrics
-   * 
+   *
    * @returns Global metrics
    */
   async getGlobalMetrics(): Promise<GlobalMetrics> {
@@ -191,10 +204,10 @@ class StakingService {
       };
     }
   }
-  
+
   /**
    * Get user's token balance
-   * 
+   *
    * @param walletAddress - User's wallet address
    * @returns Token balance in token amount
    */
@@ -202,11 +215,14 @@ class StakingService {
     try {
       const publicKey = new PublicKey(walletAddress);
       const tokenMint = new PublicKey(process.env.NEXT_PUBLIC_TOKEN_MINT || "");
-      
+
       // Get token accounts for this wallet
-      const tokenAccounts = await this.connection.getParsedTokenAccountsByOwner(publicKey, {
-        mint: tokenMint,
-      });
+      const tokenAccounts = await this.connection.getParsedTokenAccountsByOwner(
+        publicKey,
+        {
+          mint: tokenMint,
+        }
+      );
 
       if (tokenAccounts.value.length === 0) {
         return 0;
@@ -215,7 +231,8 @@ class StakingService {
       // Sum up all token account balances
       let totalBalance = 0;
       for (const account of tokenAccounts.value) {
-        const balance = account.account.data.parsed?.info?.tokenAmount?.uiAmount || 0;
+        const balance =
+          account.account.data.parsed?.info?.tokenAmount?.uiAmount || 0;
         totalBalance += balance;
       }
 

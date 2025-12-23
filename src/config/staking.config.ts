@@ -1,10 +1,14 @@
 import { BN } from "@coral-xyz/anchor";
 
 export const STAKING_CONFIG = {
-  // Fixed staking parameters
-  FIXED_APR: 30, // 30% annual percentage rate (fixed)
-  BASE_MINING_RATE: 0.000000000000025, // 2.5e-14 SOL per second (Matches spec)
-  // Note: For 30% APR at $150 SOL, 1 MKIN is valued at ~$0.0003943
+  // 30% Flat ROI (Return on Investment) per year
+  // Users earn 30% of their staked token value annually, paid in SOL
+  FIXED_ROI_PERCENT: 0.3, // 30% per year
+  FIXED_APR: 30, // Display as 30% APR
+
+  // NOTE: Mining rate is now calculated dynamically based on:
+  // Rate = (Staked Amount * 30% * Token/SOL Price) / Seconds in Year
+  // This replaces the old BASE_MINING_RATE constant
 
   // Mining Boosters (increase mining rate above base)
   BOOSTER_MULTIPLIERS: {
@@ -30,35 +34,51 @@ export const STAKING_CONFIG = {
 } as const;
 
 /**
- * Calculate mining rewards based on fixed rate
+ * Calculate mining rewards based on 30% ROI
  *
- * @param stakedAmount - Amount of MKIN staked
+ * @param stakedAmount - Amount of tokens staked
  * @param durationSeconds - Duration staked in seconds
+ * @param tokenPriceSol - Current token price in SOL
  * @param boosterMultiplier - Booster multiplier (1.0 = no boost, 1.25-2.0 = with boost)
  * @returns Total SOL rewards
  */
 export function calculateMiningRewards(
   stakedAmount: number,
   durationSeconds: number,
+  tokenPriceSol: number,
   boosterMultiplier: number = 1.0
 ): number {
+  const SECONDS_IN_YEAR = 365 * 24 * 60 * 60;
   const baseRewards =
-    stakedAmount * durationSeconds * STAKING_CONFIG.BASE_MINING_RATE;
+    (stakedAmount *
+      STAKING_CONFIG.FIXED_ROI_PERCENT *
+      tokenPriceSol *
+      durationSeconds) /
+    SECONDS_IN_YEAR;
   return baseRewards * boosterMultiplier;
 }
 
 /**
- * Calculate mining rate (SOL per second)
+ * Calculate mining rate (SOL per second) based on 30% ROI
  *
- * @param stakedAmount - Amount of MKIN staked
+ * @param stakedAmount - Amount of tokens staked
+ * @param tokenPriceSol - Current token price in SOL
  * @param boosterMultiplier - Booster multiplier (1.0 = no boost)
  * @returns SOL per second
  */
 export function calculateMiningRate(
   stakedAmount: number,
+  tokenPriceSol: number,
   boosterMultiplier: number = 1.0
 ): number {
-  return stakedAmount * STAKING_CONFIG.BASE_MINING_RATE * boosterMultiplier;
+  const SECONDS_IN_YEAR = 365 * 24 * 60 * 60;
+  return (
+    (stakedAmount *
+      STAKING_CONFIG.FIXED_ROI_PERCENT *
+      tokenPriceSol *
+      boosterMultiplier) /
+    SECONDS_IN_YEAR
+  );
 }
 
 /**
@@ -83,19 +103,27 @@ export function getBoosterMultiplier(boosterType: string): number {
 
 /**
  * Calculate estimated rewards for a stake (LEGACY - kept for backward compatibility)
+ * NOTE: This function now requires token price to be accurate
  *
  * @param amount - Amount staked
  * @param durationDays - Duration in days
- * @param apy - Annual percentage yield
+ * @param tokenPriceSol - Current token price in SOL
+ * @param apy - Annual percentage yield (ignored, kept for compatibility)
  * @returns Estimated rewards
  */
 export function estimateRewards(
   amount: number,
   durationDays: number,
-  apy: number
+  tokenPriceSol: number,
+  apy?: number
 ): number {
-  // Use new fixed-rate calculation
-  return calculateMiningRewards(amount, durationDays * 86400, 1.0);
+  // Use new ROI-based calculation
+  return calculateMiningRewards(
+    amount,
+    durationDays * 86400,
+    tokenPriceSol,
+    1.0
+  );
 }
 
 /**
