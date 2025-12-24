@@ -533,4 +533,78 @@ class LeaderboardService {
 }
 
 export const leaderboardService = new LeaderboardService();
+
+// Mining/Staking Leaderboard Functions
+export async function fetchMiningLeaderboard(
+  type: "rewards" | "staked" = "rewards", 
+  limit: number = 10
+): Promise<LeaderboardEntry[]> {
+  try {
+    const gatekeeperUrl = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
+    const response = await fetch(`${gatekeeperUrl}/api/leaderboard/mining?type=${type}&limit=${limit}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch mining leaderboard: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success || !data.leaderboard) {
+      throw new Error("Invalid leaderboard response");
+    }
+    
+    return data.leaderboard.map((entry: any): LeaderboardEntry => ({
+      userId: entry.userId,
+      username: entry.username,
+      rank: entry.rank,
+      value: entry.value,
+      valueLabel: entry.valueLabel,
+      avatarUrl: entry.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${entry.username}`,
+      gamesPlayed: undefined, // Not applicable for mining
+      breakdown: entry.breakdown,
+      lastUpdated: Date.now()
+    }));
+    
+  } catch (error) {
+    console.error("Failed to fetch mining leaderboard:", error);
+    // Return empty array on error
+    return [];
+  }
+}
+
+// Fetch top 3 miners specifically
+export async function fetchTop3Miners(type: "rewards" | "staked" = "rewards"): Promise<LeaderboardEntry[]> {
+  try {
+    const gatekeeperUrl = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
+    const response = await fetch(`${gatekeeperUrl}/api/leaderboard/mining/top3?type=${type}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch top 3 miners: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success || !data.top3) {
+      throw new Error("Invalid top 3 response");
+    }
+    
+    return data.top3.map((entry: any): LeaderboardEntry => ({
+      userId: entry.userId,
+      username: entry.username,
+      rank: entry.rank,
+      value: entry.value,
+      valueLabel: entry.valueLabel,
+      avatarUrl: entry.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${entry.username}`,
+      gamesPlayed: undefined,
+      breakdown: entry.breakdown,
+      lastUpdated: Date.now()
+    }));
+    
+  } catch (error) {
+    console.error("Failed to fetch top 3 miners:", error);
+    // Return empty array on error
+    return [];
+  }
+}
+
 export default leaderboardService;
