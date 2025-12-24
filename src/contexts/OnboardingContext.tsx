@@ -51,7 +51,7 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
     async function checkDiscordLink() {
       if (user?.uid) {
         try {
-          const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+          const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
           const response = await fetch(`${gatekeeperBase}/api/discord/status/${user.uid}`);
           if (response.ok) {
             const data = await response.json();

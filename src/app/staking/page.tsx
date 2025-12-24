@@ -43,7 +43,7 @@ function StakingPage() {
   } = useDiscord();
 
   const gatekeeperBase =
-    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
 
   // Use the real staking hook
   const {

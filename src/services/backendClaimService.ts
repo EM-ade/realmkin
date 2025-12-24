@@ -48,7 +48,7 @@ export async function claimTokens(
     // Get backend service URL from environment variables
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL ||
-      "https://gatekeeper-bot.fly.dev";
+      "https://gatekeeper-bmvu.onrender.com";
 
     // Call the new backend service
     const response = await fetch(`${backendUrl}/api/claim`, {
@@ -120,7 +120,7 @@ export async function getClaimHistory(
     // Get backend service URL from environment variables
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_SERVICE_URL ||
-      "https://gatekeeper-bot.fly.dev";
+      "https://gatekeeper-bmvu.onrender.com";
 
     // Call the new backend service
     const response = await fetch(`${backendUrl}/api/claim/status`, {

@@ -63,7 +63,7 @@ export default function WalletPage() {
   // Discord link status
   const [discordLinked, setDiscordLinked] = useState<boolean>(false);
   const gatekeeperBase =
-    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
   const [discordConnecting, setDiscordConnecting] = useState(false);
   const [discordUnlinking, setDiscordUnlinking] = useState(false);
   const [showDiscordMenu, setShowDiscordMenu] = useState(false);

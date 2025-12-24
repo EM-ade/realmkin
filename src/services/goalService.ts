@@ -1,5 +1,5 @@
 const GATEKEEPER_URL =
-  process.env.NEXT_PUBLIC_GATEKEEPER_BASE || process.env.NEXT_PUBLIC_GATEKEEPER_URL || "https://gatekeeper-bot.fly.dev";
+  process.env.NEXT_PUBLIC_GATEKEEPER_BASE || process.env.NEXT_PUBLIC_GATEKEEPER_URL || "https://gatekeeper-bmvu.onrender.com";
 
 export interface Goal {
   id: string;

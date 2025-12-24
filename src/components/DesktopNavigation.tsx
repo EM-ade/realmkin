@@ -27,7 +27,7 @@ export default function DesktopNavigation() {
         checkDiscordStatus
     } = useDiscord();
 
-    const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+    const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
     const [showDiscordMenu, setShowDiscordMenu] = useState(false);
     const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
     const [hideDiscordNotice, setHideDiscordNotice] = useState(false);

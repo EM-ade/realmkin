@@ -29,7 +29,7 @@ function DiscordLinkedContent() {
   const walletAddressFromParams = sp?.get("wallet") ?? null;
   const firebaseTokenFromParams = sp?.get("firebase_token") ?? null;
   const gatekeeperBase =
-    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
   const inviteUrl = process.env.NEXT_PUBLIC_DISCORD_URL || "";
 
   const [phase, setPhase] = useState<Phase>("idle");

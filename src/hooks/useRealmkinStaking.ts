@@ -64,23 +64,35 @@ export function useRealmkinStaking() {
   const fetchData = useCallback(async () => {
     // Wait for authentication to complete before fetching
     if (!isConnected || !uid || isAuthenticating) {
-      console.log("Skipping fetch - waiting for auth:", {
+      console.log("🔒 Skipping fetch - waiting for auth:", {
         isConnected,
-        uid,
+        uid: uid ? 'exists' : 'null',
         isAuthenticating,
       });
       return;
     }
     setLoading(true);
     try {
+      console.log("🎯 Fetching staking overview for UID:", uid);
+      console.log("🌐 Using gatekeeper URL:", process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com");
+      
       const res = await StakingAPI.getOverview();
+      console.log("✅ Staking data received successfully:", res);
       setData(res);
     } catch (e: any) {
-      console.error("Staking overview fetch error:", e);
+      console.error("❌ Staking overview fetch error:", {
+        message: e.message,
+        status: e.status,
+        statusText: e.statusText,
+        response: e.response,
+        stack: e.stack
+      });
+      
       // Only show error if it's not an auth issue
       if (!e.message?.includes("Not authenticated")) {
         console.error("Failed to load staking data:", e.message);
       }
+      setData(null);
       // Silent fail on poll to avoid spamming errors during auth
     } finally {
       setLoading(false);

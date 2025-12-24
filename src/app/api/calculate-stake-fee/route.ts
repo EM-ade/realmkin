@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     // Call gatekeeper to calculate fee
     const gatekeeperBase =
       process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
-      "https://gatekeeper-bot.fly.dev";
+      "https://gatekeeper-bmvu.onrender.com";
     const response = await fetch(
       `${gatekeeperBase}/api/staking/calculate-fee`,
       {
