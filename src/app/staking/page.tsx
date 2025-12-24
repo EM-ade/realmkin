@@ -247,7 +247,7 @@ function StakingPage() {
 
           {/* Right Column: Leaderboard & Boosters */}
           <div className="lg:col-span-3 flex flex-col-reverse lg:flex-col gap-6">
-            <LeaderboardWidget type="rewards" />
+            <LeaderboardWidget type="staked" />
 
             <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6">
               <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] mb-4 font-medium">
