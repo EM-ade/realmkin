@@ -12,7 +12,7 @@
 import { getAuth } from "firebase/auth";
 import { Transaction, Connection, VersionedTransaction } from "@solana/web3.js";
 
-const GATEKEEPER_URL = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+const GATEKEEPER_URL = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
 
 export interface InitiateWithdrawalResponse {
   success: boolean;

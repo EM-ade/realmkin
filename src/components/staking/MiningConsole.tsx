@@ -116,7 +116,7 @@ export function MiningConsole({
 
       <div className="flex flex-col items-center gap-2 mb-8 z-10">
         <div className="text-[#f7dca1]/80 text-xs uppercase tracking-widest flex items-center gap-2">
-          Current Staking Rate
+          Current Mining Rate
         </div>
         <div className="flex items-center gap-2 text-[#f4c752] text-2xl font-bold font-mono">
           <span className="animate-pulse">⚡</span>

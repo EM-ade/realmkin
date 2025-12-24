@@ -91,7 +91,7 @@ class RewardsService {
     try {
       const base =
         process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
-        "https://gatekeeper-bot.fly.dev";
+        "https://gatekeeper-bmvu.onrender.com";
       const auth = getAuth();
       const user = auth.currentUser;
       if (!user) return;

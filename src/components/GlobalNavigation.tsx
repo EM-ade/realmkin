@@ -43,7 +43,7 @@ export default function GlobalNavigation() {
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const gatekeeperBase =
-    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bot.fly.dev";
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
 
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
