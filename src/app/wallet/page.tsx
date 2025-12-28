@@ -185,6 +185,10 @@ export default function WalletPage() {
   const [nftLoading, setNftLoading] = useState(false);
   const [nftError, setNftError] = useState<string | null>(null);
 
+  // Rewards state
+  const [rewardsLoading, setRewardsLoading] = useState(false);
+  const [rewardsError, setRewardsError] = useState<string | null>(null);
+
   // Withdrawal state
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [withdrawLoading, setWithdrawLoading] = useState(false);
@@ -236,52 +240,120 @@ export default function WalletPage() {
 
     setNftLoading(true);
     setNftError(null);
+    setRewardsLoading(true);
+    setRewardsError(null);
 
-    try {
-      // Fetch from both standard and premium contracts
-      const nftCollection = await nftService.fetchAllContractNFTs(
-        effectiveAccount
-      );
+    const maxRetries = 3;
+    let lastError;
 
-      // Add test NFT if test mode is enabled (only in development)
-      const allNFTs =
-        isDevelopment && testMode
-          ? [...nftCollection.nfts, TEST_NFT]
-          : nftCollection.nfts;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Attempt ${attempt} to fetch NFTs and rewards for:`, effectiveAccount);
 
-      setNfts(allNFTs);
+        // Fetch from both standard and premium contracts
+        const nftCollection = await nftService.fetchAllContractNFTs(
+          effectiveAccount
+        );
 
-      // Initialize/update rewards based on NFT count and contract types
-      if (user) {
-        try {
-          const rewards = await rewardsService.initializeUserRewards(
-            user.uid,
-            effectiveAccount,
-            allNFTs.length,
-            allNFTs
-          );
-          setUserRewards(rewards);
+        // Add test NFT if test mode is enabled (only in development)
+        const allNFTs =
+          isDevelopment && testMode
+            ? [...nftCollection.nfts, TEST_NFT]
+            : nftCollection.nfts;
 
-          // Calculate current pending rewards with contract-aware calculation
-          const calculation = rewardsService.calculatePendingRewards(
-            rewards,
-            allNFTs.length
-          );
-          setRewardsCalculation(calculation);
-        } catch (error) {
-          console.error("Error initializing rewards:", error);
+        setNfts(allNFTs);
+
+        // Initialize/update rewards based on NFT count and contract types
+        if (user) {
+          try {
+            // Primary attempt: Initialize user rewards (full process)
+            const rewards = await rewardsService.initializeUserRewards(
+              user.uid,
+              effectiveAccount,
+              allNFTs.length,
+              allNFTs
+            );
+            setUserRewards(rewards);
+
+            // Calculate current pending rewards with contract-aware calculation
+            const calculation = rewardsService.calculatePendingRewards(
+              rewards,
+              allNFTs.length
+            );
+            setRewardsCalculation(calculation);
+
+            console.log("✅ Rewards initialized successfully");
+          } catch (initError) {
+            console.error("Error initializing rewards (attempt " + attempt + "):", initError);
+
+            // Fallback: Try to get existing user rewards
+            try {
+              console.log("🔄 Attempting fallback to get existing rewards...");
+              const existingRewards = await rewardsService.getUserRewards(user.uid);
+
+              if (existingRewards) {
+                console.log("✅ Fallback successful - using existing rewards data");
+                setUserRewards(existingRewards);
+
+                // Calculate with existing data
+                const calculation = rewardsService.calculatePendingRewards(
+                  existingRewards,
+                  allNFTs.length
+                );
+                setRewardsCalculation(calculation);
+              } else {
+                console.log("⚠️ No existing rewards found, showing default state");
+                // Set default rewards object if no existing data
+                setUserRewards({
+                  userId: user.uid,
+                  walletAddress: effectiveAccount,
+                  totalNFTs: allNFTs.length,
+                  weeklyRate: 0,
+                  totalEarned: 0,
+                  totalClaimed: 0,
+                  totalRealmkin: 0,
+                  pendingRewards: 0,
+                  lastCalculated: new Date(),
+                  lastClaimed: null,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                });
+              }
+            } catch (fallbackError) {
+              console.error("Error in fallback rewards fetch:", fallbackError);
+              // Even fallback failed, but we still have NFTs, so we can at least show NFT count
+              setRewardsError("Failed to load reward data, but NFTs were found");
+            }
+          }
+        }
+
+        if (allNFTs.length === 0) {
+          setNftError("No Realmkin NFTs found in this wallet");
+        }
+
+        // Success - break out of retry loop
+        break;
+
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed:`, error);
+        lastError = error;
+
+        // If this wasn't the last attempt, wait before retrying
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s...
+          console.log(`Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
-
-      if (allNFTs.length === 0) {
-        setNftError("No Realmkin NFTs found in this wallet");
-      }
-    } catch (error) {
-      console.error("Error fetching NFTs:", error);
-      setNftError("Failed to load NFTs. Please try again.");
-    } finally {
-      setNftLoading(false);
     }
+
+    if (lastError && maxRetries > 0) {
+      console.error("All attempts failed, showing error:", lastError);
+      setNftError("Failed to load NFTs after multiple attempts. Please try again.");
+    }
+
+    setNftLoading(false);
+    setRewardsLoading(false);
   }, [effectiveAccount, user, testMode, isDevelopment, TEST_NFT]);
 
   // Reload contract configs handler
@@ -1048,11 +1120,20 @@ export default function WalletPage() {
                 <div>
                   <p className="text-white/60 text-sm mb-1">Total Claimable</p>
                   <div className="text-white font-bold text-3xl">
-                    {userRewards
-                      ? rewardsService.formatMKIN(userRewards.totalRealmkin)
-                      : "₥0"}{" "}
-                    <span className="text-lg text-[#DA9C2F]">MKIN</span>
+                    {rewardsLoading ? (
+                      <span className="text-[#DA9C2F]">Loading...</span>
+                    ) : userRewards ? (
+                      rewardsService.formatMKIN(userRewards.totalRealmkin)
+                    ) : (
+                      "₥0"
+                    )}
+                    <span className="text-lg text-[#DA9C2F]"> MKIN</span>
                   </div>
+                  {rewardsError && (
+                    <div className="text-red-400 text-xs mt-1">
+                      ⚠️ {rewardsError}
+                    </div>
+                  )}
                 </div>
 
                 {/* Wallet Balance - Right aligned */}
