@@ -234,6 +234,8 @@ function StakingPage() {
               unclaimedRewards={stakingUser?.pendingRewards || 0}
               onClaim={handleClaim}
               isRewardsPaused={isRewardsPaused}
+              activeBoosters={stakingUser?.activeBoosters || []}
+              boosterMultiplier={stakingUser?.boosterMultiplier || 1.0}
             />
 
             <StakingControls
@@ -250,15 +252,54 @@ function StakingPage() {
             <LeaderboardWidget type="staked" />
 
             <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6">
-              <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] mb-4 font-medium">
-                Active Boosters
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {(stakingUser?.activeBoosters || []).map((booster: any) => (
-                  <BoosterSlot key={booster.id} booster={booster} />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] font-medium">
+                  Active Boosters
+                </h3>
+                <button
+                  onClick={() => {
+                    // Manual refresh boosters
+                    if (isConnected && uid) {
+                      refreshStakingData();
+                    }
+                  }}
+                  className="text-[#f7dca1]/40 hover:text-[#f4c752] text-xs uppercase tracking-wider transition-colors"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {(stakingUser?.activeBoosters || []).map((booster: any, index: number) => (
+                  <BoosterSlot
+                    key={`${booster.type}_${index}`}
+                    booster={booster}
+                  />
                 ))}
                 <BoosterSlot /> {/* Empty slot for "Add Booster" */}
               </div>
+              
+              {/* Booster Summary */}
+              {(stakingUser?.activeBoosters || []).length > 0 && (
+                <div className="mt-4 pt-4 border-t border-[#f4c752]/20">
+                  <div className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] mb-2">
+                    Booster Summary
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[#f4c752] text-sm font-bold">
+                      Total Multiplier: {(stakingUser?.boosterMultiplier || 1.0).toFixed(3)}x
+                    </div>
+                    <div className="text-[#f7dca1]/40 text-xs mt-1">
+                      {(stakingUser?.activeBoosters || []).length} active booster{(stakingUser?.activeBoosters || []).length === 1 ? '' : 's'}
+                    </div>
+                    {(stakingUser?.principal || 0) === 0 && (
+                      <div className="text-xs text-yellow-400/80 mt-2 text-center">
+                        ⚠️ Stake tokens to activate booster multiplier
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

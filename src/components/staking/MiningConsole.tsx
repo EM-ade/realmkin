@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 
+interface Booster {
+  type: string;
+  name: string;
+  multiplier: number;
+  category: string;
+  mints: string[];
+  detectedAt: Date;
+}
+
 interface MiningConsoleProps {
   stakingRate: number; // SOL per second
   unclaimedRewards: number; // Current pending rewards from server
@@ -8,6 +17,8 @@ interface MiningConsoleProps {
   stakeStartTime?: number; // When user first staked (milliseconds)
   totalClaimedSol?: number; // Total SOL claimed lifetime
   isRewardsPaused?: boolean; // Whether rewards are paused (goal not completed)
+  activeBoosters?: Booster[]; // Active boosters for the user
+  boosterMultiplier?: number; // Total stacked multiplier
 }
 
 export function MiningConsole({
@@ -18,6 +29,8 @@ export function MiningConsole({
   stakeStartTime,
   totalClaimedSol = 0,
   isRewardsPaused = false,
+  activeBoosters = [],
+  boosterMultiplier = 1.0,
 }: MiningConsoleProps) {
   const [liveRewards, setLiveRewards] = useState(unclaimedRewards);
   const [actualRate, setActualRate] = useState(0); // Rate derived from server deltas
@@ -125,6 +138,32 @@ export function MiningConsole({
         {actualRate > 0 && (
           <div className="text-xs text-[#f7dca1]/40">
             ~{(actualRate * 86400).toFixed(6)} SOL/day
+          </div>
+        )}
+        
+        {/* Booster Multiplier Display */}
+        {(boosterMultiplier > 1.0 || (activeBoosters && activeBoosters.length > 0)) && (
+          <div className="mt-2 pt-2 border-t border-[#f4c752]/20">
+            <div className="text-[#f7dca1]/60 text-xs uppercase tracking-widest mb-2">
+              Booster Multipliers
+            </div>
+            <div className="flex flex-col gap-1">
+              {activeBoosters?.map((booster, index) => (
+                <div key={index} className="flex items-center justify-between text-xs">
+                  <span className="text-[#f7dca1]/80">{booster.name}</span>
+                  <span className="text-[#f4c752] font-mono">×{booster.multiplier}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between pt-1 border-t border-[#f4c752]/20">
+                <span className="text-[#f7dca1]/60">Total Multiplier</span>
+                <span className="text-[#f4c752] font-bold font-mono">{boosterMultiplier.toFixed(3)}x</span>
+              </div>
+              {stakingRate === 0 && (
+                <div className="text-xs text-[#f7dca1]/40 mt-2 text-center">
+                  ⚠️ Stake tokens to activate booster multiplier
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

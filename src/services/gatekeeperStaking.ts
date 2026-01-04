@@ -1,7 +1,18 @@
 import { getAuth } from "firebase/auth";
+import environmentConfig from "../config/environment";
 
-const GATEKEEPER_URL =
-  process.env.NEXT_PUBLIC_GATEKEEPER_BASE || process.env.NEXT_PUBLIC_GATEKEEPER_URL || "https://gatekeeper-bmvu.onrender.com";
+// Validate environment configuration
+try {
+  environmentConfig.validateRequiredEnvVars();
+  console.log("✅ Frontend environment configuration validated");
+} catch (error) {
+  console.error("❌ Frontend environment validation failed:", error instanceof Error ? error.message : String(error));
+}
+
+const apiConfig = environmentConfig.apiConfig;
+const GATEKEEPER_URL = apiConfig.gatekeeperUrl;
+
+console.log(`🌐 Using Gatekeeper URL: ${GATEKEEPER_URL}`);
 
 async function getAuthHeaders() {
   try {
@@ -24,8 +35,9 @@ async function getAuthHeaders() {
 export const StakingAPI = {
   async getOverview() {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${GATEKEEPER_URL}/api/staking/overview`, {
+    const res = await fetch(`${GATEKEEPER_URL}${apiConfig.endpoints.staking}/overview`, {
       headers,
+      signal: AbortSignal.timeout(apiConfig.timeout),
     });
     if (!res.ok) {
       const errorText = await res.text();
@@ -39,10 +51,11 @@ export const StakingAPI = {
 
   async calculateFee(amount: number, feePercent: number = 5) {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${GATEKEEPER_URL}/api/staking/calculate-fee`, {
+    const res = await fetch(`${GATEKEEPER_URL}${apiConfig.endpoints.staking}/calculate-fee`, {
       method: "POST",
       headers,
       body: JSON.stringify({ amount, feePercent }),
+      signal: AbortSignal.timeout(apiConfig.timeout),
     });
     if (!res.ok) {
       const err = await res.json();
@@ -59,10 +72,11 @@ export const StakingAPI = {
 
   async stake(amount: number, txSignature: string, feeSignature: string) {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${GATEKEEPER_URL}/api/staking/stake`, {
+    const res = await fetch(`${GATEKEEPER_URL}${apiConfig.endpoints.staking}/stake`, {
       method: "POST",
       headers,
       body: JSON.stringify({ amount, txSignature, feeSignature }),
+      signal: AbortSignal.timeout(apiConfig.timeout),
     });
     if (!res.ok) {
       const err = await res.json();
@@ -73,10 +87,11 @@ export const StakingAPI = {
 
   async claim(txSignature: string) {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${GATEKEEPER_URL}/api/staking/claim`, {
+    const res = await fetch(`${GATEKEEPER_URL}${apiConfig.endpoints.staking}/claim`, {
       method: "POST",
       headers,
       body: JSON.stringify({ txSignature }),
+      signal: AbortSignal.timeout(apiConfig.timeout),
     });
     if (!res.ok) {
       const err = await res.json();
@@ -87,14 +102,29 @@ export const StakingAPI = {
 
   async unstake(amount: number, txSignature: string) {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${GATEKEEPER_URL}/api/staking/unstake`, {
+    const res = await fetch(`${GATEKEEPER_URL}${apiConfig.endpoints.staking}/unstake`, {
       method: "POST",
       headers,
       body: JSON.stringify({ amount, txSignature }),
+      signal: AbortSignal.timeout(apiConfig.timeout),
     });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || "Unstake failed");
+    }
+    return res.json();
+  },
+
+  async refreshBoosters() {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${GATEKEEPER_URL}${apiConfig.endpoints.boosters}/refresh`, {
+      method: "POST",
+      headers,
+      signal: AbortSignal.timeout(apiConfig.timeout),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Booster refresh failed");
     }
     return res.json();
   },

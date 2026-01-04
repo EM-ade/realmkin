@@ -157,21 +157,15 @@ function WalletModalBridge() {
 }
 
 export default function SolanaWalletProvider({ children }: Props) {
-  // Allow RPC URL and network to be configured via env
-  const networkEnv =
-    process.env.NEXT_PUBLIC_SOLANA_NETWORK?.toLowerCase() || "mainnet-beta";
+  // Import environment configuration
+  const environmentConfig = require('@/config/environment').default;
+  const networkConfig = environmentConfig.networkConfig;
+  
+  // Use configured network
+  const network = networkConfig.isDevnet ? WalletAdapterNetwork.Devnet : WalletAdapterNetwork.Mainnet;
 
-  // Map string to WalletAdapterNetwork enum
-  let network: WalletAdapterNetwork = WalletAdapterNetwork.Mainnet;
-  if (networkEnv === "devnet") {
-    network = WalletAdapterNetwork.Devnet;
-  } else if (networkEnv === "testnet") {
-    network = WalletAdapterNetwork.Testnet;
-  }
-
-  const endpoint =
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
-    "https://api.mainnet-beta.solana.com";
+  // Use configured RPC URL (prioritizing Helius)
+  const endpoint = networkConfig.rpcUrl;
 
   // Memoize wallet adapter instances with priority order
   // Note: PhantomWalletAdapter checks window.phantom.solana first, which helps avoid Brave Wallet conflicts

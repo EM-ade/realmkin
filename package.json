@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
+    "dev": "cross-env NODE_ENV=development next dev --turbopack",
+    "build": "cross-env NODE_ENV=production next build",
+    "start": "cross-env NODE_ENV=production next start",
     "lint": "next lint",
     "generate:wordle": "node scripts/wordle/generate-word-lists.mjs"
   },
@@ -13,6 +13,7 @@
     "@gsap/react": "^2.1.2",
     "@lottiefiles/dotlottie-react": "^0.17.7",
     "@metamask/detect-provider": "^2.0.0",
+    "@metaplex-foundation/js": "^0.20.1",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
     "@solana/wallet-adapter-backpack": "^0.1.14",
