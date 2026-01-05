@@ -1,0 +1,1 @@
+{"version":3,"file":"claimingService.d.ts","sourceRoot":"","sources":["../src/services/claimingService.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,SAAS,MAAM,oBAAoB,CAAC;AAkBhD,UAAU,aAAa;IACrB,OAAO,EAAE,OAAO,CAAC;IACjB,MAAM,CAAC,EAAE,MAAM,CAAC;IAChB,KAAK,CAAC,EAAE,MAAM,CAAC;CAChB;AAED;;GAEG;AACH,eAAO,MAAM,YAAY,wEAgJxB,CAAC;AAwEF;;GAEG;AACH,eAAO,MAAM,eAAe;;;;;;YAoC3B,CAAC"}

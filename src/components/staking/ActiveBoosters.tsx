@@ -6,9 +6,9 @@ interface Booster {
   type: string;
   name: string;
   multiplier: number;
-  category: string;
+  category?: string;
   mints: string[];
-  detectedAt: Date;
+  detectedAt: Date | string;
 }
 
 interface ActiveBoostersProps {
@@ -30,6 +30,7 @@ export function ActiveBoosters({
 }: ActiveBoostersProps) {
   const [expandedBooster, setExpandedBooster] = useState<string | null>(null);
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Calculate time since last update
   useEffect(() => {
@@ -66,12 +67,16 @@ export function ActiveBoosters({
   };
 
   const handleRefresh = async () => {
-    if (onRefresh) {
+    if (onRefresh && !isRefreshing) {
+      setIsRefreshing(true);
       try {
         await onRefresh();
         toast.success('Boosters refreshed successfully');
       } catch (error) {
         toast.error('Failed to refresh boosters');
+      } finally {
+        // Keep spinning for at least 600ms for visual feedback
+        setTimeout(() => setIsRefreshing(false), 600);
       }
     }
   };
@@ -176,99 +181,119 @@ export function ActiveBoosters({
   }
 
   return (
-    <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
         <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] font-medium">
           Active Boosters
         </h3>
-        <div className="flex items-center gap-2">
-          {lastUpdated && (
-            <span className="text-[#f7dca1]/40 text-xs">
-              Last updated: {timeSinceUpdate}
-            </span>
-          )}
-          <button
-            onClick={handleRefresh}
-            className="text-[#f7dca1]/40 hover:text-[#f4c752] text-xs uppercase tracking-wider transition-colors"
-            disabled={isDetecting}
+        <button
+          onClick={handleRefresh}
+          className="text-[#f7dca1]/40 hover:text-[#f4c752] transition-colors p-2 hover:bg-[#f4c752]/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isDetecting || isRefreshing}
+          title="Refresh boosters"
+        >
+          <svg 
+            className={`w-4 h-4 transition-transform ${(isDetecting || isRefreshing) ? 'animate-spin-custom' : ''}`} 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
           >
-            🔄 Refresh
-          </button>
-        </div>
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+            />
+          </svg>
+        </button>
       </div>
 
       {boosters.length === 0 ? (
         <div className="text-center py-8">
-          <div className="text-[#f7dca1]/60 text-sm mb-4">No active boosters detected</div>
-          <div className="text-[#f7dca1]/40 text-xs mb-4">
+          <div className="text-[#f7dca1]/60 text-sm mb-2">No active boosters detected</div>
+          <div className="text-[#f7dca1]/40 text-xs">
             Hold Realmkin NFTs to activate mining boosters
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <BoosterSlot />
-            <BoosterSlot />
-            <BoosterSlot />
           </div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {/* Booster Cards */}
+          <div className="space-y-2 mb-4">
             {boosters.map((booster, index) => (
               <div
                 key={`${booster.type}_${index}`}
-                className="relative"
+                className="bg-black/60 border border-[#f4c752]/30 rounded-lg p-3 hover-lift hover-border-glow cursor-pointer animate-shimmer"
                 onClick={() => handleBoosterClick(booster.type)}
               >
-                <BoosterSlot booster={booster} />
-                
-                {/* Status indicator */}
-                <div className="absolute -top-1 -right-1 px-2 py-1 bg-black/80 rounded-full">
-                  <span className={`text-xs font-medium ${getBoosterStatusColor(booster)}`}>
-                    {getBoosterStatusText(booster)}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gradient-to-br from-[#f4c752]/20 to-[#f4c752]/5 border border-[#f4c752]/30">
+                      {booster.type === 'random_1_1' && (
+                        <svg className="w-6 h-6 text-[#f4c752]" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 12a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm10-12a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2zm0 12a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z"/>
+                        </svg>
+                      )}
+                      {booster.type === 'custom_1_1' && (
+                        <svg className="w-6 h-6 text-[#f4c752]" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                      )}
+                      {booster.type === 'solana_miner' && (
+                        <svg className="w-6 h-6 text-[#f4c752]" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[#f4c752] font-bold text-sm uppercase tracking-wider">
+                        {booster.name}
+                      </div>
+                      <div className="text-[#f7dca1]/60 text-xs">
+                        {booster.mints.length} NFT{booster.mints.length === 1 ? '' : 's'} detected
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="text-[#f4c752] font-bold text-lg font-mono">
+                      ×{booster.multiplier.toFixed(2)}
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Expanded details */}
                 {expandedBooster === booster.type && (
-                  <div className="absolute top-full left-0 right-0 mt-2 z-10 bg-black/90 border border-[#f4c752]/30 rounded-lg p-4 shadow-xl">
-                    <div className="text-[#f7dca1]/80 text-xs uppercase tracking-wider mb-2">
-                      {booster.name} Details
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-[#f7dca1]/60">Multiplier:</span>
-                        <span className="text-[#f4c752] font-mono">×{booster.multiplier}</span>
+                  <div className="mt-4 pt-4 border-t border-[#f4c752]/20">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-[#f7dca1]/60 text-xs mb-1">Multiplier</div>
+                        <div className="text-[#f4c752] font-mono">×{booster.multiplier}</div>
                       </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-[#f7dca1]/60">NFTs:</span>
-                        <span className="text-[#f4c752]">{booster.mints.length}</span>
+                      <div>
+                        <div className="text-[#f7dca1]/60 text-xs mb-1">Mining Rate Boost</div>
+                        <div className="text-green-400 font-mono">+{((booster.multiplier - 1) * 100).toFixed(1)}%</div>
                       </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-[#f7dca1]/60">Detected:</span>
-                        <span className="text-[#f7dca1]/60">
-                          {new Date(booster.detectedAt).toLocaleString()}
-                        </span>
+                      <div>
+                        <div className="text-[#f7dca1]/60 text-xs mb-1">NFTs Detected</div>
+                        <div className="text-[#f4c752]">{booster.mints.length}</div>
                       </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-[#f7dca1]/60">Status:</span>
-                        <span className={`${getBoosterStatusColor(booster)}`}>
-                          {getBoosterStatusText(booster)}
-                        </span>
+                      <div>
+                        <div className="text-[#f7dca1]/60 text-xs mb-1">Detected At</div>
+                        <div className="text-[#f7dca1]/60 text-xs">
+                          {new Date(booster.detectedAt).toLocaleDateString()}
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="mt-3 pt-3 border-t border-[#f4c752]/20">
-                      <div className="text-center">
-                        <button
-                          onClick={() => setExpandedBooster(null)}
-                          className="text-[#f7dca1]/40 hover:text-[#f4c752] text-xs uppercase tracking-wider transition-colors"
-                        >
-                          Close Details
-                        </button>
-                      </div>
+                    <div className="mt-3 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedBooster(null);
+                        }}
+                        className="text-[#f7dca1]/40 hover:text-[#f4c752] text-xs uppercase tracking-wider transition-colors"
+                      >
+                        Close Details
+                      </button>
                     </div>
                   </div>
                 )}
@@ -277,33 +302,31 @@ export function ActiveBoosters({
           </div>
 
           {/* Booster Summary */}
-          <div className="mt-6 pt-4 border-t border-[#f4c752]/20">
+          <div className="pt-4 border-t border-[#f4c752]/20">
             <div className="text-[#f7dca1]/60 text-xs uppercase tracking-wider mb-3">
               Booster Summary
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-black/40 border border-[#f4c752]/20 rounded-lg p-4">
-                <div className="text-[#f7dca1]/60 text-xs uppercase tracking-wider mb-2">
-                  Total Multiplier
+            <div className="bg-black/60 border border-[#f4c752]/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[#f7dca1]/60 text-xs uppercase tracking-wider mb-1">
+                    Total Multiplier
+                  </div>
+                  <div className="text-2xl font-bold text-[#f4c752] font-mono">
+                    ×{totalMultiplier.toFixed(3)}
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-[#f4c752] font-mono">
-                  ×{totalMultiplier.toFixed(3)}
-                </div>
-                <div className="text-[#f7dca1]/40 text-xs mt-1">
-                  {boosters.length} active booster{boosters.length === 1 ? '' : 's'}
+                <div className="text-right">
+                  <div className="text-[#f7dca1]/60 text-xs uppercase tracking-wider mb-1">
+                    Mining Rate Boost
+                  </div>
+                  <div className="text-2xl font-bold text-green-400 font-mono">
+                    +{((totalMultiplier - 1) * 100).toFixed(1)}%
+                  </div>
                 </div>
               </div>
-              
-              <div className="bg-black/40 border border-[#f4c752]/20 rounded-lg p-4">
-                <div className="text-[#f7dca1]/60 text-xs uppercase tracking-wider mb-2">
-                  Mining Rate Boost
-                </div>
-                <div className="text-2xl font-bold text-green-400 font-mono">
-                  +{((totalMultiplier - 1) * 100).toFixed(1)}%
-                </div>
-                <div className="text-[#f7dca1]/40 text-xs mt-1">
-                  From {boosters.length} booster{boosters.length === 1 ? '' : 's'}
-                </div>
+              <div className="text-[#f7dca1]/40 text-xs mt-3 text-center">
+                From {boosters.length} active booster{boosters.length === 1 ? '' : 's'}
               </div>
             </div>
           </div>

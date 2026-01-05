@@ -1,0 +1,1 @@
+{"version":3,"file":"enhancedClaimTokens.d.ts","sourceRoot":"","sources":["src/enhancedClaimTokens.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,SAAS,MAAM,oBAAoB,CAAC;AAiBhD,UAAU,aAAa;IACrB,OAAO,EAAE,OAAO,CAAC;IACjB,MAAM,CAAC,EAAE,MAAM,CAAC;IAChB,KAAK,CAAC,EAAE,MAAM,CAAC;CAChB;AAED;;GAEG;AACH,eAAO,MAAM,mBAAmB,wEAgJ/B,CAAC;AAwEF;;GAEG;AACH,eAAO,MAAM,eAAe;;;;;;YAoC3B,CAAC"}

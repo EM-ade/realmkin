@@ -4,9 +4,9 @@ interface Booster {
   type: string;
   name: string;
   multiplier: number;
-  category: string;
+  category?: string;
   mints: string[];
-  detectedAt: Date;
+  detectedAt: Date | string;
 }
 
 interface MiningConsoleProps {
@@ -119,7 +119,7 @@ export function MiningConsole({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 bg-black/40 border border-[#f4c752]/30 rounded-2xl shadow-[0_0_30px_rgba(244,199,82,0.1)] relative overflow-hidden group">
+    <div className="flex flex-col items-center justify-center p-8 bg-black/40 border border-[#f4c752]/30 rounded-2xl shadow-[0_0_30px_rgba(244,199,82,0.1)] relative overflow-hidden group hover-border-glow animate-glow-pulse">
       {/* Background Glow Effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#f4c752]/5 to-transparent opacity-50 pointer-events-none" />
 
@@ -201,9 +201,9 @@ export function MiningConsole({
       <button
         onClick={onClaim}
         disabled={liveRewards <= 0 || isRewardsPaused}
-        className={`z-10 px-8 py-3 font-bold uppercase tracking-[0.2em] rounded-full transition-all active:scale-95 ${
+        className={`z-10 px-8 py-3 font-bold uppercase tracking-[0.2em] rounded-full transition-all active-scale ${
           liveRewards > 0
-            ? "bg-[#f4c752] text-black hover:scale-105 hover:shadow-[0_0_20px_rgba(244,199,82,0.4)]"
+            ? "bg-[#f4c752] text-black hover-scale hover:shadow-[0_0_20px_rgba(244,199,82,0.4)]"
             : "bg-gray-800 text-gray-500 cursor-not-allowed"
         }`}
       >

@@ -6,16 +6,16 @@ interface BoosterSlotProps {
         type: string;
         name: string;
         multiplier: number;
-        category: string;
+        category?: string;
         mints: string[];
-        detectedAt: Date;
+        detectedAt: Date | string;
     };
     onClick?: () => void;
 }
 
 export function BoosterSlot({ booster, onClick }: BoosterSlotProps) {
-    const getBoosterColor = (category: string) => {
-        switch (category) {
+    const getBoosterColor = (type: string) => {
+        switch (type) {
             case 'random_1_1':
                 return 'from-blue-500/20 to-blue-600';
             case 'custom_1_1':
@@ -27,8 +27,8 @@ export function BoosterSlot({ booster, onClick }: BoosterSlotProps) {
         }
     };
 
-    const getBoosterIcon = (category: string) => {
-        switch (category) {
+    const getBoosterIcon = (type: string) => {
+        switch (type) {
             case 'random_1_1':
                 return '🎲';
             case 'custom_1_1':
@@ -48,14 +48,14 @@ export function BoosterSlot({ booster, onClick }: BoosterSlotProps) {
             {booster ? (
                 <>
                     <div className="absolute inset-0">
-                        <div className={`w-full h-full bg-gradient-to-br ${getBoosterColor(booster.category)}`} />
+                        <div className={`w-full h-full bg-gradient-to-br ${getBoosterColor(booster.type)}`} />
                     </div>
                     <div className="z-10 text-center p-2">
                         <div className="flex items-center justify-center gap-1 mb-1">
-                            <span className="text-lg">{getBoosterIcon(booster.category)}</span>
+                            <span className="text-lg">{getBoosterIcon(booster.type)}</span>
                             <div className="text-[#f4c752] font-bold text-sm uppercase tracking-wider">{booster.name}</div>
                         </div>
-                        <div className="text-[#f7dca1]/60 text-xs">×{booster.multiplier}x Multiplier</div>
+                        <div className="text-[#f7dca1]/60 text-xs">×{booster.multiplier.toFixed(2)}x Multiplier</div>
                         <div className="text-[#f7dca1]/40 text-xs mt-1">
                             {booster.mints.length} NFT{booster.mints.length === 1 ? '' : 's'} detected
                         </div>
