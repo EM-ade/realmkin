@@ -607,4 +607,38 @@ export async function fetchTop3Miners(type: "rewards" | "staked" = "rewards"): P
   }
 }
 
+export async function fetchTop10Miners(type: "rewards" | "staked" = "rewards"): Promise<LeaderboardEntry[]> {
+  try {
+    const gatekeeperUrl = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
+    const response = await fetch(`${gatekeeperUrl}/api/leaderboard/mining/top10?type=${type}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch top 10 miners: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success || !data.top10) {
+      throw new Error("Invalid top 10 response");
+    }
+    
+    return data.top10.map((entry: any): LeaderboardEntry => ({
+      userId: entry.userId,
+      username: entry.username,
+      rank: entry.rank,
+      value: entry.value,
+      valueLabel: entry.valueLabel,
+      avatarUrl: entry.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${entry.username}`,
+      gamesPlayed: undefined,
+      breakdown: entry.breakdown,
+      lastUpdated: Date.now()
+    }));
+    
+  } catch (error) {
+    console.error("Failed to fetch top 10 miners:", error);
+    // Return empty array on error
+    return [];
+  }
+}
+
 export default leaderboardService;

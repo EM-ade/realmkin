@@ -48,11 +48,18 @@ export async function POST(request: NextRequest) {
           // This bypasses the time-based calculation entirely
           const storedPendingRewards = userRewards.pendingRewards || 0;
           
+          console.log(`📊 User ${userId}: pendingRewards=${storedPendingRewards}, weeklyRate=${userRewards.weeklyRate}, totalRealmkin=${userRewards.totalRealmkin}`);
+          
           if (storedPendingRewards > 0) {
             // Process the claim directly using a transaction (bypassing service validation)
             try {
               const claimAmount = Math.floor(storedPendingRewards * 100) / 100;
               const now = new Date();
+              
+              console.log(`💰 Processing force-claim for user ${userId}: ${claimAmount} MKIN`);
+              
+              // Variable to store the actual claim amount after transaction
+              let actualClaimAmount = 0;
               
               await db.runTransaction(async (transaction) => {
                 const userRewardsRef = db.collection("userRewards").doc(userId);
@@ -67,8 +74,12 @@ export async function POST(request: NextRequest) {
 
                 // Double-check pending rewards haven't changed
                 if (currentPendingRewards <= 0) {
+                  console.log(`⚠️ User ${userId}: Pending rewards became 0 during transaction`);
                   throw new Error("No pending rewards available");
                 }
+
+                // Use the CURRENT pending rewards amount from the transaction
+                actualClaimAmount = Math.floor(currentPendingRewards * 100) / 100;
 
                 // Create claim record
                 const claimRecordId = `${userId}_${now.getTime()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -76,7 +87,7 @@ export async function POST(request: NextRequest) {
                   id: claimRecordId,
                   userId,
                   walletAddress: userRewards.walletAddress || '',
-                  amount: claimAmount,
+                  amount: actualClaimAmount,
                   nftCount: userRewards.totalNFTs || 0,
                   claimedAt: now,
                   weeksClaimed: 0, // Force claim doesn't wait for weeks
@@ -87,14 +98,16 @@ export async function POST(request: NextRequest) {
 
                 // Update user rewards
                 transaction.update(userRewardsRef, {
-                  totalClaimed: (currentUserRewards?.totalClaimed || 0) + claimAmount,
-                  totalEarned: (currentUserRewards?.totalEarned || 0) + claimAmount,
-                  totalRealmkin: (currentUserRewards?.totalRealmkin || 0) + claimAmount,
+                  totalClaimed: (currentUserRewards?.totalClaimed || 0) + actualClaimAmount,
+                  totalEarned: (currentUserRewards?.totalEarned || 0) + actualClaimAmount,
+                  totalRealmkin: (currentUserRewards?.totalRealmkin || 0) + actualClaimAmount,
                   pendingRewards: 0,
                   lastClaimed: now,
                   lastCalculated: now,
                   updatedAt: now,
                 });
+                
+                console.log(`✅ User ${userId}: Force-claimed ${actualClaimAmount} MKIN. New totalRealmkin: ${(currentUserRewards?.totalRealmkin || 0) + actualClaimAmount}`);
               });
 
               // Update transaction history
@@ -102,13 +115,13 @@ export async function POST(request: NextRequest) {
                 userId,
                 walletAddress: userRewards.walletAddress,
                 type: "claim" as const,
-                amount: claimAmount,
-                description: `Force-claimed ${serverRewardsService.formatMKIN(claimAmount)} (bypassed weekly cadence)`
+                amount: actualClaimAmount,
+                description: `Force-claimed ${serverRewardsService.formatMKIN(actualClaimAmount)} (bypassed weekly cadence)`
               });
 
               return {
                 userId,
-                amount: claimAmount,
+                amount: actualClaimAmount,
                 weeksElapsed: 0,
                 success: true
               };
@@ -123,6 +136,7 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          console.log(`⏭️ User ${userId}: Skipped (no pending rewards)`);
           return { userId, amount: 0, success: false, reason: 'No pending rewards' };
 
         } catch (error) {

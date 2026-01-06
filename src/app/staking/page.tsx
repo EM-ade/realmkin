@@ -14,7 +14,7 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 // New Components
 import { useRealmkinStaking } from "@/hooks/useRealmkinStaking";
 import { MiningConsole } from "@/components/staking/MiningConsole";
-import { BoosterSlot } from "@/components/staking/BoosterSlot";
+import { ActiveBoosters } from "@/components/staking/ActiveBoosters";
 import { LeaderboardWidget } from "@/components/staking/LeaderboardWidget";
 import { StakingControls } from "@/components/staking/StakingControls";
 import { toast } from "react-hot-toast";
@@ -177,11 +177,11 @@ function StakingPage() {
           </p>
         </div>
 
-        {/* Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Main Grid Layout - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: User Stats & Global Stats */}
-          <div className="lg:col-span-3 space-y-6">
-            <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6">
+          <div className="lg:col-span-2 space-y-6 animate-fade-in-up">
+            <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6 hover-border-glow">
               <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] mb-4 font-medium">
                 Your Stats
               </h3>
@@ -212,7 +212,7 @@ function StakingPage() {
               </div>
             </div>
 
-            <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6">
+            <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6 hover-border-glow">
               <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] mb-4 font-medium">
                 Global Stats
               </h3>
@@ -227,39 +227,44 @@ function StakingPage() {
             </div>
           </div>
 
-          {/* Center Column: Mining Console & Actions */}
-          <div className="lg:col-span-6 space-y-8">
-            <MiningConsole
-              stakingRate={stakingUser?.totalMiningRate || 0}
-              unclaimedRewards={stakingUser?.pendingRewards || 0}
-              onClaim={handleClaim}
-              isRewardsPaused={isRewardsPaused}
-            />
+          {/* Center Column: Mining Console & Actions - Centered */}
+          <div className="lg:col-span-6 flex flex-col items-center space-y-8 animate-scale-in animation-delay-200">
+            <div className="w-full max-w-3xl">
+              <MiningConsole
+                stakingRate={stakingUser?.totalMiningRate || 0}
+                unclaimedRewards={stakingUser?.pendingRewards || 0}
+                onClaim={handleClaim}
+                isRewardsPaused={isRewardsPaused}
+                activeBoosters={stakingUser?.activeBoosters || []}
+                boosterMultiplier={stakingUser?.boosterMultiplier || 1.0}
+              />
+            </div>
 
-            <StakingControls
-              stakedAmount={stakingUser?.principal || 0}
-              walletBalance={walletBalance}
-              tokenSymbol="MKIN"
-              onStake={handleStake}
-              onUnstake={handleUnstake}
-            />
+            <div className="w-full max-w-3xl">
+              <StakingControls
+                stakedAmount={stakingUser?.principal || 0}
+                walletBalance={walletBalance}
+                tokenSymbol="MKIN"
+                onStake={handleStake}
+                onUnstake={handleUnstake}
+              />
+            </div>
           </div>
 
           {/* Right Column: Leaderboard & Boosters */}
-          <div className="lg:col-span-3 flex flex-col-reverse lg:flex-col gap-6">
+          <div className="lg:col-span-4 flex flex-col-reverse lg:flex-col gap-6 animate-slide-in-right animation-delay-400">
             <LeaderboardWidget type="staked" />
 
-            <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6">
-              <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] mb-4 font-medium">
-                Active Boosters
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {(stakingUser?.activeBoosters || []).map((booster: any) => (
-                  <BoosterSlot key={booster.id} booster={booster} />
-                ))}
-                <BoosterSlot /> {/* Empty slot for "Add Booster" */}
-              </div>
-            </div>
+            <ActiveBoosters
+              boosters={stakingUser?.activeBoosters || []}
+              isDetecting={stakingLoading}
+              onRefresh={async () => {
+                if (isConnected && uid) {
+                  await refreshStakingData();
+                }
+              }}
+              lastUpdated={stakingUser?.activeBoosters?.[0]?.detectedAt ? new Date(stakingUser.activeBoosters[0].detectedAt) : null}
+            />
           </div>
         </div>
       </main>

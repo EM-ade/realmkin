@@ -1,16 +1,10 @@
 import * as admin from "firebase-admin";
-admin.initializeApp();
 
-// Export existing functions (avoid duplicate re-exports)
-export { claimTokens } from "./claimTokens";
-export { enhancedClaimTokens, getClaimHistory } from "./enhancedClaimTokens";
-export * from "./unstake";
-export * from "./migrateStakes";
-export * from "./cors";
+// Initialize Firebase Admin SDK only once
+if (!admin.apps.length) {
+  admin.initializeApp();
+  console.log("🔥 Firebase Admin SDK initialized");
+}
 
-// Export new repair function
-export * from "./repairUserData";
-
-// Export services
-export * from "./services/claimingService";
-export { processStake, getStakingHistory } from "./services/stakingService";
+// Export only the claim history function (everything else migrated to gatekeeper)
+export { getClaimHistory } from "./claimHistory";

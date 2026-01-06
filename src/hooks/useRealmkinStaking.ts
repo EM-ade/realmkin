@@ -7,6 +7,7 @@ import {
   SystemProgram,
   PublicKey,
   LAMPORTS_PER_SOL,
+  Connection,
 } from "@solana/web3.js";
 import {
   getAssociatedTokenAddress,
@@ -14,22 +15,11 @@ import {
   getAccount,
 } from "@solana/spl-token";
 import { toast } from "react-hot-toast";
+import environmentConfig from "@/config/environment";
 
-// Token mint addresses - dynamically from env
-const MKIN_MINT_MAINNET = new PublicKey(
-  process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET ||
-    "BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA"
-);
-const MKIN_MINT_DEVNET = new PublicKey(
-  process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET ||
-    "CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm"
-);
-
-// Use devnet for testing, mainnet for production
-const MKIN_MINT =
-  process.env.NEXT_PUBLIC_SOLANA_NETWORK === "mainnet-beta"
-    ? MKIN_MINT_MAINNET
-    : MKIN_MINT_DEVNET;
+// Get network configuration
+const networkConfig = environmentConfig.networkConfig;
+const MKIN_MINT = new PublicKey(networkConfig.tokenMint);
 
 export function useRealmkinStaking() {
   const { isConnected, uid, isAuthenticating } = useWeb3();
@@ -426,5 +416,16 @@ export function useRealmkinStaking() {
     unstake,
     refresh: fetchData,
     refreshWalletBalance: fetchWalletBalance,
+    refreshBoosters: async () => {
+      if (!isConnected || !uid) return;
+      try {
+        await StakingAPI.refreshBoosters();
+        await fetchData();
+        toast.success("Boosters refreshed successfully");
+      } catch (error: any) {
+        toast.error("Failed to refresh boosters");
+        console.error("Booster refresh error:", error);
+      }
+    },
   };
 }

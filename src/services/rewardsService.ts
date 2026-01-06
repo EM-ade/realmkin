@@ -692,6 +692,7 @@ class RewardsService {
         weeklyRate: data.weeklyRate || 0,
         totalEarned: data.totalEarned || 0,
         totalClaimed: data.totalClaimed || 0,
+        totalRealmkin: data.totalRealmkin || 0, // ✅ FIX: Added fallback for totalRealmkin
         pendingRewards: data.pendingRewards || 0,
         lastCalculated: this.convertToValidDate(data.lastCalculated, now),
         lastClaimed: data.lastClaimed

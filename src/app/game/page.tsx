@@ -107,10 +107,8 @@ function GamePage() {
     },
   ];
 
-  // Load leaderboard data
+  // Load leaderboard data (using polling instead of real-time to reduce Firebase reads)
   useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-
     const loadLeaderboard = async () => {
       setIsLoadingLeaderboard(true);
       setLeaderboardError(null);
@@ -119,15 +117,14 @@ function GamePage() {
         // Initialize leaderboard (check for monthly reset)
         await leaderboardService.checkAndPerformMonthlyReset();
 
-        // Subscribe to real-time updates
-        unsubscribe = leaderboardService.subscribeToLeaderboard(
+        // Fetch leaderboard data (one-time read)
+        const entries = await leaderboardService.getLeaderboard(
           activeLeaderboardTab as "totalScore" | "streak",
-          100,
-          (entries) => {
-            setLeaderboardEntries(entries);
-            setIsLoadingLeaderboard(false);
-          }
+          100
         );
+        
+        setLeaderboardEntries(entries);
+        setIsLoadingLeaderboard(false);
       } catch (error) {
         console.error("Failed to load leaderboard:", error);
         setLeaderboardError("Failed to load leaderboard data");
@@ -157,10 +154,11 @@ function GamePage() {
 
     loadLeaderboard();
 
+    // Poll every 30 seconds instead of real-time listener
+    const interval = setInterval(loadLeaderboard, 30000);
+
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      clearInterval(interval);
     };
   }, [activeLeaderboardTab]);
 
