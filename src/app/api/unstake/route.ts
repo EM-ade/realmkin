@@ -163,9 +163,12 @@ export async function POST(request: NextRequest) {
         }
 
         const userPublicKey = new PublicKey(wallet);
-        const tokenMintPublicKey = new PublicKey(
-          process.env.NEXT_PUBLIC_TOKEN_MINT!
-        );
+        // Use the correct environment variable names based on network
+        const isDevnet = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet';
+        const tokenMintAddress = isDevnet
+          ? process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET || 'CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm'
+          : process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 'BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA';
+        const tokenMintPublicKey = new PublicKey(tokenMintAddress);
         const TOKEN_DECIMALS = parseInt(
           process.env.NEXT_PUBLIC_TOKEN_DECIMALS || "9"
         );

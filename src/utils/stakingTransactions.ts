@@ -13,7 +13,11 @@ import {
 
 const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 const STAKING_WALLET = process.env.NEXT_PUBLIC_STAKING_WALLET_ADDRESS || "";
-const TOKEN_MINT = process.env.NEXT_PUBLIC_TOKEN_MINT || "";
+// Use the correct environment variable names based on network
+const isDevnet = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet';
+const TOKEN_MINT = isDevnet
+  ? process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET || 'CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm'
+  : process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 'BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA';
 const TOKEN_DECIMALS = parseInt(process.env.NEXT_PUBLIC_TOKEN_DECIMALS || "6");
 
 export interface StakingTransactionResult {
