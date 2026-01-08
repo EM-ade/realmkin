@@ -214,7 +214,19 @@ class StakingService {
   async getTokenBalance(walletAddress: string): Promise<number> {
     try {
       const publicKey = new PublicKey(walletAddress);
-      const tokenMint = new PublicKey(process.env.NEXT_PUBLIC_TOKEN_MINT || "");
+      
+      // Use the correct environment variable names based on network
+      const isDevnet = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet';
+      const tokenMintAddress = isDevnet
+        ? process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET || 'CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm'
+        : process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 'BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA';
+      
+      if (!tokenMintAddress) {
+        console.error("Token mint address not configured");
+        return 0;
+      }
+      
+      const tokenMint = new PublicKey(tokenMintAddress);
 
       // Get token accounts for this wallet
       const tokenAccounts = await this.connection.getParsedTokenAccountsByOwner(

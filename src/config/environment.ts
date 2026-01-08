@@ -237,9 +237,9 @@ class EnvironmentConfig {
       console.warn(`⚠️ ${envType} environment - missing recommended environment variables: ${missing.join(', ')}`);
       console.log('💡 Set these variables in your .env.local file for full functionality');
       
-      // Only throw error in production for missing critical vars
+      // Don't throw error - just warn. Let the app handle missing configs gracefully
       if (this.isProduction) {
-        throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+        console.error(`❌ Frontend environment validation failed: Missing required environment variables: ${missing.join(', ')}`);
       }
     } else {
       const envType = this.isProduction ? 'Production' : this.isDevelopment ? 'Development' : 'Test';

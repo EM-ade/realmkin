@@ -84,7 +84,12 @@ export function StakingProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       try {
-        const tokenMint = new PublicKey(process.env.NEXT_PUBLIC_TOKEN_MINT || "");
+        // Use the correct environment variable names based on network
+        const isDevnet = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet';
+        const tokenMintAddress = isDevnet
+          ? process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET || 'CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm'
+          : process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 'BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA';
+        const tokenMint = new PublicKey(tokenMintAddress);
         const ata = await getAssociatedTokenAddress(tokenMint, new PublicKey(account));
         subId = connection.onAccountChange(
           ata,
