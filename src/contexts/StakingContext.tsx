@@ -79,7 +79,9 @@ export function StakingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isConnected || !account) return;
 
-    const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com", "confirmed");
+    // Use Helius RPC URL if available, fall back to standard RPC
+    const rpcUrl = process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+    const connection = new Connection(rpcUrl, "confirmed");
     let subId: number | null = null;
 
     (async () => {

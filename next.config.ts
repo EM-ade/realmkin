@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
       "shdw-drive.genesysgo.net",
       "cdn.helius.xyz",
       "metadata.degods.com",
+      // W3S IPFS gateways for Realmkin NFTs
+      "bafybeie7ne2t3wtfie6n5zrtglmsszw4xdhlg542xs5vu5ykxkk4xfshxi.ipfs.w3s.link",
+      "w3s.link",
     ],
     remotePatterns: [
       { protocol: "https", hostname: "*" },

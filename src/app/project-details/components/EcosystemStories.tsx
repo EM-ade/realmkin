@@ -55,7 +55,7 @@ export default function EcosystemStories({
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-center text-3xl md:text-5xl font-black uppercase tracking-tighter mb-24 text-white">
+        <h2 className="text-center text-3xl md:text-5xl font-black uppercase tracking-tighter mb-12 lg:mb-30 text-white">
           How It Works
         </h2>
 
@@ -172,7 +172,7 @@ export default function EcosystemStories({
           </div>
         </div>
 
-        <div className="flex justify-center flex-wrap gap-4 mt-12 lg:mt-24">
+        <div className="flex justify-center flex-wrap gap-4 mt-12 lg:mt-30">
           <button
             onClick={onOpenWhitepaper}
             className="px-8 py-4 rounded-full border border-[#DA9C2F] text-[#DA9C2F] uppercase tracking-widest hover:bg-[#DA9C2F] hover:text-black transition-all duration-300"

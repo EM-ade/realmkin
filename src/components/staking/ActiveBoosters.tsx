@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { BoosterSlot } from './BoosterSlot';
 import { toast } from 'react-hot-toast';
+import Image from 'next/image';
+
+interface NFTDetail {
+  mint: string;
+  name: string;
+  image: string | null;
+  symbol?: string;
+  description?: string;
+  attributes?: Array<{ trait_type: string; value: string }>;
+}
 
 interface Booster {
   type: string;
@@ -9,6 +19,7 @@ interface Booster {
   category?: string;
   mints: string[];
   detectedAt: Date | string;
+  nftDetails?: NFTDetail[];
 }
 
 interface ActiveBoostersProps {
@@ -18,6 +29,7 @@ interface ActiveBoostersProps {
   onRefresh?: () => void;
   onRetry?: () => void;
   lastUpdated?: Date | null;
+  showNFTImages?: boolean;
 }
 
 export function ActiveBoosters({
@@ -27,6 +39,7 @@ export function ActiveBoosters({
   onRefresh,
   onRetry,
   lastUpdated,
+  showNFTImages = true,
 }: ActiveBoostersProps) {
   const [expandedBooster, setExpandedBooster] = useState<string | null>(null);
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
@@ -264,6 +277,45 @@ export function ActiveBoosters({
                 {/* Expanded details */}
                 {expandedBooster === booster.type && (
                   <div className="mt-4 pt-4 border-t border-[#f4c752]/20">
+                    {/* NFT Images Gallery */}
+                    {showNFTImages && booster.nftDetails && booster.nftDetails.length > 0 && (
+                      <div className="mb-4">
+                        <div className="text-[#f7dca1]/60 text-xs mb-2 uppercase tracking-wider">Your Booster NFTs</div>
+                        <div className="flex flex-wrap gap-2">
+                          {booster.nftDetails.map((nft, nftIndex) => (
+                            <div 
+                              key={nft.mint || nftIndex} 
+                              className="relative group/nft"
+                              title={`${nft.name}\n${nft.mint.slice(0, 8)}...${nft.mint.slice(-6)}`}
+                            >
+                              {nft.image ? (
+                                <div className="w-16 h-16 rounded-lg overflow-hidden border border-[#f4c752]/30 hover:border-[#f4c752] transition-colors">
+                                  <Image
+                                    src={nft.image}
+                                    alt={nft.name}
+                                    width={64}
+                                    height={64}
+                                    className="object-cover w-full h-full"
+                                    loading="lazy"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-16 h-16 rounded-lg bg-black/60 border border-[#f4c752]/30 flex items-center justify-center">
+                                  <span className="text-[#f7dca1]/40 text-2xl">🖼️</span>
+                                </div>
+                              )}
+                              {/* NFT Name Tooltip */}
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover/nft:opacity-100 transition-opacity pointer-events-none z-20">
+                                <div className="bg-black/90 backdrop-blur-sm px-2 py-1 rounded text-xs text-white whitespace-nowrap max-w-[150px] truncate">
+                                  {nft.name}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <div className="text-[#f7dca1]/60 text-xs mb-1">Multiplier</div>
@@ -284,6 +336,26 @@ export function ActiveBoosters({
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Mint addresses (collapsed) */}
+                    {booster.mints.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-[#f4c752]/10">
+                        <div className="text-[#f7dca1]/40 text-xs mb-1">Mint Addresses</div>
+                        <div className="space-y-1">
+                          {booster.mints.slice(0, 3).map((mint, i) => (
+                            <div key={mint} className="text-[#f7dca1]/50 text-xs font-mono truncate">
+                              {mint.slice(0, 12)}...{mint.slice(-8)}
+                            </div>
+                          ))}
+                          {booster.mints.length > 3 && (
+                            <div className="text-[#f7dca1]/40 text-xs">
+                              +{booster.mints.length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="mt-3 text-center">
                       <button
                         onClick={(e) => {
