@@ -1293,10 +1293,7 @@ export default function WalletPage() {
                       ℹ️ Withdrawal Fees
                     </p>
                     <ul className="text-white/70 text-xs space-y-1">
-                      <li>• Under 5,000 MKIN: $0.50 in SOL</li>
-                      <li>• 5,000 - 7,499 MKIN: $1.00 in SOL</li>
-                      <li>• 7,500 - 9,999 MKIN: $2.00 in SOL</li>
-                      <li>• 10,000 MKIN or more: $5.00 in SOL</li>
+                      <li>• All withdrawals: $0.15 in SOL</li>
                       <li>• Withdraw any amount you have available</li>
                     </ul>
                   </div>
@@ -1374,8 +1371,7 @@ export default function WalletPage() {
                             const val = parseFloat(withdrawAmount);
                             if (val >= 10000) return "5.00";
                             if (val >= 7500) return "2.00";
-                            if (val >= 5000) return "1.00";
-                            return "0.50";
+                            return "0.15";
                           })()}{" "}
                           SOL
                         </p>

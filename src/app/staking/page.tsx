@@ -101,8 +101,8 @@ function StakingPage() {
 
   return (
     <div className="relative min-h-screen bg-[#050302] text-[#f4c752] font-sans selection:bg-[#f4c752] selection:text-black">
-      {/* Mobile Header */}
-      <header className="lg:hidden mx-auto w-full max-w-7xl px-6 pt-8 pb-4 flex items-center justify-between">
+      {/* Mobile Header - Hidden on desktop */}
+      <header className="flex lg:hidden mx-auto w-full max-w-7xl px-6 pt-8 pb-4 items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <div className="w-10 h-10 relative">
             <Image

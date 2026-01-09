@@ -45,7 +45,10 @@ class EnvironmentConfig {
 
   // Network Configuration
   get networkConfig() {
-    const isDevnet = this.isDevelopment || process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet';
+    // Check explicitly for network setting - don't assume production = mainnet
+    // Priority: NEXT_PUBLIC_SOLANA_NETWORK env var, then fall back to development mode check
+    const networkEnv = process.env.NEXT_PUBLIC_SOLANA_NETWORK?.toLowerCase();
+    const isDevnet = networkEnv === 'devnet' || (!networkEnv && this.isDevelopment);
     
     return {
       isDevnet,
