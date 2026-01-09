@@ -128,4 +128,45 @@ export const StakingAPI = {
     }
     return res.json();
   },
+
+  async getBoostersWithMetadata() {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${GATEKEEPER_URL}${apiConfig.endpoints.boosters}/with-metadata`, {
+      headers,
+      signal: AbortSignal.timeout(apiConfig.timeout),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to fetch boosters with metadata");
+    }
+    return res.json() as Promise<{
+      success: boolean;
+      data: {
+        activeBoosters: Array<{
+          type: string;
+          name: string;
+          multiplier: number;
+          category?: string;
+          mints: string[];
+          detectedAt: Date | string;
+          nftDetails?: Array<{
+            mint: string;
+            name: string;
+            image: string | null;
+            symbol?: string;
+            description?: string;
+            attributes?: Array<{ trait_type: string; value: string }>;
+          }>;
+        }>;
+        stackedMultiplier: number;
+        nftDetails: Array<{
+          mint: string;
+          name: string;
+          image: string | null;
+        }>;
+        boosterCount: number;
+        lastUpdated: string | null;
+      };
+    }>;
+  },
 };
