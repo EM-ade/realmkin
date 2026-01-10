@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BoosterSlot } from './BoosterSlot';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import { StakingAPI } from '@/services/gatekeeperStaking';
 
 interface NFTDetail {
   mint: string;
@@ -44,6 +45,58 @@ export function ActiveBoosters({
   const [expandedBooster, setExpandedBooster] = useState<string | null>(null);
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [enrichedBoosters, setEnrichedBoosters] = useState<Booster[]>([]);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+
+  // Fetch NFT metadata for boosters
+  const fetchBoosterMetadata = useCallback(async () => {
+    if (!showNFTImages || boosters.length === 0) {
+      setEnrichedBoosters(boosters);
+      return;
+    }
+
+    // Check if boosters already have nftDetails
+    const hasExistingDetails = boosters.some(b => b.nftDetails && b.nftDetails.length > 0 && b.nftDetails.some(d => d.image));
+    if (hasExistingDetails) {
+      setEnrichedBoosters(boosters);
+      return;
+    }
+
+    setIsLoadingMetadata(true);
+    try {
+      const response = await StakingAPI.getBoostersWithMetadata();
+      if (response.success && response.data.activeBoosters) {
+        // Merge the metadata with the existing boosters
+        const metadataMap = new Map(
+          response.data.activeBoosters.map(b => [b.type, b.nftDetails || []])
+        );
+        
+        const enriched = boosters.map(booster => ({
+          ...booster,
+          nftDetails: metadataMap.get(booster.type) || booster.nftDetails || [],
+        }));
+        
+        setEnrichedBoosters(enriched);
+        console.log('✅ Loaded NFT metadata for boosters:', enriched.length);
+      } else {
+        setEnrichedBoosters(boosters);
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to fetch booster metadata:', error);
+      // Fall back to boosters without images
+      setEnrichedBoosters(boosters);
+    } finally {
+      setIsLoadingMetadata(false);
+    }
+  }, [boosters, showNFTImages]);
+
+  // Fetch metadata when boosters change
+  useEffect(() => {
+    fetchBoosterMetadata();
+  }, [fetchBoosterMetadata]);
+
+  // Use enriched boosters for display
+  const displayBoosters = enrichedBoosters.length > 0 ? enrichedBoosters : boosters;
 
   // Calculate time since last update
   useEffect(() => {
@@ -84,6 +137,20 @@ export function ActiveBoosters({
       setIsRefreshing(true);
       try {
         await onRefresh();
+        // Also refetch metadata after refresh
+        if (showNFTImages) {
+          setIsLoadingMetadata(true);
+          try {
+            const response = await StakingAPI.getBoostersWithMetadata();
+            if (response.success && response.data.activeBoosters) {
+              setEnrichedBoosters(response.data.activeBoosters);
+            }
+          } catch (metadataError) {
+            console.warn('⚠️ Failed to fetch metadata after refresh:', metadataError);
+          } finally {
+            setIsLoadingMetadata(false);
+          }
+        }
         toast.success('Boosters refreshed successfully');
       } catch (error) {
         toast.error('Failed to refresh boosters');
@@ -134,9 +201,9 @@ export function ActiveBoosters({
   };
 
   const calculateTotalMultiplier = () => {
-    if (boosters.length === 0) return 1.0;
+    if (displayBoosters.length === 0) return 1.0;
     
-    return boosters.reduce((total: number, booster: Booster) => {
+    return displayBoosters.reduce((total: number, booster: Booster) => {
       return total * booster.multiplier;
     }, 1.0);
   };
@@ -221,7 +288,7 @@ export function ActiveBoosters({
         </button>
       </div>
 
-      {boosters.length === 0 ? (
+      {displayBoosters.length === 0 ? (
         <div className="text-center py-8">
           <div className="text-[#f7dca1]/60 text-sm mb-2">No active boosters detected</div>
           <div className="text-[#f7dca1]/40 text-xs">
@@ -232,7 +299,7 @@ export function ActiveBoosters({
         <>
           {/* Booster Cards */}
           <div className="space-y-2 mb-4">
-            {boosters.map((booster, index) => (
+            {displayBoosters.map((booster, index) => (
               <div
                 key={`${booster.type}_${index}`}
                 className="bg-black/60 border border-[#f4c752]/30 rounded-lg p-3 hover-lift hover-border-glow cursor-pointer animate-shimmer"
@@ -398,7 +465,7 @@ export function ActiveBoosters({
                 </div>
               </div>
               <div className="text-[#f7dca1]/40 text-xs mt-3 text-center">
-                From {boosters.length} active booster{boosters.length === 1 ? '' : 's'}
+                From {displayBoosters.length} active booster{displayBoosters.length === 1 ? '' : 's'}
               </div>
             </div>
           </div>
