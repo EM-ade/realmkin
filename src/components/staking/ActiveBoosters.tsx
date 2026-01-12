@@ -42,7 +42,8 @@ export function ActiveBoosters({
   lastUpdated,
   showNFTImages = true,
 }: ActiveBoostersProps) {
-  const [expandedBooster, setExpandedBooster] = useState<string | null>(null);
+  // Expanded by default - store which boosters are COLLAPSED instead
+  const [collapsedBoosters, setCollapsedBoosters] = useState<Set<string>>(new Set());
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [enrichedBoosters, setEnrichedBoosters] = useState<Booster[]>([]);
@@ -129,7 +130,15 @@ export function ActiveBoosters({
   }, [lastUpdated]);
 
   const handleBoosterClick = (boosterType: string) => {
-    setExpandedBooster(expandedBooster === boosterType ? null : boosterType);
+    setCollapsedBoosters(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(boosterType)) {
+        newSet.delete(boosterType); // Expand
+      } else {
+        newSet.add(boosterType); // Collapse
+      }
+      return newSet;
+    });
   };
 
   const handleRefresh = async () => {
@@ -341,8 +350,8 @@ export function ActiveBoosters({
                   </div>
                 </div>
                 
-                {/* Expanded details */}
-                {expandedBooster === booster.type && (
+                {/* Expanded details - shown by default unless collapsed */}
+                {!collapsedBoosters.has(booster.type) && (
                   <div className="mt-4 pt-4 border-t border-[#f4c752]/20">
                     {/* NFT Images Gallery */}
                     {showNFTImages && booster.nftDetails && booster.nftDetails.length > 0 && (
@@ -427,11 +436,11 @@ export function ActiveBoosters({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setExpandedBooster(null);
+                          handleBoosterClick(booster.type);
                         }}
                         className="text-[#f7dca1]/40 hover:text-[#f4c752] text-xs uppercase tracking-wider transition-colors"
                       >
-                        Close Details
+                        Collapse Details
                       </button>
                     </div>
                   </div>
