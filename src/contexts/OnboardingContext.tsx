@@ -71,20 +71,26 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
       try {
         if (user?.uid) {
           const progressKey = `onboarding_progress_${user.uid}`;
+          const completedKey = `onboarding_completed_${user.uid}`;
           const savedStep = localStorage.getItem(progressKey);
-          if (savedStep === "complete") {
+          const hasCompleted = localStorage.getItem(completedKey) === "true";
+          
+          // If user has already completed onboarding, never show it again
+          if (hasCompleted || savedStep === "complete") {
             setIsOnboarding(false);
             setCurrentStep("complete");
             // Clear incomplete setup flag when onboarding is complete
             localStorage.removeItem("realmkin_incomplete_setup");
             return;
           }
+          
           if (isNewUser) {
             setIsOnboarding(true);
             setCurrentStep("welcome");
             setStartingStepState("welcome");
             return;
           }
+          
           const hasWallet = !!userData?.walletAddress;
           const hasUsername = !!userData?.username;
           let unameOk: boolean | null = null;
@@ -101,19 +107,21 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
           }
           setUsernameMappingValid(unameOk);
           setWalletMappingValid(walletOk);
-          if (hasWallet && hasUsername && discordLinked && unameOk === true && walletOk === true) {
+          
+          // If user has basic setup (wallet and username), mark onboarding as complete
+          // Discord is optional and shouldn't block completion
+          if (hasWallet && hasUsername && unameOk !== false && walletOk !== false) {
             setIsOnboarding(false);
             setCurrentStep("complete");
+            // Mark onboarding as permanently completed
+            localStorage.setItem(completedKey, "true");
+            localStorage.setItem(progressKey, "complete");
             // Clear incomplete setup flag when onboarding is complete
             localStorage.removeItem("realmkin_incomplete_setup");
             return;
           }
-          if (hasWallet && hasUsername && !discordLinked && unameOk !== false && walletOk !== false) {
-            setIsOnboarding(true);
-            setCurrentStep("discord");
-            setStartingStepState("discord");
-            return;
-          }
+          
+          // Only show onboarding if user is missing critical setup
           if (walletOk === false || !hasWallet) {
             setIsOnboarding(true);
             setCurrentStep("wallet");
@@ -126,8 +134,12 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
             setStartingStepState("username");
             return;
           }
+          
+          // Fallback: user has everything, mark complete
           setIsOnboarding(false);
           setCurrentStep("complete");
+          localStorage.setItem(completedKey, "true");
+          localStorage.setItem(progressKey, "complete");
           // Clear incomplete setup flag when onboarding is complete
           localStorage.removeItem("realmkin_incomplete_setup");
         }
@@ -161,11 +173,16 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
       setCurrentStep(STEPS[currentIndex + 1]);
     } else {
       setCurrentStep("complete");
+      // Mark onboarding as permanently completed
+      if (user?.uid) {
+        const completedKey = `onboarding_completed_${user.uid}`;
+        localStorage.setItem(completedKey, "true");
+      }
       // Clear onboarding flag to allow auto-login
       localStorage.removeItem('onboarding_active');
       setTimeout(() => setIsOnboarding(false), 1000);
     }
-  }, []);
+  }, [user?.uid]);
 
   const skipOnboarding = useCallback(() => {
     // Check if user has incomplete setup before allowing skip
@@ -179,9 +196,14 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
 
     setIsOnboarding(false);
     setCurrentStep("complete");
+    // Mark onboarding as permanently completed
+    if (user?.uid) {
+      const completedKey = `onboarding_completed_${user.uid}`;
+      localStorage.setItem(completedKey, "true");
+    }
     // Clear onboarding flag to allow auto-login
     localStorage.removeItem('onboarding_active');
-  }, []);
+  }, [user?.uid]);
 
   const resetOnboarding = useCallback(() => {
     setCurrentStep("welcome");
