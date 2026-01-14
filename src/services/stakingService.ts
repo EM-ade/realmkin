@@ -36,6 +36,8 @@ class StakingService {
 
   constructor() {
     const rpcUrl =
+      process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL ||
+      process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL ||
       process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
       "https://api.mainnet-beta.solana.com";
     this.connection = new Connection(rpcUrl, "confirmed");
