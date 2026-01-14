@@ -166,6 +166,17 @@ export default function SolanaWalletProvider({ children }: Props) {
 
   // Use configured RPC URL (prioritizing Helius)
   const endpoint = networkConfig.rpcUrl;
+  
+  // Log RPC configuration for debugging
+  useEffect(() => {
+    console.log('[Realmkin] Solana RPC Configuration:', {
+      network: networkConfig.cluster,
+      endpoint: endpoint.includes('api-key=') 
+        ? endpoint.replace(/api-key=([^&]+)/, 'api-key=***') // Hide API key
+        : endpoint,
+      isHelius: endpoint.includes('helius-rpc.com'),
+    });
+  }, [endpoint, networkConfig.cluster]);
 
   // Memoize wallet adapter instances with priority order
   // Note: PhantomWalletAdapter checks window.phantom.solana first, which helps avoid Brave Wallet conflicts

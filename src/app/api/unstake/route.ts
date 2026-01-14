@@ -135,7 +135,9 @@ export async function POST(request: NextRequest) {
 
         // Create transfer transaction from treasury wallet
         const connection = new Connection(
-          process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+          process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL ||
+            process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL ||
+            process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
             "https://api.mainnet-beta.solana.com",
           "confirmed"
         );

@@ -11,7 +11,11 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
-const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+const RPC_URL = 
+  process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL || 
+  process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL || 
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 
+  "https://api.mainnet-beta.solana.com";
 const STAKING_WALLET = process.env.NEXT_PUBLIC_STAKING_WALLET_ADDRESS || "";
 // Use the correct environment variable names based on network
 const isDevnet = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet';

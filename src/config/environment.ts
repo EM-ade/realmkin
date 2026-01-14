@@ -58,8 +58,8 @@ class EnvironmentConfig {
         : process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 'BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA',
       // Prioritize Helius RPC endpoints, fallback to public endpoints
       rpcUrl: isDevnet
-        ? process.env.NEXT_PUBLIC_HELIUS_DEVNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL || 'https://api.devnet.solana.com'
-        : process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com',
+        ? process.env.NEXT_PUBLIC_HELIUS_DEVNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com'
+        : process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
       heliusUrl: isDevnet
         ? process.env.NEXT_PUBLIC_HELIUS_DEVNET_RPC_URL
         : process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL,

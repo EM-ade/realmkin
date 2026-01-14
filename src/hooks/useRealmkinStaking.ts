@@ -149,7 +149,23 @@ export function useRealmkinStaking() {
       );
 
       // Get latest blockhash
-      const latestBlockhash = await connection.getLatestBlockhash();
+      let latestBlockhash;
+      try {
+        latestBlockhash = await connection.getLatestBlockhash();
+      } catch (rpcError: any) {
+        console.error("RPC Error getting blockhash:", rpcError);
+        
+        // Check for specific RPC errors
+        if (rpcError.message?.includes("403") || rpcError.message?.includes("forbidden")) {
+          throw new Error(
+            "RPC endpoint rate limit reached. Please try again in a few moments. " +
+            "If this persists, contact support."
+          );
+        }
+        
+        throw new Error(`RPC connection failed: ${rpcError.message}`);
+      }
+      
       transaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
       transaction.recentBlockhash = latestBlockhash.blockhash;
       transaction.feePayer = publicKey;
@@ -159,6 +175,16 @@ export function useRealmkinStaking() {
       return signature;
     } catch (e: any) {
       console.error("Fee Payment Failed:", e);
+      
+      // Provide user-friendly error messages
+      if (e.message?.includes("RPC")) {
+        throw e; // Already formatted above
+      }
+      
+      if (e.message?.includes("User rejected")) {
+        throw new Error("Transaction cancelled");
+      }
+      
       throw new Error(`Fee payment failed: ${e.message}`);
     }
   };
@@ -262,7 +288,23 @@ export function useRealmkinStaking() {
         );
 
       // 3. Get latest blockhash
-      const latestBlockhash = await connection.getLatestBlockhash();
+      let latestBlockhash;
+      try {
+        latestBlockhash = await connection.getLatestBlockhash();
+      } catch (rpcError: any) {
+        console.error("RPC Error getting blockhash:", rpcError);
+        
+        // Check for specific RPC errors
+        if (rpcError.message?.includes("403") || rpcError.message?.includes("forbidden")) {
+          throw new Error(
+            "RPC endpoint rate limit reached. Please try again in a few moments. " +
+            "If this persists, contact support."
+          );
+        }
+        
+        throw new Error(`RPC connection failed: ${rpcError.message}`);
+      }
+      
       transaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
       transaction.recentBlockhash = latestBlockhash.blockhash;
       transaction.feePayer = publicKey;
