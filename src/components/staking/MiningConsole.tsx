@@ -32,77 +32,72 @@ export function MiningConsole({
   activeBoosters = [],
   boosterMultiplier = 1.0,
 }: MiningConsoleProps) {
-  const [liveRewards, setLiveRewards] = useState(unclaimedRewards);
-  const [actualRate, setActualRate] = useState(0); // Rate derived from server deltas
+  // The displayed reward value - this should NEVER decrease (except after claiming)
+  const [displayedRewards, setDisplayedRewards] = useState(unclaimedRewards);
+  const [actualRate, setActualRate] = useState(stakingRate);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track the last server value to detect claims (when server value drops significantly)
+  const lastServerValueRef = useRef(unclaimedRewards);
 
-  // Store previous server values to calculate actual rate
-  const prevServerValueRef = useRef(unclaimedRewards);
-  const prevServerTimeRef = useRef(Date.now());
-
-  // Derive actual rate from server data changes
+  // Sync with server data - only update if server value is HIGHER or if a claim happened
   useEffect(() => {
-    const now = Date.now();
-
-    // Update state
-    setLiveRewards(unclaimedRewards);
-
-    // PRIORITIZE explicitly provided rate from backend
+    // Update rate from server
     if (stakingRate > 0) {
       setActualRate(stakingRate);
-    } else {
-      // Fallback: Calculate actual rate from server delta
-      const serverValueDelta = unclaimedRewards - prevServerValueRef.current;
-      const serverTimeDelta = (now - prevServerTimeRef.current) / 1000;
-
-      let derivedRate = 0;
-      if (serverTimeDelta > 0 && serverValueDelta >= 0) {
-        derivedRate = serverValueDelta / serverTimeDelta;
-      }
-      setActualRate(derivedRate);
     }
+    
+    // Detect if a claim happened (server value dropped significantly)
+    const serverDropped = unclaimedRewards < lastServerValueRef.current * 0.5;
+    const isClaimReset = serverDropped && lastServerValueRef.current > 0;
+    
+    if (isClaimReset) {
+      // User claimed rewards - reset to new server value
+      setDisplayedRewards(unclaimedRewards);
+    } else if (unclaimedRewards > displayedRewards) {
+      // Server is ahead - snap to server value (catches up any drift)
+      setDisplayedRewards(unclaimedRewards);
+    }
+    // If server value is LOWER than displayed (but not a claim), we keep our higher displayed value
+    // This prevents visual resets due to timing/calculation differences
+    
+    // Track for next comparison
+    lastServerValueRef.current = unclaimedRewards;
+    
+  }, [unclaimedRewards, stakingRate, displayedRewards]);
 
-    // Store for next comparison (still needed for fallback)
-    prevServerValueRef.current = unclaimedRewards;
-    prevServerTimeRef.current = now;
-  }, [unclaimedRewards, stakingRate]);
+  // The live rewards value shown to user
+  const liveRewards = displayedRewards;
 
-  // Live counter - increments every second using ACTUAL rate from server
+  // Live counter - increments displayedRewards every second using rate from server
+  // This creates smooth visual counting that never resets backward
   useEffect(() => {
-    if (actualRate <= 0) {
-      return;
-    }
-
     // Clear any existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
 
-    // Update once per second using actual derived rate
+    // Don't start counting if no rate or rewards are paused
+    if (actualRate <= 0 || isRewardsPaused) {
+      return;
+    }
+
+    // Update once per second using the server-provided rate
     const updateInterval = 1000; // 1 second
-    const incrementPerUpdate = actualRate; // Actual rate from server deltas
+    const incrementPerUpdate = actualRate;
 
     intervalRef.current = setInterval(() => {
-      setLiveRewards((prev) => {
-        const newValue = prev + incrementPerUpdate;
-        // Only log occasionally to reduce spam
-        if (Math.random() < 0.1) {
-          console.log(
-            `⏱️ Counter tick: ${prev.toFixed(12)} → ${newValue.toFixed(
-              12
-            )} (+${incrementPerUpdate.toFixed(15)}/sec)`
-          );
-        }
-        return newValue;
-      });
+      setDisplayedRewards((prev) => prev + incrementPerUpdate);
     }, updateInterval);
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [actualRate]);
+  }, [actualRate, isRewardsPaused]);
 
   // Format rewards with appropriate decimals
   const formatRewards = (value: number) => {
