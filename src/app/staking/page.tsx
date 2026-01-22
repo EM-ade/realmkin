@@ -200,7 +200,7 @@ function StakingPage() {
                   </div>
                   <div className="text-xl font-bold text-[#f4c752]">
                     {(
-                      (stakingUser?.totalMiningRate || 0) *
+                      (stakingUser?.displayMiningRate || stakingUser?.totalMiningRate || 0) *
                       60 *
                       60 *
                       24 *
@@ -231,7 +231,7 @@ function StakingPage() {
           <div className="lg:col-span-6 flex flex-col items-center space-y-8 animate-scale-in animation-delay-200">
             <div className="w-full max-w-3xl">
               <MiningConsole
-                stakingRate={stakingUser?.totalMiningRate || 0}
+                stakingRate={stakingUser?.displayMiningRate || stakingUser?.totalMiningRate || 0}
                 unclaimedRewards={stakingUser?.pendingRewards || 0}
                 onClaim={handleClaim}
                 isRewardsPaused={isRewardsPaused}
