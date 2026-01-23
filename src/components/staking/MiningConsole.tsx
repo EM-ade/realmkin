@@ -99,12 +99,13 @@ export function MiningConsole({
     };
   }, [actualRate, isRewardsPaused]);
 
-  // Format rewards with appropriate decimals
+  // Format rewards with high precision to show live counting
+  // Users with small stakes need more decimals to see movement
   const formatRewards = (value: number) => {
-    if (value < 0.000001) return value.toFixed(12);
-    if (value < 0.001) return value.toFixed(9);
-    if (value < 1) return value.toFixed(6);
-    return value.toFixed(4);
+    if (value < 0.0001) return value.toFixed(15);
+    if (value < 0.01) return value.toFixed(12);
+    if (value < 1) return value.toFixed(9);
+    return value.toFixed(6);
   };
 
   const formatRate = (value: number) => {
