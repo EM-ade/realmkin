@@ -130,7 +130,7 @@ export function useRealmkinStaking() {
     } catch (e) {
       console.warn("Failed to fetch dynamic fee, using fallback:", e);
       // Fallback: assume SOL = $150
-      return 2.0 / 150; // ~0.0133 SOL
+      return 0.1 / 150; // ~0.0133 SOL
     }
   };
 
