@@ -104,7 +104,7 @@ export default function ComingSoonTemplate({ current }: ComingSoonTemplateProps)
       <div className="absolute inset-0 bg-gradient-to-b from-[#050302]/30 via-transparent to-[#050302]" aria-hidden="true" />
 
       {/* Mobile Header */}
-      <header className="lg:hidden relative z-10 mx-auto w-full max-w-6xl px-6 pt-10 lg:px-10">
+      {/* <header className="lg:hidden relative z-10 mx-auto w-full max-w-6xl px-6 pt-10 lg:px-10">
         <div className="flex flex-row items-center justify-between gap-3">
           <Link href="/" className="flex items-center space-x-3">
             <div className="w-14 h-14 animate-float">
@@ -119,10 +119,10 @@ export default function ComingSoonTemplate({ current }: ComingSoonTemplateProps)
             <h1 className="font-bold text-lg uppercase tracking-wider gold-gradient-text">
               THE REALMKIN
             </h1>
-          </Link>
+          </Link> */}
 
           {/* Mobile menu button - always visible */}
-          <button
+          {/* <button
             onClick={() => setShowMobileActions((value) => !value)}
             className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
             aria-expanded={showMobileActions}
@@ -131,7 +131,7 @@ export default function ComingSoonTemplate({ current }: ComingSoonTemplateProps)
             <span className={`text-xs transition-transform ${showMobileActions ? "rotate-180" : ""}`}>⋯</span>
           </button>
         </div>
-      </header>
+      </header> */}
 
 
 

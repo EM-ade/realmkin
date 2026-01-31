@@ -199,8 +199,8 @@ function GamePage() {
       {!isMobile && <ConstellationBackground />}
 
 
-      <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20">
-        <div className="flex items-center space-x-3">
+      {/* <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20"> */}
+        {/* <div className="flex items-center space-x-3">
           <div className="w-14 h-14 animate-float">
             <Image
               src="/realmkin-logo.png"
@@ -214,10 +214,10 @@ function GamePage() {
           <h1 className="font-bold text-lg uppercase tracking-wider gold-gradient-text">
             THE REALMKIN
           </h1>
-        </div>
+        </div> */}
 
         {/* Mobile menu button - always visible */}
-        <div className="w-auto flex-shrink-0">
+        {/* <div className="w-auto flex-shrink-0">
           <button
             onClick={() => setShowMobileActions((v) => !v)}
             className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
@@ -226,8 +226,8 @@ function GamePage() {
           >
             <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
           </button>
-        </div>
-      </header>
+        </div> */}
+      {/* </header> */}
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 pb-16 pt-10 lg:px-10">
         <section className="relative overflow-hidden rounded-3xl border border-[#DA9C2F]/25 bg-[#0B0B09]/80 px-6 py-8 shadow-[0_35px_80px_rgba(0,0,0,0.55)] backdrop-blur-sm md:px-10 md:py-12">

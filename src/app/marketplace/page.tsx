@@ -21,7 +21,7 @@ export default function MarketplaceComingSoonPage() {
   return (
     <main className="min-h-screen bg-[var(--background)]">
       {/* Mobile Header - mirrors other pages */}
-      <header className="lg:hidden flex items-center justify-between px-4 py-3 relative z-20">
+      {/* <header className="lg:hidden flex items-center justify-between px-4 py-3 relative z-20">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10">
             <Image
@@ -45,7 +45,7 @@ export default function MarketplaceComingSoonPage() {
         >
           <span className={`text-xs transition-transform ${showMobileActions ? 'rotate-180' : ''}`}>⋯</span>
         </button>
-      </header>
+      </header> */}
 
       <HeroComingSoon />
       <FeatureHighlights />
