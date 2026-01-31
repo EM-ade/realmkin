@@ -117,7 +117,7 @@ export function useRealmkinStaking() {
       }
 
       // Calculate SOL needed for $2 USD
-      const targetUSD = 2.0;
+      const targetUSD = 0.1;
       const feeInSol = targetUSD / solPrice;
 
       console.log(
