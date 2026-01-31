@@ -304,8 +304,8 @@ export default function MyNFTPage() {
         {!isMobile && <EtherealParticles />}
         {!isMobile && <ConstellationBackground />}
 
-        {/* Mobile Header */}
-        <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20">
+        Mobile Header
+        {/* <header className="lg:hidden flex flex-row justify-between items-center gap-3 p-4 md:p-6 animate-fade-in relative z-20">
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14 animate-float">
               <Image
@@ -320,10 +320,10 @@ export default function MyNFTPage() {
             <h1 className="font-bold text-lg uppercase tracking-wider gold-gradient-text">
               THE REALMKIN
             </h1>
-          </div>
+          </div> */}
 
           {/* Mobile menu button - always visible */}
-          <div className="w-auto flex-shrink-0">
+          {/* <div className="w-auto flex-shrink-0">
             <button
               onClick={() => setShowMobileActions((v) => !v)}
               className="flex items-center gap-2 bg-[#0B0B09] px-3 py-2 rounded-lg border border-[#404040] text-[#DA9C2F] font-medium text-sm hover:bg-[#1a1a1a] transition-colors"
@@ -337,7 +337,7 @@ export default function MyNFTPage() {
               </span>
             </button>
           </div>
-        </header>
+        </header> */}
 
         {/* Mobile Menu Modal */}
         <MobileMenuOverlay

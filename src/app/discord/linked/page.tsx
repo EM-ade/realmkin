@@ -28,8 +28,12 @@ function DiscordLinkedContent() {
   const discordId = sp?.get("discordId") ?? null;
   const walletAddressFromParams = sp?.get("wallet") ?? null;
   const firebaseTokenFromParams = sp?.get("firebase_token") ?? null;
+  // Use Discord Bot URL for Discord-related operations (linking, verification)
+  // Separate from backend-api which handles staking/rewards
   const gatekeeperBase =
-    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
+    process.env.NEXT_PUBLIC_DISCORD_BOT_URL || 
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE || 
+    "https://gatekeeper-bmvu.onrender.com";
   const inviteUrl = process.env.NEXT_PUBLIC_DISCORD_URL || "";
 
   const [phase, setPhase] = useState<Phase>("idle");
