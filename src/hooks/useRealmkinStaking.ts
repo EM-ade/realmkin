@@ -129,8 +129,8 @@ export function useRealmkinStaking() {
       return feeInSol;
     } catch (e) {
       console.warn("Failed to fetch dynamic fee, using fallback:", e);
-      // Fallback: assume SOL = $150
-      return 0.1 / 150; // ~0.0133 SOL
+      // Fallback: assume SOL = $100
+      return 0.1 / 100; // ~0.001 SOL
     }
   };
 
@@ -383,7 +383,7 @@ export function useRealmkinStaking() {
       toast.loading("Calculating fee...", { id: "claim-fee" });
       const feeAmount = await fetchDynamicFee();
 
-      toast.loading(`Paying $2 fee (${feeAmount.toFixed(4)} SOL)...`, {
+      toast.loading(`Paying $0.10 fee (${feeAmount.toFixed(4)} SOL)...`, {
         id: "claim-fee",
       });
       const signature = await paySolFee(
@@ -419,7 +419,7 @@ export function useRealmkinStaking() {
       toast.loading("Calculating fee...", { id: "unstake-fee" });
       const feeAmount = await fetchDynamicFee();
 
-      toast.loading(`Paying $2 fee (${feeAmount.toFixed(4)} SOL)...`, {
+      toast.loading(`Paying $0.10 fee (${feeAmount.toFixed(4)} SOL)...`, {
         id: "unstake-fee",
       });
       const signature = await paySolFee(
