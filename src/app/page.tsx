@@ -246,7 +246,7 @@ function Home() {
               iconSrc="/wallet.png"
               label="Wallet"
               stat={`${balanceDisplay} $`}
-              href="/wallet"
+              href="/account"
             />
             <QuickAccessCard
               icon="⚔️"
