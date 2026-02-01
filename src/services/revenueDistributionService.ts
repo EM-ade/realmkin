@@ -48,10 +48,13 @@ export interface RevenueClaimHistory {
 export interface RevenueClaimResponse {
   success: boolean;
   amountSol?: number;
+  amountEmpire?: number;
+  amountMkin?: number;
   amountUsd?: number;
   payoutSignature?: string;
   feeSignature?: string;
   timestamp?: string;
+  accountsCreated?: string[];
   error?: string;
 }
 

@@ -51,7 +51,7 @@ async function testUsernameAvailability() {
 
   for (const username of testUsernames) {
     const doc = await db.collection('usernames').doc(username.toLowerCase()).get();
-    const exists = doc.exists();
+    const exists = doc.exists;
     console.log(`  ${username}: ${exists ? '❌ Taken' : '✓ Available'}`);
   }
 }

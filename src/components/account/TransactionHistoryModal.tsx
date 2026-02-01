@@ -269,7 +269,7 @@ export default function TransactionHistoryModal({
                   <tr
                     key={tx.id}
                     className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                    onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
+                    onClick={() => setExpandedTx(expandedTx === tx.id ? null : (tx.id || null))}
                   >
                     {/* Type */}
                     <td className="px-8 py-5">

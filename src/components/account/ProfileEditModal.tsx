@@ -56,7 +56,7 @@ export default function ProfileEditModal({
         const userNFTs = nftCollection?.nfts || [];
         setNfts(
           userNFTs.map((nft) => ({
-            mint: nft.mint,
+            mint: nft.id, // NFTMetadata uses 'id' instead of 'mint'
             name: nft.name || "Unnamed NFT",
             image: nft.image || "/realmkin-logo.png",
           }))
