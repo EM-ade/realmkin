@@ -11,6 +11,11 @@
 
 import { getAuth } from "firebase/auth";
 import { Transaction, Connection, VersionedTransaction } from "@solana/web3.js";
+import {
+  createPendingTransaction,
+  completeTransaction,
+  failTransaction,
+} from "./transactionHistoryService";
 
 const GATEKEEPER_URL = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "https://gatekeeper-bmvu.onrender.com";
 
@@ -91,17 +96,34 @@ export async function completeWithdrawal(
   amount: number,
   walletAddress: string
 ): Promise<CompleteWithdrawalResponse> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    return {
+      success: false,
+      error: "User must be authenticated",
+    };
+  }
+
+  // Create pending transaction log
+  let transactionId: string | null = null;
   try {
-    const auth = getAuth();
-    const user = auth.currentUser;
+    transactionId = await createPendingTransaction(user.uid, {
+      type: "withdrawal",
+      amount: Math.floor(amount),
+      token: "MKIN",
+      recipient: walletAddress,
+      metadata: {
+        feeSignature,
+      },
+    });
+  } catch (logError) {
+    console.error("Error logging transaction:", logError);
+    // Continue with withdrawal even if logging fails
+  }
 
-    if (!user) {
-      return {
-        success: false,
-        error: "User must be authenticated",
-      };
-    }
-
+  try {
     const token = await user.getIdToken();
 
     const response = await fetch(`${GATEKEEPER_URL}/api/withdraw/complete`, {
@@ -120,6 +142,11 @@ export async function completeWithdrawal(
     const data = await response.json();
 
     if (!response.ok) {
+      // Log failed transaction
+      if (transactionId) {
+        await failTransaction(user.uid, transactionId, new Error(data.error || `HTTP error! status: ${response.status}`));
+      }
+
       return {
         success: false,
         error: data.error || `HTTP error! status: ${response.status}`,
@@ -128,9 +155,22 @@ export async function completeWithdrawal(
       };
     }
 
+    // Log successful transaction
+    if (transactionId && data.txHash) {
+      await completeTransaction(user.uid, transactionId, data.txHash, {
+        newBalance: data.newBalance,
+      });
+    }
+
     return data;
   } catch (error) {
     console.error("Error completing withdrawal:", error);
+    
+    // Log failed transaction
+    if (transactionId) {
+      await failTransaction(user.uid, transactionId, error);
+    }
+
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",

@@ -641,4 +641,43 @@ export async function fetchTop10Miners(type: "rewards" | "staked" = "rewards"): 
   }
 }
 
+/**
+ * Fetch top secondary market buyers (users with most NFTs from secondary market)
+ */
+export async function fetchTopSecondaryMarketBuyers(limit: number = 3): Promise<
+  Array<{
+    rank: number;
+    username: string;
+    nftCount: number;
+    avatarUrl?: string;
+  }>
+> {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
+    "https://gatekeeper-bmvu.onrender.com";
+
+  try {
+    const response = await fetch(
+      `${baseUrl}/api/leaderboard/secondary-market?limit=${limit}`
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch secondary market leaderboard:", response.statusText);
+      return [];
+    }
+
+    const data = await response.json();
+
+    if (!data.leaderboard || !Array.isArray(data.leaderboard)) {
+      console.error("Invalid leaderboard data:", data);
+      return [];
+    }
+
+    return data.leaderboard;
+  } catch (error) {
+    console.error("Error fetching secondary market leaderboard:", error);
+    return [];
+  }
+}
+
 export default leaderboardService;
