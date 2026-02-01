@@ -117,7 +117,7 @@ export async function updateUserProfile(
     };
 
     if (updates.username) {
-      userUpdates.username = updates.username.toLowerCase().trim();
+      userUpdates.username = updates.username.trim(); // Preserve original case for display
     }
 
     if (updates.avatarUrl !== undefined) {
