@@ -248,7 +248,7 @@ export async function calculateClaimFee(
   walletAddress: string
 ): Promise<ClaimFeeEstimate> {
   try {
-    const accountCreationFeeSOL = 0.00203928; // Rent-exempt minimum per account
+    const TOKEN_ACCOUNT_CREATION_FEE_USD = 0.10; // $0.10 per account (testing fee)
     const solPrice = await getSolPrice();
 
     const accounts = await checkTokenAccounts(walletAddress);
@@ -257,7 +257,7 @@ export async function calculateClaimFee(
     if (!accounts.empire.exists) accountCreationCount++;
     if (!accounts.mkin.exists) accountCreationCount++;
 
-    const accountCreationFeeUsd = accountCreationCount * accountCreationFeeSOL * solPrice;
+    const accountCreationFeeUsd = accountCreationCount * TOKEN_ACCOUNT_CREATION_FEE_USD;
     const totalFeeUsd = CLAIM_FEE_USD + accountCreationFeeUsd;
     const totalFeeSol = totalFeeUsd / solPrice;
 

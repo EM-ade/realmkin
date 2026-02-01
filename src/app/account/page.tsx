@@ -149,11 +149,13 @@ export default function AccountPage() {
       setRevenueLoading(true);
       try {
         const eligibility = await checkEligibility();
+        console.log('💰 Revenue Eligibility Response:', eligibility);
         setRevenueEligibility(eligibility);
         
         // Get claim fee estimate if eligible
         if (eligibility.eligible) {
           const feeEstimate = await calculateClaimFee(account);
+          console.log('💵 Claim Fee Estimate:', feeEstimate);
           setClaimFeeEstimate(feeEstimate);
         }
       } catch (error) {
@@ -174,8 +176,8 @@ export default function AccountPage() {
 
       setLeaderboardLoading(true);
       try {
-        // Fetch top secondary market buyers
-        const entries = await fetchTopSecondaryMarketBuyers(3);
+        // Fetch top 10 secondary market buyers
+        const entries = await fetchTopSecondaryMarketBuyers(10);
         setLeaderboardEntries(
           entries.map((entry) => ({
             rank: entry.rank,
@@ -390,8 +392,9 @@ export default function AccountPage() {
         : process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
       const connection = new Connection(rpcUrl, "confirmed");
 
-      const treasuryPubkey = new PublicKey(
-        process.env.NEXT_PUBLIC_STAKING_WALLET_ADDRESS || ""
+      // Gatekeeper public key (derived from GATEKEEPER_KEYPAIR on backend)
+      const gatekeeperPubkey = new PublicKey(
+        process.env.NEXT_PUBLIC_GATEKEEPER_ADDRESS || "8w1dD5Von2GBTa9cVASeC2A9F3gRrCqHA7QPds5pfXsM"
       );
       const userPubkey = new PublicKey(account || "");
 
@@ -399,7 +402,7 @@ export default function AccountPage() {
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: userPubkey,
-          toPubkey: treasuryPubkey,
+          toPubkey: gatekeeperPubkey,
           lamports: Math.floor(claimFeeEstimate.totalFeeSol * 1e9),
         })
       );
@@ -443,18 +446,49 @@ export default function AccountPage() {
       const result = await claimRevenue(signature, revenueEligibility.distributionId);
 
       if (result.success) {
+        const { notifySuccess } = await import("@/utils/toastNotifications");
+        
         const accountsMsg = result.accountsCreated && result.accountsCreated.length > 0
           ? ` (Created ${result.accountsCreated.join(', ')} token accounts)`
           : '';
         
-        alert(
+        notifySuccess(
           `Successfully claimed revenue!${accountsMsg}\n` +
           `You received:\n` +
           `- ${result.amountSol?.toFixed(6)} SOL\n` +
           `- ${result.amountEmpire?.toLocaleString()} EMPIRE\n` +
           `- ${result.amountMkin?.toLocaleString()} MKIN\n\n` +
-          `Transaction: ${result.payoutSignature}`
+          `Transaction:\n${result.payoutSignature}`,
+          8000 // Show for 8 seconds
         );
+
+        // Log successful revenue claim to transaction history
+        if (user) {
+          try {
+            const { logTransaction } = await import("@/services/transactionHistoryService");
+            const { Timestamp } = await import("firebase/firestore");
+            
+            await logTransaction(user.uid, {
+              type: "revenue_share",
+              status: "success",
+              amount: result.amountMkin || 0,
+              token: "MKIN",
+              txSignature: result.payoutSignature,
+              timestamp: Timestamp.now(),
+              metadata: {
+                distributionId: revenueEligibility.distributionId,
+                amountSol: result.amountSol,
+                amountEmpire: result.amountEmpire,
+                amountMkin: result.amountMkin,
+                accountsCreated: result.accountsCreated,
+                feeSignature: signature,
+              },
+            });
+          } catch (logError) {
+            console.error("Error logging transaction to history:", logError);
+            // Don't fail the whole flow if logging fails
+          }
+        }
 
         // Refresh eligibility and rewards
         const eligibility = await checkEligibility();
@@ -469,11 +503,39 @@ export default function AccountPage() {
       }
     } catch (error) {
       console.error("Error claiming revenue:", error);
-      alert(
+      const { notifyError } = await import("@/utils/toastNotifications");
+      notifyError(
         `Failed to claim revenue: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
+      
+      // Log failed attempt to transaction history
+      if (user) {
+        try {
+          const { logTransaction } = await import("@/services/transactionHistoryService");
+          const { getFriendlyErrorMessage } = await import("@/services/transactionHistoryService");
+          const { Timestamp } = await import("firebase/firestore");
+          
+          const { errorCode, errorMessage, technicalError } = getFriendlyErrorMessage(error);
+          
+          await logTransaction(user.uid, {
+            type: "revenue_share",
+            status: "failed",
+            amount: 0,
+            token: "MKIN",
+            timestamp: Timestamp.now(),
+            errorCode,
+            errorMessage,
+            technicalError,
+            metadata: {
+              distributionId: revenueEligibility?.distributionId,
+            },
+          });
+        } catch (logError) {
+          console.error("Error logging failed transaction:", logError);
+        }
+      }
     } finally {
       setRevenueClaiming(false);
     }
@@ -544,10 +606,9 @@ export default function AccountPage() {
             {/* Revenue Distribution Card - Only show if eligible */}
             {revenueEligibility?.eligible && (
               <RevenueDistributionCard
-                solAmount={revenueEligibility?.amountSol || 0}
-                empireAmount={revenueEligibility?.amountEmpire || 0}
                 mkinAmount={revenueEligibility?.amountMkin || 0}
-                totalUsd={revenueEligibility?.amountUsd || 0}
+                empireAmount={revenueEligibility?.amountEmpire || 0}
+                solAmount={revenueEligibility?.amountSol || 0}
                 eligible={revenueEligibility?.eligible || false}
                 loading={revenueLoading}
                 onClaim={handleRevenueClaim}

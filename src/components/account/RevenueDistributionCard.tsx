@@ -3,10 +3,9 @@
 import { useState } from "react";
 
 interface RevenueDistributionCardProps {
-  solAmount: number;
-  empireAmount: number;
   mkinAmount: number;
-  totalUsd: number;
+  empireAmount: number;
+  solAmount: number;
   eligible: boolean;
   loading: boolean;
   onClaim: () => void;
@@ -19,10 +18,9 @@ interface RevenueDistributionCardProps {
 }
 
 export default function RevenueDistributionCard({
-  solAmount,
-  empireAmount,
   mkinAmount,
-  totalUsd,
+  empireAmount,
+  solAmount,
   eligible,
   loading,
   onClaim,
@@ -30,17 +28,17 @@ export default function RevenueDistributionCard({
   claimFeeUsd,
   accountsToCreate,
 }: RevenueDistributionCardProps) {
-  const [selectedTab, setSelectedTab] = useState<"sol" | "empire" | "mkin">("sol");
+  const [selectedTab, setSelectedTab] = useState<"mkin" | "empire" | "sol">("mkin");
 
   const tokens = [
     {
-      id: "sol" as const,
-      name: "SOL",
-      amount: solAmount,
-      icon: "◎",
-      color: "text-purple-400",
-      bgColor: "bg-purple-900/20",
-      borderColor: "border-purple-500/20",
+      id: "mkin" as const,
+      name: "MKIN",
+      amount: mkinAmount,
+      icon: "👑",
+      color: "text-yellow-400",
+      bgColor: "bg-yellow-900/20",
+      borderColor: "border-yellow-500/20",
     },
     {
       id: "empire" as const,
@@ -52,13 +50,13 @@ export default function RevenueDistributionCard({
       borderColor: "border-blue-500/20",
     },
     {
-      id: "mkin" as const,
-      name: "MKIN",
-      amount: mkinAmount,
-      icon: "👑",
-      color: "text-yellow-400",
-      bgColor: "bg-yellow-900/20",
-      borderColor: "border-yellow-500/20",
+      id: "sol" as const,
+      name: "SOL",
+      amount: solAmount,
+      icon: "◎",
+      color: "text-purple-400",
+      bgColor: "bg-purple-900/20",
+      borderColor: "border-purple-500/20",
     },
   ];
 
@@ -138,18 +136,6 @@ export default function RevenueDistributionCard({
             </div>
           )}
 
-          {/* Total Value */}
-          <div className="bg-[#0f0f0f] rounded-lg p-3 mb-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Total Value (USD)</span>
-              <span className="text-lg font-bold text-white">
-                ${totalUsd.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
-          </div>
 
           {/* Fee Information */}
           <div className="bg-yellow-900/10 border border-yellow-500/20 rounded-lg p-3 mb-4">
@@ -168,11 +154,11 @@ export default function RevenueDistributionCard({
               <div className="flex-1">
                 <p className="text-xs text-yellow-400 font-medium mb-1">Claim Fee</p>
                 <p className="text-xs text-gray-300">
-                  Base fee: ${claimFeeUsd.toFixed(2)} (paid in SOL)
+                  Base fee: $0.10 (paid in SOL)
                 </p>
                 {accountsToCreate && (accountsToCreate.empire || accountsToCreate.mkin) && (
                   <p className="text-xs text-gray-300 mt-1">
-                    + Token account creation fee (~$0.0006 per account)
+                    + Token account creation fee ($0.10 per account)
                   </p>
                 )}
               </div>
@@ -215,16 +201,16 @@ export default function RevenueDistributionCard({
             <p className="text-xs text-gray-500 mb-2">Claim Breakdown:</p>
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
-                <span className="text-gray-400">◎ SOL:</span>
-                <span className="text-white font-mono">{solAmount.toFixed(6)}</span>
+                <span className="text-gray-400">👑 MKIN:</span>
+                <span className="text-white font-mono">{mkinAmount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-400">🏛️ EMPIRE:</span>
                 <span className="text-white font-mono">{empireAmount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-gray-400">👑 MKIN:</span>
-                <span className="text-white font-mono">{mkinAmount.toLocaleString()}</span>
+                <span className="text-gray-400">◎ SOL:</span>
+                <span className="text-white font-mono">{solAmount.toFixed(6)}</span>
               </div>
             </div>
           </div>
