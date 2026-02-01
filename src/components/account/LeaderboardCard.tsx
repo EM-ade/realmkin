@@ -4,6 +4,7 @@ interface LeaderboardEntry {
   rank: number;
   username: string;
   score: number;
+  nftCount?: number;
   avatarUrl?: string;
 }
 
@@ -42,29 +43,34 @@ export default function LeaderboardCard({
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.rank} className="flex items-center justify-between py-1">
-              <div className="flex items-center gap-3">
-                <span className="text-[#facc15] font-bold text-sm w-4">
-                  {entry.rank}.
-                </span>
-                {/* Avatar */}
-                <div className="w-[40px] h-[40px] rounded-full bg-[#374151] overflow-hidden">
-                  {entry.avatarUrl && (
-                    <img
-                      src={entry.avatarUrl}
-                      alt={entry.username}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
+          {entries.map((entry) => {
+            const medals: Record<number, string> = {
+              1: "🥇",
+              2: "🥈", 
+              3: "🥉"
+            };
+            const medal = medals[entry.rank];
+            
+            return (
+              <li key={entry.rank} className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-3">
+                  {/* Medal */}
+                  <div className="w-[40px] h-[40px] rounded-full bg-gradient-to-br from-[#facc15]/20 to-[#f59e0b]/20 border border-[#facc15]/30 flex items-center justify-center">
+                    <span className="text-2xl">{medal || `#${entry.rank}`}</span>
+                  </div>
+                  <span className="text-gray-200 text-sm font-medium">{entry.username}</span>
                 </div>
-                <span className="text-gray-200 text-sm">{entry.username}</span>
-              </div>
-              <span className="text-gray-400 text-xs font-mono">
-                {entry.score.toLocaleString()}
-              </span>
-            </li>
-          ))}
+                <div className="flex flex-col items-end gap-0.5">
+                  <span className="text-[#facc15] text-base font-bold">
+                    {(entry.nftCount || entry.score).toLocaleString()}
+                  </span>
+                  <span className="text-gray-500 text-[10px] uppercase tracking-wider">
+                    NFTs
+                  </span>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 

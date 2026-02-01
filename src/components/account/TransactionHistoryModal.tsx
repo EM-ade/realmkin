@@ -132,10 +132,11 @@ export default function TransactionHistoryModal({
   // Initial load
   useEffect(() => {
     if (isOpen && userId) {
+      setLastDoc(null); // Reset pagination when filters change
       fetchTransactions();
       fetchStats();
     }
-  }, [isOpen, userId, selectedType, selectedStatus]);
+  }, [isOpen, userId, selectedType, selectedStatus, fetchTransactions, fetchStats]);
 
   // Handle search
   useEffect(() => {
@@ -236,7 +237,7 @@ export default function TransactionHistoryModal({
             onChange={(e) => setSelectedStatus(e.target.value as any)}
             className="bg-[#050505] border border-[#27272a] rounded-lg px-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#8b5cf6]"
           >
-            <option value="all">Last 30 Days</option>
+            <option value="all">All Status</option>
             <option value="success">Success</option>
             <option value="failed">Failed</option>
             <option value="pending">Pending</option>
