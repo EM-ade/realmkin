@@ -181,6 +181,7 @@ export default function AccountPage() {
             rank: entry.rank,
             username: entry.username,
             score: entry.nftCount,
+            nftCount: entry.nftCount, // Keep nftCount separate
             avatarUrl: entry.avatarUrl,
           }))
         );
@@ -540,19 +541,21 @@ export default function AccountPage() {
               }
             />
 
-            {/* Revenue Distribution Card */}
-            <RevenueDistributionCard
-              solAmount={revenueEligibility?.amountSol || 0}
-              empireAmount={revenueEligibility?.amountEmpire || 0}
-              mkinAmount={revenueEligibility?.amountMkin || 0}
-              totalUsd={revenueEligibility?.amountUsd || 0}
-              eligible={revenueEligibility?.eligible || false}
-              loading={revenueLoading}
-              onClaim={handleRevenueClaim}
-              claiming={revenueClaiming}
-              claimFeeUsd={claimFeeEstimate?.totalFeeUsd || 0.10}
-              accountsToCreate={claimFeeEstimate?.accountsToCreate}
-            />
+            {/* Revenue Distribution Card - Only show if eligible */}
+            {revenueEligibility?.eligible && (
+              <RevenueDistributionCard
+                solAmount={revenueEligibility?.amountSol || 0}
+                empireAmount={revenueEligibility?.amountEmpire || 0}
+                mkinAmount={revenueEligibility?.amountMkin || 0}
+                totalUsd={revenueEligibility?.amountUsd || 0}
+                eligible={revenueEligibility?.eligible || false}
+                loading={revenueLoading}
+                onClaim={handleRevenueClaim}
+                claiming={revenueClaiming}
+                claimFeeUsd={claimFeeEstimate?.totalFeeUsd || 0.10}
+                accountsToCreate={claimFeeEstimate?.accountsToCreate}
+              />
+            )}
           </section>
 
           {/* Leaderboard Card */}
