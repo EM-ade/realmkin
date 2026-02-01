@@ -158,7 +158,7 @@ export default function RevenueDistributionCard({
                 </p>
                 {accountsToCreate && (accountsToCreate.empire || accountsToCreate.mkin) && (
                   <p className="text-xs text-gray-300 mt-1">
-                    + Token account creation fee ($0.10 per account)
+                    + Token account creation fee ($1.00 per account)
                   </p>
                 )}
               </div>

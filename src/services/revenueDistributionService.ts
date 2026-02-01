@@ -248,7 +248,7 @@ export async function calculateClaimFee(
   walletAddress: string
 ): Promise<ClaimFeeEstimate> {
   try {
-    const TOKEN_ACCOUNT_CREATION_FEE_USD = 0.10; // $0.10 per account (testing fee)
+    const TOKEN_ACCOUNT_CREATION_FEE_USD = 1.00; // $1.00 per account
     const solPrice = await getSolPrice();
 
     const accounts = await checkTokenAccounts(walletAddress);
