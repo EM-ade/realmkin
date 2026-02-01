@@ -9,6 +9,11 @@ import {
   initiateUnstake,
   calculatePendingRewards,
 } from "./firebaseStakingService";
+import {
+  createPendingTransaction,
+  completeTransaction,
+  failTransaction,
+} from "./transactionHistoryService";
 
 export interface StakeInfo {
   stakeEntry: string;
@@ -54,6 +59,22 @@ class StakingService {
     lockPeriod: "flexible" | "30" | "60" | "90",
     txSignature: string
   ): Promise<{ txId: string; stakeEntry: string }> {
+    // Create pending transaction log
+    let transactionId: string | null = null;
+    try {
+      transactionId = await createPendingTransaction(uid, {
+        type: "stake",
+        amount: amount,
+        token: "MKIN",
+        metadata: {
+          lockPeriod,
+          duration: lockPeriod === "flexible" ? 0 : parseInt(lockPeriod) * 86400,
+        },
+      });
+    } catch (logError) {
+      console.error("Error logging transaction:", logError);
+    }
+
     try {
       // 1. Verify the on-chain transfer really happened
       const verification = await verifyTransaction(txSignature);
@@ -78,12 +99,25 @@ class StakingService {
         txSignature
       );
 
+      // Log successful transaction
+      if (transactionId) {
+        await completeTransaction(uid, transactionId, txSignature, {
+          stakeId: stakeRecord.id,
+        });
+      }
+
       return {
         txId: txSignature,
         stakeEntry: stakeRecord.id,
       };
     } catch (error) {
       console.error("Staking service error:", error);
+      
+      // Log failed transaction
+      if (transactionId) {
+        await failTransaction(uid, transactionId, error);
+      }
+      
       throw error;
     }
   }
@@ -100,14 +134,50 @@ class StakingService {
     wallet: { publicKey?: { toString?: () => string } } | string,
     stakeEntry: string
   ): Promise<{ txId: string; rewardsClaimed: number }> {
+    // Create pending transaction log
+    let transactionId: string | null = null;
+    try {
+      transactionId = await createPendingTransaction(uid, {
+        type: "staking_claim",
+        amount: 0, // Will be updated with actual rewards
+        token: "MKIN",
+        metadata: {
+          stakeId: stakeEntry,
+        },
+      });
+    } catch (logError) {
+      console.error("Error logging transaction:", logError);
+    }
+
     try {
       const rewardsClaimed = await claimStakeRewards(uid, stakeEntry);
+      const txId = `claim-${stakeEntry}-${Date.now()}`;
+
+      // Log successful transaction with actual rewards amount
+      if (transactionId) {
+        await completeTransaction(uid, transactionId, txId, {
+          stakeId: stakeEntry,
+        });
+        // Update the amount
+        const { updateDoc, doc } = await import("firebase/firestore");
+        const { db } = await import("@/config/firebase");
+        await updateDoc(doc(db, `transactionHistory/${uid}/transactions/${transactionId}`), {
+          amount: rewardsClaimed,
+        });
+      }
+
       return {
-        txId: `claim-${stakeEntry}-${Date.now()}`,
+        txId,
         rewardsClaimed,
       };
     } catch (error) {
       console.error("Error claiming rewards:", error);
+      
+      // Log failed transaction
+      if (transactionId) {
+        await failTransaction(uid, transactionId, error);
+      }
+      
       throw error;
     }
   }
@@ -124,23 +194,53 @@ class StakingService {
     wallet: { publicKey?: { toString?: () => string } } | string,
     stakeEntry: string
   ): Promise<{ txId: string; amountReturned: number }> {
+    // Get the stake amount first
+    const walletAddress =
+      typeof wallet === "string"
+        ? wallet
+        : wallet.publicKey?.toString?.() || "";
+    const stakes = await fbGetUserStakes(walletAddress);
+    const stake = stakes.find((s) => s.id === stakeEntry);
+    const amount = stake?.amount || 0;
+
+    // Create pending transaction log
+    let transactionId: string | null = null;
+    try {
+      transactionId = await createPendingTransaction(uid, {
+        type: "unstake",
+        amount: amount,
+        token: "MKIN",
+        metadata: {
+          stakeId: stakeEntry,
+        },
+      });
+    } catch (logError) {
+      console.error("Error logging transaction:", logError);
+    }
+
     try {
       await initiateUnstake(uid, stakeEntry);
+      const txId = `unstake-${stakeEntry}-${Date.now()}`;
 
-      // Get the stake to return the amount
-      const walletAddress =
-        typeof wallet === "string"
-          ? wallet
-          : wallet.publicKey?.toString?.() || "";
-      const stakes = await fbGetUserStakes(walletAddress);
-      const stake = stakes.find((s) => s.id === stakeEntry);
+      // Log successful transaction
+      if (transactionId) {
+        await completeTransaction(uid, transactionId, txId, {
+          stakeId: stakeEntry,
+        });
+      }
 
       return {
-        txId: `unstake-${stakeEntry}-${Date.now()}`,
-        amountReturned: stake?.amount || 0,
+        txId,
+        amountReturned: amount,
       };
     } catch (error) {
       console.error("Error unstaking:", error);
+      
+      // Log failed transaction
+      if (transactionId) {
+        await failTransaction(uid, transactionId, error);
+      }
+      
       throw error;
     }
   }

@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "test:account": "ts-node scripts/test-account-page.ts",
+    "test:profile": "ts-node scripts/test-profile-edit.ts",
+    "test:revenue": "ts-node scripts/test-revenue-claim.ts",
+    "test:transactions": "ts-node scripts/test-transaction-logging.ts",
+    "test:account:all": "npm run test:account && npm run test:profile && npm run test:revenue && npm run test:transactions"
+  }
+}

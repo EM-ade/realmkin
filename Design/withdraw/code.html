@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Realmkin - Withdraw Modal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                page: '#050505',
+                card: '#111111',
+                accent: '#8A2BE2',
+                gold: '#FFB800',
+                success: '#22c55e',
+                'card-border': '#27272a',
+                charcoal: '#121212',
+              },
+              fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+              },
+            },
+          },
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        :root {
+            --brand-charcoal: #121212;
+            --brand-gold: #FFB800;
+            --brand-purple: #8A2BE2;
+            --brand-purple-dark: #6a21af;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050505;
+            color: white;
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+        }
+        .gold-border-glow {
+            border: 1px solid var(--brand-gold);
+            box-shadow: 0 0 15px rgba(255, 184, 0, 0.15);
+        }
+        .btn-purple-gradient {
+            background: linear-gradient(135deg, var(--brand-purple) 0%, var(--brand-purple-dark) 100%);
+        }
+        .input-dark {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+        }
+        .input-dark:focus {
+            border-color: var(--brand-purple);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+<div class="fixed inset-0 modal-overlay flex items-center justify-center z-50">
+<div class="w-full max-w-[440px] bg-[var(--brand-charcoal)] rounded-2xl gold-border-glow overflow-hidden relative">
+<div class="px-6 pt-6 pb-2 flex justify-between items-center">
+<h2 class="text-xl font-bold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-[var(--brand-gold)]">account_balance_wallet</span>
+                    Withdraw Assets
+                </h2>
+<button class="text-gray-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-6">
+<div class="mb-6 bg-black/40 rounded-xl p-4 border border-card-border">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Current Balance</span>
+<span class="text-xs font-semibold text-[var(--brand-gold)] bg-[var(--brand-gold)]/10 px-2 py-0.5 rounded">MKIN TOKEN</span>
+</div>
+<div class="text-2xl font-bold text-white">
+                        23,075.00 <span class="text-sm text-gray-400">MKIN</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-medium text-gray-400 ml-1">Withdrawal Amount</label>
+<div class="relative">
+<input class="w-full h-14 pl-4 pr-20 input-dark rounded-xl text-lg font-semibold text-white placeholder-gray-600" placeholder="0.00" type="number"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[var(--brand-purple)] hover:bg-[var(--brand-purple-dark)] text-white text-xs font-bold rounded-lg transition-colors uppercase tracking-tight">
+                            MAX
+                        </button>
+</div>
+<div class="flex justify-between px-1 mt-1">
+<span class="text-[11px] text-gray-500">Min: 100 MKIN</span>
+<span class="text-[11px] text-gray-500">Network Fee: 0.5%</span>
+</div>
+</div>
+<button class="w-full mt-8 py-4 rounded-xl btn-purple-gradient text-white font-bold text-base shadow-lg shadow-purple-900/20 hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                    Confirm Withdrawal
+                </button>
+<p class="text-center text-[10px] text-gray-600 mt-4 uppercase tracking-widest">
+                    Secure transaction powered by Realmkin Vault
+                </p>
+</div>
+</div>
+</div>
+<main class="w-full max-w-[400px] flex flex-col gap-5 opacity-20 pointer-events-none">
+<section class="bg-card rounded-2xl p-6 border border-card-border relative">
+<div class="flex flex-col items-center mt-2">
+<div class="w-[100px] h-[100px] rounded-full overflow-hidden border-2 border-gray-800 bg-gray-900">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAk4T3CBspXQEKgzQr8MTNVjBafzDKjILk4oaGEkWFtO6qSpHO6vcsLtzv-qEtbsrcc5VR_GQsrZBQWNbsmuZpohHKvHUza2eqRVZdrG8oyIbCnHodUCvgVCfE6P27YQw2iM2PsR7q5QNpcwogKgL3AbTrPKmFWejD_F2Nv9TVPbO1D7_DcB1fwvItD4ghEH4bW1AhcVwohdZxsbfZpzI5YjCbS0uYtA3zVA9FQNbiQ4zmbjHoInwyttqijE2_ls67VgOvlX7sPvu0"/>
+</div>
+<h1 class="text-xl font-bold mt-4 text-white">RealmKeeper</h1>
+</div>
+<div class="mt-6 flex flex-col gap-3">
+<div class="flex gap-3">
+<div class="flex-1 h-10 rounded-xl bg-accent/20 border border-accent/30"></div>
+<div class="flex-1 h-10 rounded-xl bg-accent/20 border border-accent/30"></div>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-3">
+<div class="h-24 bg-card rounded-2xl border border-card-border"></div>
+<div class="h-24 bg-card rounded-2xl border border-card-border"></div>
+</section>
+</main>
+
+</body></html>
