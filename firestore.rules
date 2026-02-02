@@ -75,6 +75,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Staking transactions (backend collection - read only for users)
+    match /staking_transactions/{transactionId} {
+      allow read: if signedIn() && resource.data.user_id == request.auth.uid;
+      allow write: if false; // Backend/Admin SDK only
+    }
+
     match /transferRecords/{id} {
       allow read: if isAdmin() || (signedIn() && (resource.data.senderUserId == request.auth.uid || resource.data.recipientUserId == request.auth.uid));
       allow create: if signedIn() && request.resource.data.senderUserId == request.auth.uid;

@@ -251,6 +251,7 @@ export async function getTransactionById(
 
 /**
  * Get transaction history with filters
+ * Fetches from both transactionHistory (frontend) and staking_transactions (backend)
  */
 export async function getTransactionHistory(
   userId: string,
@@ -265,6 +266,9 @@ export async function getTransactionHistory(
   lastDoc: QueryDocumentSnapshot | null;
 }> {
   try {
+    const requestedLimit = options?.limit || 50;
+    
+    // Fetch from frontend transaction history collection
     const transactionsRef = collection(db, `transactionHistory/${userId}/transactions`);
     let q = query(transactionsRef, orderBy("timestamp", "desc"));
 
@@ -278,27 +282,143 @@ export async function getTransactionHistory(
     }
 
     // Apply limit
-    if (options?.limit) {
-      q = query(q, limit(options.limit));
-    }
+    q = query(q, limit(requestedLimit));
 
     // Pagination
     if (options?.startAfterDoc) {
       q = query(q, startAfter(options.startAfterDoc));
     }
 
-    const snapshot = await getDocs(q);
-    const transactions = snapshot.docs.map((doc) => ({
+    // Fetch frontend transactions
+    const [frontendSnapshot, stakingSnapshot] = await Promise.all([
+      getDocs(q),
+      fetchStakingTransactions(userId, options)
+    ]);
+
+    // Map frontend transactions
+    const frontendTransactions = frontendSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as TransactionRecord[];
 
-    const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+    // Merge and sort all transactions by timestamp
+    const allTransactions = [...frontendTransactions, ...stakingSnapshot]
+      .sort((a, b) => {
+        const aTime = a.timestamp?.toMillis?.() || 0;
+        const bTime = b.timestamp?.toMillis?.() || 0;
+        return bTime - aTime; // Descending order (newest first)
+      })
+      .slice(0, requestedLimit); // Apply limit after merging
 
-    return { transactions, lastDoc };
+    const lastDoc = frontendSnapshot.docs[frontendSnapshot.docs.length - 1] || null;
+
+    console.log(`📊 Fetched ${frontendTransactions.length} frontend + ${stakingSnapshot.length} staking = ${allTransactions.length} total transactions`);
+
+    return { transactions: allTransactions, lastDoc };
   } catch (error) {
     console.error("Error getting transaction history:", error);
     return { transactions: [], lastDoc: null };
+  }
+}
+
+/**
+ * Fetch staking transactions from backend collection
+ */
+async function fetchStakingTransactions(
+  userId: string,
+  options?: {
+    type?: TransactionType;
+    status?: TransactionStatus;
+    limit?: number;
+  }
+): Promise<TransactionRecord[]> {
+  try {
+    console.log(`🔍 Fetching staking transactions for user: ${userId}`);
+    
+    // Fetch from backend staking_transactions collection
+    const stakingRef = collection(db, "staking_transactions");
+    let q = query(
+      stakingRef,
+      where("user_id", "==", userId),
+      orderBy("timestamp", "desc"),
+      limit(options?.limit || 50)
+    );
+
+    const snapshot = await getDocs(q);
+    console.log(`📦 Found ${snapshot.docs.length} staking transactions in Firestore`);
+    
+    // Map staking transactions to TransactionRecord format
+    const stakingTransactions: TransactionRecord[] = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const type = data.type as string;
+      
+      // Map backend transaction type to frontend type
+      let mappedType: TransactionType;
+      if (type === "STAKE") mappedType = "stake";
+      else if (type === "CLAIM") mappedType = "staking_claim";
+      else if (type === "UNSTAKE") mappedType = "unstake";
+      else mappedType = type.toLowerCase() as TransactionType;
+
+      // Determine status - backend logs don't have explicit status field
+      // If payout_signature exists or status is COMPLETED, it's success
+      const status: TransactionStatus = 
+        data.payout_signature || data.status === "COMPLETED" 
+          ? "success" 
+          : data.status === "PENDING_RECOVERY" || data.error_message
+          ? "failed"
+          : "success"; // Default to success if transaction was logged
+
+      // Determine token type based on transaction type
+      let token: TokenType;
+      if (type === "STAKE" || type === "UNSTAKE") {
+        token = "MKIN";
+      } else if (type === "CLAIM") {
+        token = "SOL";
+      } else {
+        token = data.token || "MKIN";
+      }
+
+      // Get amount based on transaction type
+      let amount = 0;
+      if (type === "STAKE" || type === "UNSTAKE") {
+        amount = data.amount_mkin || data.amount || 0;
+      } else if (type === "CLAIM") {
+        amount = data.amount_sol || data.amount || 0;
+      }
+
+      return {
+        id: doc.id,
+        type: mappedType,
+        status,
+        amount,
+        token,
+        timestamp: data.timestamp || Timestamp.now(),
+        txSignature: data.signature || data.payout_signature || data.fee_tx,
+        errorMessage: data.error_message,
+        metadata: {
+          feeAmount: data.fee_amount_sol || data.fee_amount_mkin_value,
+          feePaid: data.fee_amount_sol,
+          stakeId: data.user_id,
+          ...(data.fee_tx && { feeTxSignature: data.fee_tx }),
+          ...(data.payout_signature && { payoutSignature: data.payout_signature }),
+        },
+      };
+    });
+
+    // Apply type filter if specified
+    if (options?.type) {
+      return stakingTransactions.filter(tx => tx.type === options.type);
+    }
+
+    // Apply status filter if specified
+    if (options?.status) {
+      return stakingTransactions.filter(tx => tx.status === options.status);
+    }
+
+    return stakingTransactions;
+  } catch (error) {
+    console.error("Error fetching staking transactions:", error);
+    return [];
   }
 }
 
