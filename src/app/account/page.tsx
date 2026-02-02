@@ -644,20 +644,19 @@ export default function AccountPage() {
               }
             />
 
-            {/* Revenue Distribution Card - Only show if eligible */}
-            {revenueEligibility?.eligible && (
-              <RevenueDistributionCard
-                mkinAmount={revenueEligibility?.amountMkin || 0}
-                empireAmount={revenueEligibility?.amountEmpire || 0}
-                solAmount={revenueEligibility?.amountSol || 0}
-                eligible={revenueEligibility?.eligible || false}
-                loading={revenueLoading}
-                onClaim={handleRevenueClaim}
-                claiming={revenueClaiming}
-                claimFeeUsd={claimFeeEstimate?.totalFeeUsd || 0.10}
-                accountsToCreate={claimFeeEstimate?.accountsToCreate}
-              />
-            )}
+            {/* Revenue Distribution Card - Always visible */}
+            <RevenueDistributionCard
+              mkinAmount={revenueEligibility?.amountMkin || 0}
+              empireAmount={revenueEligibility?.amountEmpire || 0}
+              solAmount={revenueEligibility?.amountSol || 0}
+              eligible={revenueEligibility?.eligible || false}
+              loading={revenueLoading}
+              onClaim={handleRevenueClaim}
+              claiming={revenueClaiming}
+              claimFeeUsd={claimFeeEstimate?.totalFeeUsd || 0.10}
+              accountsToCreate={claimFeeEstimate?.accountsToCreate}
+              reason={revenueEligibility?.reason}
+            />
           </section>
 
           {/* Leaderboard Card */}

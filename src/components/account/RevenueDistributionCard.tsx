@@ -15,6 +15,7 @@ interface RevenueDistributionCardProps {
     empire: boolean;
     mkin: boolean;
   };
+  reason?: string; // Reason why user is not eligible
 }
 
 export default function RevenueDistributionCard({
@@ -27,6 +28,7 @@ export default function RevenueDistributionCard({
   claiming,
   claimFeeUsd,
   accountsToCreate,
+  reason,
 }: RevenueDistributionCardProps) {
   const [selectedTab, setSelectedTab] = useState<"mkin" | "empire" | "sol">("mkin");
 
@@ -92,10 +94,86 @@ export default function RevenueDistributionCard({
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
         </div>
       ) : !eligible ? (
-        <div className="text-center py-8">
-          <p className="text-gray-400 text-sm">
-            You need at least 1 Realmkin NFT purchased from secondary market to be eligible
-          </p>
+        <div className="py-6">
+          {/* Not Eligible Info */}
+          <div className="bg-gray-900/40 rounded-lg p-4 border border-gray-700/50 mb-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-medium text-sm mb-1">Not Eligible</h3>
+                <p className="text-gray-400 text-xs leading-relaxed">
+                  {reason || "You need at least 1 Realmkin NFT purchased from secondary market to be eligible for revenue distribution."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* How to Become Eligible */}
+          <div className="bg-blue-900/10 border border-blue-500/20 rounded-lg p-4">
+            <div className="flex items-start gap-2 mb-3">
+              <svg
+                className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div className="flex-1">
+                <p className="text-xs text-blue-400 font-medium mb-2">How to Become Eligible</p>
+                <ul className="space-y-2 text-xs text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">•</span>
+                    <span>Purchase a Realmkin NFT from a secondary marketplace (Magic Eden, Tensor, etc.)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">•</span>
+                    <span>Connect your wallet to verify ownership</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">•</span>
+                    <span>Revenue is distributed monthly to eligible holders</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Zero Balance Display */}
+          <div className="mt-4 pt-4 border-t border-gray-800">
+            <p className="text-xs text-gray-500 mb-2">Current Month Allocation:</p>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">👑 MKIN:</span>
+                <span className="text-gray-600 font-mono">0</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">🏛️ EMPIRE:</span>
+                <span className="text-gray-600 font-mono">0</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">◎ SOL:</span>
+                <span className="text-gray-600 font-mono">0.000000</span>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <>
