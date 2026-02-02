@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 interface LeaderboardEntry {
   rank: number;
   username: string;
@@ -13,6 +15,8 @@ interface LeaderboardCardProps {
   entries: LeaderboardEntry[];
   userRank?: number;
   loading?: boolean;
+  onRefresh?: () => Promise<void>; // NEW: Refresh callback
+  showRefreshButton?: boolean; // NEW: Show refresh button for secondary market only
 }
 
 export default function LeaderboardCard({
@@ -20,20 +24,70 @@ export default function LeaderboardCard({
   entries,
   userRank,
   loading,
+  onRefresh,
+  showRefreshButton = false,
 }: LeaderboardCardProps) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefresh || refreshing) return;
+    
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } catch (error) {
+      console.error("Error refreshing leaderboard:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <section className="bg-[#111111] rounded-2xl p-5 border border-[#27272a]">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <svg
-          className="w-5 h-5 text-yellow-500"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.035-.84-1.875-1.875-1.875h-.75zM9.75 8.625c0-1.035-.84-1.875-1.875-1.875h-.75c-1.035 0-1.875.84-1.875 1.875v11.25c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V8.625zM3 13.125c0-1.035-.84-1.875-1.875-1.875h-.75C.375 11.25 0 12.09 0 13.125v6.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875v-6.75z" />
-        </svg>
-        <h2 className="text-white font-semibold">{title}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <svg
+            className="w-5 h-5 text-yellow-500"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.035-.84-1.875-1.875-1.875h-.75zM9.75 8.625c0-1.035-.84-1.875-1.875-1.875h-.75c-1.035 0-1.875.84-1.875 1.875v11.25c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V8.625zM3 13.125c0-1.035-.84-1.875-1.875-1.875h-.75C.375 11.25 0 12.09 0 13.125v6.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875v-6.75z" />
+          </svg>
+          <h2 className="text-white font-semibold">{title}</h2>
+        </div>
+
+        {/* Refresh Button */}
+        {showRefreshButton && onRefresh && (
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing || loading}
+            className={`
+              p-2 rounded-lg transition-all duration-200
+              ${refreshing || loading
+                ? 'bg-gray-800 cursor-not-allowed opacity-50'
+                : 'bg-gray-800 hover:bg-gray-700 active:scale-95'
+              }
+            `}
+            title="Refresh leaderboard data"
+          >
+            <svg
+              className={`w-4 h-4 text-yellow-500 ${refreshing ? 'animate-spin' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* List */}
