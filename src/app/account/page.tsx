@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useWallet } from "@solana/wallet-adapter-react";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import ProfileHeader from "@/components/account/ProfileHeader";
 import StatsCard from "@/components/account/StatsCard";
 import LeaderboardCard from "@/components/account/LeaderboardCard";
@@ -585,18 +584,61 @@ export default function AccountPage() {
   // Calculate level based on weekly mining rate
   const level = Math.min(50, Math.floor((userRewards?.weeklyRate || 0) / 10) + 1);
 
+  // Helper function to prompt wallet connection
+  const promptWalletConnection = () => {
+    const walletButton = document.querySelector('.wallet-adapter-button') as HTMLButtonElement;
+    if (walletButton) {
+      walletButton.click();
+    } else {
+      const connectBtn = document.getElementById('connect-wallet-btn');
+      if (connectBtn) connectBtn.click();
+    }
+  };
+
+  // Wrapper functions for actions that require wallet
+  const handleEditProfileClick = () => {
+    if (!account || !isConnected) {
+      promptWalletConnection();
+      return;
+    }
+    setShowProfileEditModal(true);
+  };
+
+  const handleViewHistoryClick = () => {
+    if (!user) {
+      // User needs to be logged in
+      return;
+    }
+    setShowHistoryModal(true);
+  };
+
+  const handleWithdrawClick = () => {
+    if (!account || !isConnected) {
+      promptWalletConnection();
+      return;
+    }
+    setShowWithdrawModal(true);
+  };
+
+  const handleTransferClick = () => {
+    if (!account || !isConnected) {
+      promptWalletConnection();
+      return;
+    }
+    setShowTransferModal(true);
+  };
+
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-[#050505] flex justify-center items-start py-10 px-4">
+    <div className="min-h-screen bg-[#050505] flex justify-center items-start py-10 px-4">
         <main className="w-full max-w-[400px] md:max-w-[600px] lg:max-w-[800px] xl:max-w-[1000px] flex flex-col gap-5">
           {/* Profile Card */}
           <ProfileHeader
             userId={user?.uid || ""}
             level={level}
-            onEditProfile={() => setShowProfileEditModal(true)}
-            onViewHistory={() => setShowHistoryModal(true)}
-            onWithdraw={() => setShowWithdrawModal(true)}
-            onTransfer={() => setShowTransferModal(true)}
+            onEditProfile={handleEditProfileClick}
+            onViewHistory={handleViewHistoryClick}
+            onWithdraw={handleWithdrawClick}
+            onTransfer={handleTransferClick}
             refreshKey={profileRefreshKey}
           />
 
@@ -924,7 +966,6 @@ export default function AccountPage() {
           amount={lastTransferAmount}
           recipient={lastTransferRecipient}
         />
-      </div>
-    </ProtectedRoute>
+    </div>
   );
 }
