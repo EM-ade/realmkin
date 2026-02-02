@@ -15,6 +15,16 @@ import {
 } from "firebase/firestore";
 import { db } from "@/config/firebase";
 
+// Cache for transaction history to prevent excessive reads
+interface CacheEntry {
+  data: TransactionRecord[];
+  timestamp: number;
+  lastDoc: QueryDocumentSnapshot | null;
+}
+
+const transactionCache = new Map<string, CacheEntry>();
+const CACHE_DURATION = 30 * 1000; // 30 seconds cache
+
 // Transaction types
 export type TransactionType =
   | "withdrawal"
@@ -268,6 +278,16 @@ export async function getTransactionHistory(
   try {
     const requestedLimit = options?.limit || 50;
     
+    // Create cache key from userId and options
+    const cacheKey = `${userId}_${options?.type || 'all'}_${options?.status || 'all'}_${requestedLimit}`;
+    
+    // Check cache first
+    const cached = transactionCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log(`💾 Using cached transactions (age: ${Math.floor((Date.now() - cached.timestamp) / 1000)}s)`);
+      return { transactions: cached.data, lastDoc: cached.lastDoc };
+    }
+    
     // Fetch from frontend transaction history collection
     const transactionsRef = collection(db, `transactionHistory/${userId}/transactions`);
     let q = query(transactionsRef, orderBy("timestamp", "desc"));
@@ -313,6 +333,13 @@ export async function getTransactionHistory(
     const lastDoc = frontendSnapshot.docs[frontendSnapshot.docs.length - 1] || null;
 
     console.log(`📊 Fetched ${frontendTransactions.length} frontend + ${stakingSnapshot.length} staking = ${allTransactions.length} total transactions`);
+
+    // Store in cache
+    transactionCache.set(cacheKey, {
+      data: allTransactions,
+      timestamp: Date.now(),
+      lastDoc,
+    });
 
     return { transactions: allTransactions, lastDoc };
   } catch (error) {
