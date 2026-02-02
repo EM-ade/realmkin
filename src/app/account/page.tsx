@@ -393,19 +393,41 @@ export default function AccountPage() {
       const connection = new Connection(rpcUrl, "confirmed");
 
       // Gatekeeper public key (derived from GATEKEEPER_KEYPAIR on backend)
-      const gatekeeperPubkey = new PublicKey(
-        process.env.NEXT_PUBLIC_GATEKEEPER_ADDRESS || "8w1dD5Von2GBTa9cVASeC2A9F3gRrCqHA7QPds5pfXsM"
-      );
+      const gatekeeperAddress = process.env.NEXT_PUBLIC_GATEKEEPER_ADDRESS || "8w1dD5Von2GBTa9cVASeC2A9F3gRrCqHA7QPds5pfXsM";
+      const gatekeeperPubkey = new PublicKey(gatekeeperAddress);
       const userPubkey = new PublicKey(account || "");
+
+      // Calculate exact lamports to send (ensuring precision)
+      const lamportsToSend = Math.floor(claimFeeEstimate.totalFeeSol * 1e9);
+      
+      // Log fee payment details for debugging
+      console.log("🔐 Revenue Claim Fee Payment:");
+      console.log("   Gatekeeper:", gatekeeperAddress);
+      console.log("   User:", account);
+      console.log("   Fee (SOL):", claimFeeEstimate.totalFeeSol);
+      console.log("   Fee (lamports):", lamportsToSend);
+      console.log("   Fee (USD):", claimFeeEstimate.totalFeeUsd);
+      console.log("   Base Fee (USD):", claimFeeEstimate.baseFeeUsd);
+      console.log("   Token Account Creation (USD):", claimFeeEstimate.accountCreationFeeUsd);
+      console.log("   Accounts to Create:", claimFeeEstimate.accountsToCreate);
+      
+      // Validate the fee amount before creating transaction
+      if (lamportsToSend <= 0 || !isFinite(lamportsToSend)) {
+        throw new Error(`Invalid fee amount calculated: ${lamportsToSend} lamports`);
+      }
+      
+      console.log("   ✅ Fee validation passed, creating transaction...");
 
       // Create fee payment transaction (base fee + token account creation fee)
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: userPubkey,
           toPubkey: gatekeeperPubkey,
-          lamports: Math.floor(claimFeeEstimate.totalFeeSol * 1e9),
+          lamports: lamportsToSend,
         })
       );
+      
+      console.log("   ✅ Transaction created with transfer instruction");
 
       const { blockhash, lastValidBlockHeight } =
         await connection.getLatestBlockhash("confirmed");
@@ -414,16 +436,28 @@ export default function AccountPage() {
       transaction.feePayer = userPubkey;
 
       // Sign transaction
+      console.log("   📝 Requesting user to sign transaction...");
       let signedTransaction;
       if (walletAdapterSignTransaction) {
         signedTransaction = (await walletAdapterSignTransaction(
           transaction
         )) as Transaction;
+        console.log("   ✅ Transaction signed by user");
       } else {
         throw new Error("Wallet adapter not ready");
       }
 
+      // Verify the signed transaction contains the correct transfer
+      console.log("   🔍 Verifying signed transaction...");
+      const transferInstruction = signedTransaction.instructions[0];
+      if (transferInstruction && transferInstruction.programId.toBase58() === "11111111111111111111111111111111") {
+        console.log("   ✅ Transaction contains SOL transfer instruction");
+      } else {
+        console.error("   ❌ Transaction missing SOL transfer instruction");
+      }
+
       // Send transaction
+      console.log("   📡 Sending transaction to network...");
       const signature = await connection.sendRawTransaction(
         signedTransaction.serialize(),
         {
@@ -431,8 +465,10 @@ export default function AccountPage() {
           preflightCommitment: "confirmed",
         }
       );
+      console.log("   ✅ Transaction sent! Signature:", signature);
 
       // Wait for confirmation
+      console.log("   ⏳ Waiting for transaction confirmation...");
       await connection.confirmTransaction(
         {
           signature,
@@ -441,9 +477,14 @@ export default function AccountPage() {
         },
         "confirmed"
       );
+      console.log("   ✅ Transaction confirmed on-chain!");
 
       // Submit claim to backend
+      console.log("   📤 Submitting claim to backend with transaction signature...");
+      console.log("   Transaction Signature:", signature);
+      console.log("   Distribution ID:", revenueEligibility.distributionId);
       const result = await claimRevenue(signature, revenueEligibility.distributionId);
+      console.log("   📥 Backend response:", result);
 
       if (result.success) {
         const { notifySuccess } = await import("@/utils/toastNotifications");

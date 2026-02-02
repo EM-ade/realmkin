@@ -7,7 +7,7 @@ const GATEKEEPER_BASE =
 
 // Token mints
 const EMPIRE_MINT = new PublicKey("EmpirdtfUMfBQXEjnNmTngeimjfizfuSBD3TN9zqzydj");
-const MKIN_MINT = new PublicKey("MKiNfTBT83DH1GK4azYyypSvQVPhN3E3tGYiHcR2BPR");
+const MKIN_MINT = new PublicKey("BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA"); // Mainnet MKIN mint - must match backend
 
 // Claim fee in USD (updated from $2.00 to $0.10)
 const CLAIM_FEE_USD = 0.10;
@@ -243,8 +243,69 @@ async function getSolPrice(): Promise<number> {
 
 /**
  * Calculate total claim fee including token account creation
+ * UPDATED: Use backend calculation for consistency with backend verification
  */
 export async function calculateClaimFee(
+  walletAddress: string
+): Promise<ClaimFeeEstimate> {
+  try {
+    const auth = getAuth();
+    if (!auth.currentUser) {
+      throw new Error("User not authenticated");
+    }
+
+    const token = await auth.currentUser.getIdToken();
+
+    // Get fee estimate from backend (ensures consistency)
+    const response = await fetch(
+      `${GATEKEEPER_BASE}/api/revenue-distribution/calculate-fee`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      // Fallback to local calculation if backend unavailable
+      console.warn("Backend fee calculation failed, using local calculation");
+      return calculateClaimFeeLocal(walletAddress);
+    }
+
+    const data = await response.json();
+
+    console.log("💵 Fee estimate from backend:", {
+      baseFeeUsd: data.baseFeeUsd,
+      accountCreationFeeUsd: data.accountCreationFeeUsd,
+      totalFeeUsd: data.totalFeeUsd,
+      totalFeeSol: data.totalFeeSol,
+      solPrice: data.solPrice,
+      accountsToCreate: data.accountsToCreate,
+    });
+
+    return {
+      baseFeeUsd: data.baseFeeUsd,
+      accountCreationFeeUsd: data.accountCreationFeeUsd,
+      totalFeeUsd: data.totalFeeUsd,
+      totalFeeSol: data.totalFeeSol,
+      accountsToCreate: {
+        empire: data.accountsToCreate.empire,
+        mkin: data.accountsToCreate.mkin,
+      },
+    };
+  } catch (error) {
+    console.error("Error calculating claim fee from backend:", error);
+    // Fallback to local calculation
+    return calculateClaimFeeLocal(walletAddress);
+  }
+}
+
+/**
+ * Local fallback fee calculation
+ */
+async function calculateClaimFeeLocal(
   walletAddress: string
 ): Promise<ClaimFeeEstimate> {
   try {
@@ -272,7 +333,7 @@ export async function calculateClaimFee(
       },
     };
   } catch (error) {
-    console.error("Error calculating claim fee:", error);
+    console.error("Error calculating claim fee locally:", error);
     // Return base fee as fallback
     const solPrice = await getSolPrice();
     return {
