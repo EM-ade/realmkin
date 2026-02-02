@@ -169,35 +169,79 @@ export default function AccountPage() {
   }, [user?.uid, account]);
 
   // Fetch leaderboard (Secondary Market Buyers)
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      if (!user?.uid) return;
+  const fetchLeaderboard = useCallback(async () => {
+    if (!user?.uid) return;
 
-      setLeaderboardLoading(true);
-      try {
-        // Fetch top 10 secondary market buyers
-        const entries = await fetchTopSecondaryMarketBuyers(10);
-        setLeaderboardEntries(
-          entries.map((entry) => ({
-            rank: entry.rank,
-            username: entry.username,
-            score: entry.nftCount,
-            nftCount: entry.nftCount, // Keep nftCount separate
-            avatarUrl: entry.avatarUrl,
-          }))
-        );
+    setLeaderboardLoading(true);
+    try {
+      // Fetch top 10 secondary market buyers
+      const entries = await fetchTopSecondaryMarketBuyers(10);
+      setLeaderboardEntries(
+        entries.map((entry) => ({
+          rank: entry.rank,
+          username: entry.username,
+          score: entry.nftCount,
+          nftCount: entry.nftCount, // Keep nftCount separate
+          avatarUrl: entry.avatarUrl,
+        }))
+      );
 
-        // User rank not shown for secondary market leaderboard
-        setUserRank(undefined);
-      } catch (error) {
-        console.error("Error fetching leaderboard:", error);
-      } finally {
-        setLeaderboardLoading(false);
-      }
-    };
-
-    fetchLeaderboard();
+      // User rank not shown for secondary market leaderboard
+      setUserRank(undefined);
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+    } finally {
+      setLeaderboardLoading(false);
+    }
   }, [user?.uid]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
+
+  // Refresh secondary market leaderboard cache
+  const handleRefreshLeaderboard = async () => {
+    try {
+      const auth = getAuth();
+      if (!auth.currentUser) {
+        throw new Error("User not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      
+      // Call backend to refresh secondary market cache
+      const gatekeeperBase = process.env.NEXT_PUBLIC_GATEKEEPER_BASE || "http://localhost:3001";
+      const response = await fetch(
+        `${gatekeeperBase}/api/revenue-distribution/refresh-secondary-market`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            limit: 50, // Refresh top 50 wallets
+            forceRefresh: false, // Only refresh stale caches (>24h old)
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to refresh leaderboard");
+      }
+
+      const result = await response.json();
+      console.log("✅ Leaderboard cache refreshed:", result.stats);
+
+      // Wait a moment for cache to update, then refetch leaderboard
+      setTimeout(() => {
+        fetchLeaderboard();
+      }, 1000);
+    } catch (error) {
+      console.error("Error refreshing leaderboard:", error);
+      throw error; // Re-throw so the button can show error state
+    }
+  };
 
   // Handle withdraw (copied from wallet page)
   const handleWithdraw = useCallback(async () => {
@@ -707,6 +751,8 @@ export default function AccountPage() {
             entries={leaderboardEntries}
             userRank={userRank}
             loading={leaderboardLoading}
+            onRefresh={handleRefreshLeaderboard}
+            showRefreshButton={true}
           />
         </main>
 
