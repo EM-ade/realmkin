@@ -98,20 +98,46 @@ export default function LeaderboardCard({
       ) : (
         <ul className="flex flex-col gap-3">
           {entries.map((entry) => {
-            const medals: Record<number, string> = {
-              1: "🥇",
-              2: "🥈", 
-              3: "🥉"
+            // Medal colors for top 3
+            const rankColors: Record<number, { border: string; bg: string }> = {
+              1: { border: "border-yellow-500", bg: "from-yellow-500/20 to-yellow-600/20" },
+              2: { border: "border-gray-400", bg: "from-gray-400/20 to-gray-500/20" },
+              3: { border: "border-amber-600", bg: "from-amber-600/20 to-amber-700/20" }
             };
-            const medal = medals[entry.rank];
+            const colors = rankColors[entry.rank] || { 
+              border: "border-[#facc15]/30", 
+              bg: "from-[#facc15]/20 to-[#f59e0b]/20" 
+            };
+            
+            // Avatar URL - use user's avatar or default realmkin logo
+            const avatarUrl = entry.avatarUrl || "/realmkin-logo.png";
             
             return (
               <li key={entry.rank} className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-3">
-                  {/* Medal */}
-                  <div className="w-[40px] h-[40px] rounded-full bg-gradient-to-br from-[#facc15]/20 to-[#f59e0b]/20 border border-[#facc15]/30 flex items-center justify-center">
-                    <span className="text-2xl">{medal || `#${entry.rank}`}</span>
+                  {/* Rank Badge (outside circle) */}
+                  <div className="relative flex items-center gap-2">
+                    {/* Rank Number */}
+                    <div className={`w-8 h-8 rounded-md bg-gradient-to-br ${colors.bg} border ${colors.border} flex items-center justify-center`}>
+                      <span className="text-sm font-bold text-yellow-500">#{entry.rank}</span>
+                    </div>
+                    
+                    {/* Avatar */}
+                    <div className={`w-[56px] h-[56px] rounded-full bg-gradient-to-br ${colors.bg} border-2 ${colors.border} flex items-center justify-center overflow-hidden relative`}>
+                      <img 
+                        src={avatarUrl}
+                        alt={entry.username}
+                        className="w-full h-full object-cover"
+                        style={{ imageRendering: '-webkit-optimize-contrast' }}
+                        loading="lazy"
+                        onError={(e) => {
+                          // Fallback to realmkin logo if image fails to load
+                          e.currentTarget.src = "/realmkin-logo.png";
+                        }}
+                      />
+                    </div>
                   </div>
+                  
                   <span className="text-gray-200 text-sm font-medium">{entry.username}</span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
