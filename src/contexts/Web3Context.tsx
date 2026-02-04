@@ -23,6 +23,7 @@ import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { dataRepairService } from "@/services/dataRepairService";
 import { logger } from "@/lib/logger";
+import toast from "react-hot-toast";
 
 // Import onboarding context type
 declare global {
@@ -146,9 +147,9 @@ const Web3Context = createContext<Web3ContextType>({
   uid: null,
   isConnected: false,
   isConnecting: false,
-  connectWallet: async () => { },
-  disconnectWallet: () => { },
-  refreshWalletState: async () => { },
+  connectWallet: async () => {},
+  disconnectWallet: () => {},
+  refreshWalletState: async () => {},
   provider: null,
   isAuthenticating: false,
 });
@@ -196,179 +197,264 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const router = useRouter();
 
   // Auto-authenticate with Firebase when wallet connects
-  const autoAuthenticateFirebase = useCallback(async (walletAddress: string) => {
-    try {
-      // Validate wallet address using Solana's PublicKey constructor
+  const autoAuthenticateFirebase = useCallback(
+    async (walletAddress: string) => {
       try {
-        new PublicKey(walletAddress); // This will throw if invalid
-      } catch (e) {
-        console.error("Invalid Solana wallet address:", walletAddress);
-        throw new Error("Invalid Solana wallet address");
-      }
-
-      const auth = getAuth();
-
-      if (auth.currentUser) {
-        if (auth.currentUser.uid) {
-          setUid(auth.currentUser.uid);
-
-          // Repair user data if needed
-          try {
-            await dataRepairService.repairUsernameMapping(auth.currentUser.uid);
-          } catch (repairError) {
-            console.warn("Failed to repair user data:", repairError);
-          }
-
-          return;
-        }
-      }
-
-      // Use lowercase for email only, keep original case for wallet address
-      const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
-      const tempPassword = walletAddress;
-
-      logger.debug(`🔐 Authenticating wallet: ${walletAddress}`);
-
-      setIsAuthenticating(true);
-
-      // Check if we're in onboarding - if so, don't navigate
-      const isOnboarding = localStorage.getItem("onboarding_active") === "true";
-
-      try {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          tempEmail,
-          tempPassword,
-        );
-        setUid(userCredential.user.uid);
-
-        // Store wallet address in original case (Solana addresses are case-sensitive)
-        const walletLower = walletAddress.toLowerCase();
-
-        // Ensure wallet mapping exists (lowercased key for lookup, but store original case)
-        const walletDocRef = doc(db, "wallets", walletLower);
-        const walletDoc = await getDoc(walletDocRef);
-        if (!walletDoc.exists()) {
-          console.log("📝 Creating missing wallet mapping...");
-          await setDoc(walletDocRef, {
-            uid: userCredential.user.uid,
-            walletAddress: walletAddress, // Store in original case
-            createdAt: new Date(),
-          });
-          console.log("✅ Wallet mapping created");
-        }
-
-        // Ensure user profile exists with proper username validation
+        // Validate wallet address using Solana's PublicKey constructor
         try {
-          const userDocRef = doc(db, "users", userCredential.user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (!userDoc.exists()) {
-            console.log("📝 Creating missing user profile...");
-            await setDoc(userDocRef, {
-              walletAddress: walletAddress, // Store in original case
-              createdAt: new Date(),
-            });
-            console.log("✅ User profile created");
-          } else {
-            // Check if user has a username set
-            const userData = userDoc.data();
-            if (!userData?.username) {
-              console.warn("User profile exists but missing username");
-              // Try to repair username mapping
-              try {
-                const repaired = await dataRepairService.repairUsernameMapping(userCredential.user.uid);
-                if (repaired) {
-                  console.log("✅ Username mapping repaired during login");
-                }
-              } catch (repairError) {
-                console.warn("Failed to repair username mapping:", repairError);
-              }
-
-              // Don't redirect during onboarding
-              if (!isOnboarding) {
-                // Set a flag to indicate incomplete setup
-                localStorage.setItem("realmkin_incomplete_setup", "true");
-              }
-            }
-          }
-        } catch (profileErr) {
-          console.warn("⚠️ Failed to ensure user profile exists:", profileErr);
+          new PublicKey(walletAddress); // This will throw if invalid
+        } catch (e) {
+          console.error("Invalid Solana wallet address:", walletAddress);
+          throw new Error("Invalid Solana wallet address");
         }
 
-        console.log("✅ Sign-in successful");
-      } catch (error: unknown) {
-        const authError = error as { code?: string };
-        if (
-          authError.code === "auth/user-not-found" ||
-          authError.code === "auth/invalid-credential"
-        ) {
-          console.log("ℹ️ No account found. Attempting to create profile...");
-          try {
-            // Try to create a new account instead of redirecting
-            const newUserCredential = await createUserWithEmailAndPassword(
-              auth,
-              tempEmail,
-              tempPassword,
-            );
-            setUid(newUserCredential.user.uid);
+        const auth = getAuth();
 
-            // Create wallet mapping (lowercased key for lookup, but store original case)
-            const walletLower = walletAddress.toLowerCase();
-            const walletDocRef = doc(db, "wallets", walletLower);
+        if (auth.currentUser) {
+          if (auth.currentUser.uid) {
+            setUid(auth.currentUser.uid);
+
+            // Repair user data if needed
+            try {
+              await dataRepairService.repairUsernameMapping(
+                auth.currentUser.uid,
+              );
+            } catch (repairError) {
+              console.warn("Failed to repair user data:", repairError);
+            }
+
+            return;
+          }
+        }
+
+        // Use lowercase for email only, keep original case for wallet address
+        const tempEmail = `${walletAddress.toLowerCase()}@wallet.realmkin.com`;
+        const tempPassword = walletAddress;
+
+        logger.debug(`🔐 Authenticating wallet: ${walletAddress}`);
+
+        setIsAuthenticating(true);
+
+        // Check if we're in onboarding - if so, don't navigate
+        const isOnboarding =
+          localStorage.getItem("onboarding_active") === "true";
+
+        try {
+          const userCredential = await signInWithEmailAndPassword(
+            auth,
+            tempEmail,
+            tempPassword,
+          );
+          setUid(userCredential.user.uid);
+
+          // Store wallet address in original case (Solana addresses are case-sensitive)
+          const walletLower = walletAddress.toLowerCase();
+
+          // Ensure wallet mapping exists (lowercased key for lookup, but store original case)
+          const walletDocRef = doc(db, "wallets", walletLower);
+          const walletDoc = await getDoc(walletDocRef);
+          if (!walletDoc.exists()) {
+            console.log("📝 Creating missing wallet mapping...");
             await setDoc(walletDocRef, {
-              uid: newUserCredential.user.uid,
+              uid: userCredential.user.uid,
               walletAddress: walletAddress, // Store in original case
               createdAt: new Date(),
             });
+            console.log("✅ Wallet mapping created");
+          }
 
-            // Create user profile
-            const userDocRef = doc(db, "users", newUserCredential.user.uid);
-            await setDoc(userDocRef, {
-              walletAddress: walletAddress, // Store in original case
-              createdAt: new Date(),
-            });
-
-            console.log("✅ New account created successfully");
-          } catch (createErr) {
-            console.error("🚨 Failed to create account:", createErr);
-
-            // Instead of redirecting to login, trigger onboarding at wallet step
-            console.log("🔄 Triggering onboarding wizard at wallet connection step...");
-
-            // Check if we have onboarding trigger available
-            if (typeof window !== 'undefined' && window.__realmkin_onboarding_trigger) {
-              window.__realmkin_onboarding_trigger('wallet');
+          // Ensure user profile exists with proper username validation
+          try {
+            const userDocRef = doc(db, "users", userCredential.user.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (!userDoc.exists()) {
+              console.log("📝 Creating missing user profile...");
+              await setDoc(userDocRef, {
+                walletAddress: walletAddress, // Store in original case
+                createdAt: new Date(),
+              });
+              console.log("✅ User profile created");
             } else {
-              // Fallback: Only redirect if we're not already on the login page and not during onboarding
-              if (!window.location.pathname.includes("/login") && !isOnboarding) {
-                router.push(`/login?wallet=${walletAddress}`);
+              // Check if user has a username set
+              const userData = userDoc.data();
+              if (!userData?.username) {
+                console.warn("User profile exists but missing username");
+                // Try to repair username mapping
+                try {
+                  const repaired =
+                    await dataRepairService.repairUsernameMapping(
+                      userCredential.user.uid,
+                    );
+                  if (repaired) {
+                    console.log("✅ Username mapping repaired during login");
+                  }
+                } catch (repairError) {
+                  console.warn(
+                    "Failed to repair username mapping:",
+                    repairError,
+                  );
+                }
+
+                // Don't redirect during onboarding
+                if (!isOnboarding) {
+                  // Set a flag to indicate incomplete setup
+                  localStorage.setItem("realmkin_incomplete_setup", "true");
+                }
               }
             }
+          } catch (profileErr) {
+            console.warn(
+              "⚠️ Failed to ensure user profile exists:",
+              profileErr,
+            );
           }
-        } else {
-          console.error("🚨 Firebase sign-in error:", error);
+
+          console.log("✅ Sign-in successful");
+        } catch (error: unknown) {
+          const authError = error as { code?: string };
+          if (
+            authError.code === "auth/user-not-found" ||
+            authError.code === "auth/invalid-credential"
+          ) {
+            console.log("ℹ️ No account found. Prompting user for creation...");
+
+            const handleCreateAccount = async () => {
+              const toast = (await import("react-hot-toast")).default;
+              const toastId = toast.loading("Creating profile...");
+              try {
+                // Try to create a new account instead of redirecting
+                const newUserCredential = await createUserWithEmailAndPassword(
+                  auth,
+                  tempEmail,
+                  tempPassword,
+                );
+                setUid(newUserCredential.user.uid);
+
+                // Create wallet mapping (lowercased key for lookup, but store original case)
+                const walletLower = walletAddress.toLowerCase();
+                const walletDocRef = doc(db, "wallets", walletLower);
+                await setDoc(walletDocRef, {
+                  uid: newUserCredential.user.uid,
+                  walletAddress: walletAddress, // Store in original case
+                  createdAt: new Date(),
+                });
+
+                // Create user profile
+                const userDocRef = doc(db, "users", newUserCredential.user.uid);
+                await setDoc(userDocRef, {
+                  walletAddress: walletAddress, // Store in original case
+                  createdAt: new Date(),
+                });
+
+                console.log("✅ New account created successfully");
+                toast.success("Profile created!", { id: toastId });
+              } catch (createErr) {
+                console.error("🚨 Failed to create account:", createErr);
+                toast.error("Failed to create profile", { id: toastId });
+
+                // Instead of redirecting to login, trigger onboarding at wallet step
+                console.log(
+                  "🔄 Triggering onboarding wizard at wallet connection step...",
+                );
+
+                // Check if we have onboarding trigger available
+                if (
+                  typeof window !== "undefined" &&
+                  window.__realmkin_onboarding_trigger
+                ) {
+                  window.__realmkin_onboarding_trigger("wallet");
+                } else {
+                  // Fallback: Only redirect if we're not already on the login page and not during onboarding
+                  if (
+                    !window.location.pathname.includes("/login") &&
+                    !isOnboarding
+                  ) {
+                    router.push(`/login?wallet=${walletAddress}`);
+                  }
+                }
+              }
+            };
+
+            const toast = (await import("react-hot-toast")).default;
+            toast(
+              (t) => (
+                <div className="flex flex-col gap-3 min-w-[250px]">
+                  <div className="flex flex-col gap-1">
+                    <p className="font-bold text-[#DA9C2F]">
+                      New Wallet Detected
+                    </p>
+                    <p className="text-sm text-zinc-300">
+                      No profile found for{" "}
+                      <span className="font-mono text-xs bg-zinc-800 px-1 rounded">
+                        {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+                      </span>
+                      .
+                    </p>
+                    <p className="text-sm text-zinc-300">
+                      Do you want to create a new profile?
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        toast.dismiss(t.id);
+                        handleCreateAccount();
+                      }}
+                      className="flex-1 bg-[#DA9C2F] text-black py-2 rounded-md text-sm font-bold hover:bg-[#ffbf00] transition-colors"
+                    >
+                      Create Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        toast.dismiss(t.id);
+                        disconnectWallet();
+                      }}
+                      className="flex-1 bg-zinc-700 text-white py-2 rounded-md text-sm hover:bg-zinc-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ),
+              {
+                duration: Infinity,
+                position: "top-center",
+                style: {
+                  background: "#1a1a1a",
+                  color: "#fff",
+                  border: "1px solid rgba(218, 156, 47, 0.3)",
+                },
+              },
+            );
+
+            setIsAuthenticating(false);
+            return; // Stop execution here, wait for user input
+          } else {
+            console.error("🚨 Firebase sign-in error:", error);
+          }
+        }
+        setIsAuthenticating(false);
+      } catch (error) {
+        console.error("🚨 Auto-authentication process failed:", error);
+        setIsAuthenticating(false);
+
+        // If auth failed, we must disconnect the wallet to prevent "connected but restricted" state
+        // This handles the user's concern about "access restricted" loops
+        disconnectWallet();
+
+        try {
+          const toast = (await import("react-hot-toast")).default;
+          toast.error("Authentication failed. Please try connecting again.", {
+            id: "auth-error",
+            duration: 4000,
+          });
+        } catch (e) {
+          // ignore
         }
       }
-      setIsAuthenticating(false);
-    } catch (error) {
-      console.error("🚨 Auto-authentication process failed:", error);
-      setIsAuthenticating(false);
-
-      // If auth failed, we must disconnect the wallet to prevent "connected but restricted" state
-      // This handles the user's concern about "access restricted" loops
-      disconnectWallet();
-
-      try {
-        const toast = (await import('react-hot-toast')).default;
-        toast.error('Authentication failed. Please try connecting again.', {
-          id: 'auth-error',
-          duration: 4000,
-        });
-      } catch (e) {
-        // ignore
-      }
-    }
-  }, [router]);
+    },
+    [router],
+  );
 
   // Sync adapter state into this context (with debouncing to prevent race conditions)
   useEffect(() => {
@@ -385,10 +471,15 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       try {
         // Only show connecting state if we actually have a reason to believe we're connecting
         // (i.e., we have a cached wallet or the adapter is truly connecting)
-        const hasCachedWallet = typeof window !== 'undefined' && !!localStorage.getItem("realmkin_cached_wallet");
+        const hasCachedWallet =
+          typeof window !== "undefined" &&
+          !!localStorage.getItem("realmkin_cached_wallet");
         setIsConnecting(Boolean(connecting && (hasCachedWallet || connected)));
         if (publicKey) {
-          console.log("✅ [Wallet Sync] Public key detected:", publicKey.toString());
+          console.log(
+            "✅ [Wallet Sync] Public key detected:",
+            publicKey.toString(),
+          );
           const address =
             (
               publicKey as unknown as {
@@ -401,7 +492,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
           try {
             new PublicKey(address); // This will throw if invalid
           } catch (e) {
-            console.error("Invalid Solana wallet address from wallet adapter:", address);
+            console.error(
+              "Invalid Solana wallet address from wallet adapter:",
+              address,
+            );
             setAccount(null);
             setUid(null);
             setIsConnected(false);
@@ -410,7 +504,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
           if (address && isValidSolanaAddress(address)) {
             // Only update if address actually changed (prevent unnecessary rerenders)
-            setAccount(prevAccount => prevAccount === address ? prevAccount : address);
+            setAccount((prevAccount) =>
+              prevAccount === address ? prevAccount : address,
+            );
             setIsConnected(true);
 
             // Cache connection for faster reloads
@@ -424,13 +520,16 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             );
 
             // Auto-authenticate with Firebase (AWAIT to ensure auth completes before navigation)
-            console.log("🔐 Starting Firebase authentication for wallet:", address);
+            console.log(
+              "🔐 Starting Firebase authentication for wallet:",
+              address,
+            );
 
             // Show toast notification for better UX
             try {
-              const toast = (await import('react-hot-toast')).default;
-              toast.loading('Authenticating wallet...', {
-                id: 'wallet-auth',
+              const toast = (await import("react-hot-toast")).default;
+              toast.loading("Authenticating wallet...", {
+                id: "wallet-auth",
                 duration: 2000,
               });
             } catch (e) {
@@ -442,9 +541,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
             // Show success toast
             try {
-              const toast = (await import('react-hot-toast')).default;
-              toast.success('Wallet connected successfully!', {
-                id: 'wallet-auth',
+              const toast = (await import("react-hot-toast")).default;
+              toast.success("Wallet connected successfully!", {
+                id: "wallet-auth",
                 duration: 2000,
               });
             } catch (e) {
@@ -506,10 +605,14 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       // Only check cached connection if adapter hasn't connected yet
       // This prevents competing with adapter's built-in autoConnect
       if (!publicKey && !connected && !connecting) {
-        console.log("🔍 Adapter didn't auto-connect, checking cached connection...");
+        console.log(
+          "🔍 Adapter didn't auto-connect, checking cached connection...",
+        );
         checkConnection();
       } else {
-        console.log("✅ Adapter already connected or connecting, skipping cache check");
+        console.log(
+          "✅ Adapter already connected or connecting, skipping cache check",
+        );
       }
     }, 2000); // Increased from 500ms to 2s
 
@@ -586,7 +689,9 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   async function checkConnection() {
     // Add debounce to prevent excessive connection checks
     const now = Date.now();
-    const lastCheck = parseInt(localStorage.getItem("last_connection_check") || "0");
+    const lastCheck = parseInt(
+      localStorage.getItem("last_connection_check") || "0",
+    );
     if (now - lastCheck < 2000) {
       console.log("⏱️ Skipping connection check (too frequent)");
       return;
@@ -627,7 +732,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       console.log("📦 Found cached wallet:", {
         type: walletData.type,
         age: `${Math.floor(cacheAge / 1000)}s`,
-        address: walletData.address?.substring(0, 8) + "..."
+        address: walletData.address?.substring(0, 8) + "...",
       });
 
       // Only use cache if it's less than 15 minutes old
@@ -736,11 +841,13 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
 
             // If user rejected, STOP RETRYING IMMEDIATELY and clear cache
             if (
-              error?.message?.includes("User rejected") || 
+              error?.message?.includes("User rejected") ||
               error?.message?.includes("User denied") ||
               error?.name === "WalletConnectionError"
             ) {
-              console.log("🛑 User rejected connection, clearing cache and stopping retries");
+              console.log(
+                "🛑 User rejected connection, clearing cache and stopping retries",
+              );
               localStorage.removeItem("realmkin_cached_wallet");
               // Don't show error toast for user rejection (it's intentional)
               break;
@@ -783,11 +890,11 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       logger.debug("🔒 Connection already in progress");
       // Show user feedback
       try {
-        const toast = (await import('react-hot-toast')).default;
+        const toast = (await import("react-hot-toast")).default;
         toast("Wallet connection in progress, please wait...", {
           duration: 2000,
-          id: 'connection-in-progress',
-          icon: 'ℹ️',
+          id: "connection-in-progress",
+          icon: "ℹ️",
         });
       } catch (e) {
         console.warn("Failed to show toast:", e);
@@ -835,7 +942,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       try {
         if (setWalletModalVisible) {
           console.log("🔔 Opening Solana Wallet Adapter modal via context");
-          console.log("📋 Available wallets:", wallets?.map(w => w.adapter.name));
+          console.log(
+            "📋 Available wallets:",
+            wallets?.map((w) => w.adapter.name),
+          );
           console.log("🔌 Currently selected wallet:", wallet?.adapter.name);
 
           setWalletModalVisible(true);
@@ -1026,7 +1136,10 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
               // Use a longer timeout for mobile since users need to switch apps
               const connectionPromise = phantom.connect();
               const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("Connection timeout")), 15000),
+                setTimeout(
+                  () => reject(new Error("Connection timeout")),
+                  15000,
+                ),
               );
 
               const response = await Promise.race([
