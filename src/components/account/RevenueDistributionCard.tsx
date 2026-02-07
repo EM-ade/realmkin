@@ -232,7 +232,7 @@ export default function RevenueDistributionCard({
               <div className="flex-1">
                 <p className="text-xs text-yellow-400 font-medium mb-1">Claim Fee</p>
                 <p className="text-xs text-gray-300">
-                  Base fee: $0.10 (paid in SOL)
+                  Base fee: $1.00 total ($0.10 claim + $0.90 site fee, paid in SOL)
                 </p>
                 {accountsToCreate && (accountsToCreate.empire || accountsToCreate.mkin) && (
                   <p className="text-xs text-gray-300 mt-1">

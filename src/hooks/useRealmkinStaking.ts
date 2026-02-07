@@ -103,7 +103,7 @@ export function useRealmkinStaking() {
   }, [fetchWalletBalance]);
 
   // Helper: Fetch dynamic fee based on current SOL price
-  const fetchDynamicFee = async (): Promise<number> => {
+  const fetchDynamicFee = async (usdAmount: number = 2.80): Promise<number> => {
     try {
       // Fetch SOL price from multiple sources
       const response = await fetch(
@@ -116,12 +116,11 @@ export function useRealmkinStaking() {
         throw new Error("Invalid SOL price");
       }
 
-      // Calculate SOL needed for $2 USD
-      const targetUSD = 0.1;
-      const feeInSol = targetUSD / solPrice;
+      // Calculate SOL needed for specified USD amount
+      const feeInSol = usdAmount / solPrice;
 
       console.log(
-        `💵 Dynamic fee: $${targetUSD} = ${feeInSol.toFixed(
+        `💵 Dynamic fee: $${usdAmount} = ${feeInSol.toFixed(
           4
         )} SOL (SOL price: $${solPrice})`
       );
@@ -206,19 +205,22 @@ export function useRealmkinStaking() {
       console.log("  User wallet:", publicKey.toBase58());
       console.log("  Vault address:", data.config.stakingWalletAddress);
 
-      // 1. Calculate 5% entry fee
-      toast.loading("Calculating entry fee...", { id: "stake-fee" });
+      // 1. Calculate 5% entry fee (backend will add $0.90 site fee automatically)
+      toast.loading("Processing entry fee (5% + $0.90)...", { id: "stake-fee" });
       const feeData = await StakingAPI.calculateFee(amount, 5);
+      
+      // Calculate approximate $0.90 in SOL for display
+      const siteFeeResponse = await fetch("/api/get-sol-price?usd=0.90");
+      const siteFeeData = await siteFeeResponse.json();
+      const siteFeeSOL = siteFeeData.solAmount;
+      const totalEstimatedFee = feeData.feeInSol + siteFeeSOL;
+      
       console.log(
-        `💰 Entry fee: ${feeData.feeInSol.toFixed(6)} SOL (${
-          feeData.feeInMkin
-        } MKIN value at $${feeData.mkinPriceUsd})`
+        `💰 Entry fee: ${feeData.feeInSol.toFixed(6)} SOL (5%) + ${siteFeeSOL.toFixed(6)} SOL ($0.90 site fee) = ${totalEstimatedFee.toFixed(6)} SOL total`
       );
 
       toast.loading(
-        `Entry fee: ${feeData.feeInSol.toFixed(
-          6
-        )} SOL. Creating transaction...`,
+        `Total fee: ~${totalEstimatedFee.toFixed(4)} SOL (5% + $0.90). Creating transaction...`,
         { id: "stake-fee" }
       );
 
@@ -333,9 +335,7 @@ export function useRealmkinStaking() {
       console.log("  ✅ Stake registered with backend!");
 
       toast.success(
-        `Successfully staked ${amount} MKIN! Entry fee: ${feeData.feeInSol.toFixed(
-          6
-        )} SOL`,
+        `Successfully staked ${amount} MKIN! Total fee paid: 5% + $0.90 site fee`,
         { id: "stake-fee", duration: 5000 }
       );
       fetchData();
@@ -379,13 +379,17 @@ export function useRealmkinStaking() {
     }
     setIsClaiming(true);
     try {
-      // Fetch dynamic fee (~$2 USD in SOL)
-      toast.loading("Calculating fee...", { id: "claim-fee" });
-      const feeAmount = await fetchDynamicFee();
+      // Calculate fee amount
+      toast.loading("Processing transaction fee...", { id: "claim-fee" });
+      
+      const feeResponse = await fetch("/api/get-sol-price?usd=2.90");
+      const feeData = await feeResponse.json();
+      const feeAmount = feeData.solAmount;
 
-      toast.loading(`Paying $2 fee (${feeAmount.toFixed(4)} SOL)...`, {
+      toast.loading(`Paying $2.90 fee (${feeAmount.toFixed(4)} SOL)...`, {
         id: "claim-fee",
       });
+      // User pays full $2.90 to staking vault, backend will split it
       const signature = await paySolFee(
         feeAmount,
         data.config.stakingWalletAddress
@@ -415,13 +419,14 @@ export function useRealmkinStaking() {
     }
     setIsClaiming(true);
     try {
-      // Fetch dynamic fee (~$2 USD in SOL)
-      toast.loading("Calculating fee...", { id: "unstake-fee" });
-      const feeAmount = await fetchDynamicFee();
+      // Get fee amount from backend (it knows the current SOL price)
+      toast.loading("Processing transaction fee...", { id: "unstake-fee" });
+      
+      const feeResponse = await fetch("/api/get-sol-price?usd=2.90");
+      const feeData = await feeResponse.json();
+      const feeAmount = feeData.solAmount;
 
-      toast.loading(`Paying $2 fee (${feeAmount.toFixed(4)} SOL)...`, {
-        id: "unstake-fee",
-      });
+      // User pays full $2.90 to staking vault, backend will split it
       const signature = await paySolFee(
         feeAmount,
         data.config.stakingWalletAddress

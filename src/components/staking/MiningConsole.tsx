@@ -207,7 +207,7 @@ export function MiningConsole({
       </button>
       {liveRewards > 0 && (
         <div className="text-xs text-[#f7dca1]/60 mt-2 z-10">
-          💡 $2 fee applies when claiming
+          💡 $2.90 fee applies when claiming ($2.00 + $0.90 site fee)
         </div>
       )}
     </div>

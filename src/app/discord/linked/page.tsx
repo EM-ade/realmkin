@@ -299,20 +299,35 @@ function DiscordLinkedContent() {
           );
         }
 
-        // Step 2: Ensure user is in guild before verification
-        setPhase("checkingMember");
-        const checkMember = async (): Promise<boolean> => {
-          const mRes = await fetch(`${gatekeeperBase}/api/discord/is-member`, {
-            headers: { Authorization: `Bearer ${token}` },
-            cache: "no-store",
-          });
-          const mJson = await mRes
-            .json()
-            .catch(() => ({} as Record<string, unknown>));
-          console.log("[discord:linked] is-member:", mRes.status, mJson);
-          return Boolean((mJson as Record<string, unknown>)?.member);
-        };
-        const inGuild = await checkMember();
+        // Check if Discord was already linked - if so, skip member check
+        const alreadyLinked = linkJson?.message === "Already linked";
+        if (alreadyLinked) {
+          console.log(
+            "[discord:linked] Discord already linked, skipping member check and proceeding to verification"
+          );
+        }
+
+        // Step 2: Ensure user is in guild before verification (skip if already linked)
+        let inGuild = true; // Assume in guild if already linked
+        if (!alreadyLinked) {
+          setPhase("checkingMember");
+          const checkMember = async (): Promise<boolean> => {
+            const mRes = await fetch(`${gatekeeperBase}/api/discord/is-member`, {
+              headers: { Authorization: `Bearer ${token}` },
+              cache: "no-store",
+            });
+            const mJson = await mRes
+              .json()
+              .catch(() => ({} as Record<string, unknown>));
+            console.log("[discord:linked] is-member:", mRes.status, mJson);
+            return Boolean((mJson as Record<string, unknown>)?.member);
+          };
+          inGuild = await checkMember();
+        } else {
+          console.log(
+            "[discord:linked] Skipping member check for already-linked account"
+          );
+        }
         if (!inGuild) {
           // Show invite and poll until they join
           setPhase("join");

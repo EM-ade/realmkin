@@ -9,8 +9,8 @@ const GATEKEEPER_BASE =
 const EMPIRE_MINT = new PublicKey("EmpirdtfUMfBQXEjnNmTngeimjfizfuSBD3TN9zqzydj");
 const MKIN_MINT = new PublicKey("BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA"); // Mainnet MKIN mint - must match backend
 
-// Claim fee in USD (updated from $2.00 to $0.10)
-const CLAIM_FEE_USD = 0.10;
+// Claim fee in USD (updated to include $0.90 site fee)
+const CLAIM_FEE_USD = 1.00; // $0.10 base + $0.90 site fee
 
 export interface RevenueEligibility {
   eligible: boolean;
