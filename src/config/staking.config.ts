@@ -1,13 +1,13 @@
 import { BN } from "@coral-xyz/anchor";
 
 export const STAKING_CONFIG = {
-  // 30% Flat ROI (Return on Investment) per year
-  // Users earn 30% of their staked token value annually, paid in SOL
-  FIXED_ROI_PERCENT: 0.3, // 30% per year
-  FIXED_APR: 30, // Display as 30% APR
+  // 10% Flat ROI (Return on Investment) per year
+  // Users earn 10% of their staked token value annually, paid in SOL
+  FIXED_ROI_PERCENT: 0.1, // 10% per year
+  FIXED_APR: 10, // Display as 10% APR
 
   // NOTE: Mining rate is now calculated dynamically based on:
-  // Rate = (Staked Amount * 30% * Token/SOL Price) / Seconds in Year
+  // Rate = (Staked Amount * 10% * Token/SOL Price) / Seconds in Year
   // This replaces the old BASE_MINING_RATE constant
 
   // Mining Boosters (increase mining rate above base)
@@ -34,7 +34,7 @@ export const STAKING_CONFIG = {
 } as const;
 
 /**
- * Calculate mining rewards based on 30% ROI
+ * Calculate mining rewards based on 10% ROI
  *
  * @param stakedAmount - Amount of tokens staked
  * @param durationSeconds - Duration staked in seconds
@@ -59,7 +59,7 @@ export function calculateMiningRewards(
 }
 
 /**
- * Calculate mining rate (SOL per second) based on 30% ROI
+ * Calculate mining rate (SOL per second) based on 10% ROI
  *
  * @param stakedAmount - Amount of tokens staked
  * @param tokenPriceSol - Current token price in SOL
@@ -127,7 +127,7 @@ export function estimateRewards(
 }
 
 /**
- * Get APY (always returns fixed 30% APR)
+ * Get APY (always returns fixed 10% APR)
  */
 export function getAPYForLockPeriod(
   lockPeriod: "flexible" | "30" | "60" | "90"
