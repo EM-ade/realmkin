@@ -308,20 +308,22 @@ function DiscordLinkedContent() {
         }
 
         // Step 2: Ensure user is in guild before verification (skip if already linked)
+        // Define checkMember function outside the conditional so it's accessible in polling
+        const checkMember = async (): Promise<boolean> => {
+          const mRes = await fetch(`${gatekeeperBase}/api/discord/is-member`, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          });
+          const mJson = await mRes
+            .json()
+            .catch(() => ({} as Record<string, unknown>));
+          console.log("[discord:linked] is-member:", mRes.status, mJson);
+          return Boolean((mJson as Record<string, unknown>)?.member);
+        };
+
         let inGuild = true; // Assume in guild if already linked
         if (!alreadyLinked) {
           setPhase("checkingMember");
-          const checkMember = async (): Promise<boolean> => {
-            const mRes = await fetch(`${gatekeeperBase}/api/discord/is-member`, {
-              headers: { Authorization: `Bearer ${token}` },
-              cache: "no-store",
-            });
-            const mJson = await mRes
-              .json()
-              .catch(() => ({} as Record<string, unknown>));
-            console.log("[discord:linked] is-member:", mRes.status, mJson);
-            return Boolean((mJson as Record<string, unknown>)?.member);
-          };
           inGuild = await checkMember();
         } else {
           console.log(
