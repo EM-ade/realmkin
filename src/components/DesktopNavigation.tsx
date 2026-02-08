@@ -63,7 +63,7 @@ export default function DesktopNavigation() {
         if (discordUnlinking || !user) return false;
         try {
             // Use context method for disconnect
-            await disconnectDiscord(user, gatekeeperBase);
+            await disconnectDiscord(user);
             setShowDiscordMenu(false);
             return true;
         } catch (error) {
@@ -75,7 +75,7 @@ export default function DesktopNavigation() {
     // Check Discord status on mount
     useEffect(() => {
         if (user?.uid) {
-            checkDiscordStatus(user.uid, gatekeeperBase);
+            checkDiscordStatus(user.uid);
         }
     }, [user?.uid, gatekeeperBase, checkDiscordStatus]);
 

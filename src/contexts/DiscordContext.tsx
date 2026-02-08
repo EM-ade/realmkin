@@ -7,13 +7,23 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/config/firebaseClient"; // Fixed import path
 import { useWeb3 } from "./Web3Context"; // Import Web3 context
 
+/**
+ * DiscordContext handles Discord OAuth flow and linking operations.
+ * 
+ * Environment Variables:
+ * - NEXT_PUBLIC_DISCORD_BOT_URL: Primary URL for Discord bot operations (linking, verification)
+ * - NEXT_PUBLIC_GATEKEEPER_BASE: Fallback URL for backward compatibility
+ * 
+ * See ENV_VARS_GUIDE.md for more details.
+ */
+
 interface DiscordContextType {
   discordLinked: boolean;
   discordConnecting: boolean;
   discordUnlinking: boolean;
   connectDiscord: (user: { uid: string; getIdToken: () => Promise<string> }) => Promise<void>;
-  disconnectDiscord: (user: { uid: string; getIdToken: () => Promise<string> }, gatekeeperBase: string) => Promise<void>;
-  checkDiscordStatus: (userId: string, gatekeeperBase: string) => Promise<void>;
+  disconnectDiscord: (user: { uid: string; getIdToken: () => Promise<string> }) => Promise<void>;
+  checkDiscordStatus: (userId: string) => Promise<void>;
 }
 
 const DiscordContext = createContext<DiscordContextType | undefined>(undefined);
@@ -109,12 +119,18 @@ export const DiscordProvider = ({ children }: DiscordProviderProps) => {
   );
 
   const disconnectDiscord = useCallback(
-    async (user: { uid: string; getIdToken: () => Promise<string> }, gatekeeperBase: string) => {
+    async (user: { uid: string; getIdToken: () => Promise<string> }) => {
       if (!user?.uid) return;
       setDiscordUnlinking(true);
       try {
+        // Use Discord Bot URL for Discord operations
+        const discordBotUrl =
+          process.env.NEXT_PUBLIC_DISCORD_BOT_URL ||
+          process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
+          "https://gatekeeper-bmvu.onrender.com";
+
         const token = await user.getIdToken();
-        const response = await fetch(`${gatekeeperBase}/api/link/discord`, {
+        const response = await fetch(`${discordBotUrl}/api/link/discord`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -136,9 +152,15 @@ export const DiscordProvider = ({ children }: DiscordProviderProps) => {
   );
 
   const checkDiscordStatus = useCallback(
-    async (userId: string, gatekeeperBase: string) => {
+    async (userId: string) => {
       try {
-        const response = await fetch(`${gatekeeperBase}/api/discord/status/${userId}`);
+        // Use Discord Bot URL for Discord operations
+        const discordBotUrl =
+          process.env.NEXT_PUBLIC_DISCORD_BOT_URL ||
+          process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
+          "https://gatekeeper-bmvu.onrender.com";
+
+        const response = await fetch(`${discordBotUrl}/api/discord/status/${userId}`);
         if (response.ok) {
           const data = await response.json();
           setDiscordLinked(data.linked || false);

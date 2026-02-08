@@ -38,7 +38,7 @@ export default function GlobalMobileNavigation() {
   };
 
   const handleDiscordDisconnect = async () => {
-    if (user) await disconnectDiscord(user, gatekeeperBase);
+    if (user) await disconnectDiscord(user);
   };
 
   return (
