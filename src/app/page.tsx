@@ -106,8 +106,14 @@ function Home() {
     async function checkDiscordLink() {
       if (user?.uid) {
         try {
+          // Use Discord Bot URL for Discord operations
+          const discordBotUrl =
+            process.env.NEXT_PUBLIC_DISCORD_BOT_URL ||
+            process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
+            "https://gatekeeper-bmvu.onrender.com";
+
           const response = await fetch(
-            `${gatekeeperBase}/api/discord/status/${user.uid}`
+            `${discordBotUrl}/api/discord/status/${user.uid}`
           );
           if (response.ok) {
             const data = await response.json();

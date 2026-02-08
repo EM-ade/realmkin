@@ -88,7 +88,7 @@ export default function ProjectDetailsPage() {
                 discordConnecting={discordConnecting}
                 discordUnlinking={discordUnlinking}
                 onDiscordConnect={() => user && connectDiscord(user)}
-                onDiscordDisconnect={() => user && disconnectDiscord(user, gatekeeperBase)}
+                onDiscordDisconnect={() => user && disconnectDiscord(user)}
                 onConnectWallet={connectWallet}
                 onDisconnectWallet={disconnectWallet}
             />

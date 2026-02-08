@@ -137,7 +137,7 @@ function StakingPage() {
         discordUnlinking={discordUnlinking}
         onDiscordConnect={() => uid && connectDiscord({ uid } as any)}
         onDiscordDisconnect={() =>
-          uid && disconnectDiscord({ uid } as any, gatekeeperBase)
+          uid && disconnectDiscord({ uid } as any)
         }
         onConnectWallet={connectWallet}
         onDisconnectWallet={disconnectWallet}

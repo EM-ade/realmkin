@@ -1,3 +1,9 @@
+/**
+ * Goal Service
+ * 
+ * Uses backend API (NEXT_PUBLIC_GATEKEEPER_BASE) for goal tracking.
+ * Goals are managed by the backend-api service, not the Discord bot.
+ */
 const GATEKEEPER_URL =
   process.env.NEXT_PUBLIC_GATEKEEPER_BASE || process.env.NEXT_PUBLIC_GATEKEEPER_URL || "https://gatekeeper-bmvu.onrender.com";
 

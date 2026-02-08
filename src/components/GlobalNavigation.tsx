@@ -66,7 +66,7 @@ export default function GlobalNavigation() {
   // Check Discord status on mount
   useEffect(() => {
     if (user?.uid) {
-      checkDiscordStatus(user.uid, gatekeeperBase);
+      checkDiscordStatus(user.uid);
     }
   }, [user?.uid, gatekeeperBase, checkDiscordStatus]);
 
@@ -94,7 +94,7 @@ export default function GlobalNavigation() {
         notifyError("You must be logged in to disconnect Discord");
         return;
       }
-      await disconnectDiscord(user, gatekeeperBase);
+      await disconnectDiscord(user);
       notifySuccess("Discord disconnected");
     } catch (error) {
       notifyError("Failed to disconnect Discord");
