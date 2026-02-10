@@ -62,15 +62,16 @@ export default function DesktopNavigation() {
     const handleDiscordDisconnect = useCallback(async (): Promise<boolean> => {
         if (discordUnlinking || !user) return false;
         try {
-            // Use context method for disconnect
+            // Use context method for disconnect (already shows toast)
             await disconnectDiscord(user);
             setShowDiscordMenu(false);
             return true;
         } catch (error) {
+            // Context already shows error toast
             console.error(error);
             return false;
         }
-    }, [discordUnlinking, user, disconnectDiscord, gatekeeperBase]);
+    }, [discordUnlinking, user, disconnectDiscord]);
 
     // Check Discord status on mount
     useEffect(() => {

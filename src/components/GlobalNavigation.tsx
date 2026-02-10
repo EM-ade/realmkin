@@ -94,12 +94,12 @@ export default function GlobalNavigation() {
         notifyError("You must be logged in to disconnect Discord");
         return;
       }
+      // disconnectDiscord already shows toast, don't show another one
       await disconnectDiscord(user);
-      notifySuccess("Discord disconnected");
     } catch (error) {
-      notifyError("Failed to disconnect Discord");
+      // Don't show error toast either - context already handles it
     }
-  }, [disconnectDiscord, user, gatekeeperBase]);
+  }, [disconnectDiscord, user]);
 
   // Username fetching is already handled by AuthContext
   // This redundant check has been removed to reduce Firebase reads

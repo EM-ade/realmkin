@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   getTransactionHistory,
   searchTransactions,
@@ -56,6 +57,7 @@ export default function TransactionHistoryModal({
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [stats, setStats] = useState<any>(null);
+  const isMobile = useIsMobile();
 
   // Fetch transaction history
   const fetchTransactions = useCallback(
@@ -96,7 +98,7 @@ export default function TransactionHistoryModal({
         setLoading(false);
       }
     },
-    [userId, selectedType, selectedStatus, lastDoc]
+    [userId, selectedType, selectedStatus]
   );
 
   // Fetch stats
@@ -129,10 +131,11 @@ export default function TransactionHistoryModal({
     }
   }, [searchTerm, userId, fetchTransactions]);
 
-  // Initial load
+  // Initial load and filter changes
   useEffect(() => {
     if (isOpen && userId) {
       setLastDoc(null); // Reset pagination when filters change
+      setTransactions([]); // Clear existing transactions
       fetchTransactions();
       fetchStats();
     }
@@ -176,6 +179,219 @@ export default function TransactionHistoryModal({
   const formatAmount = (amount: number, token: string) => {
     return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
+
+  if (isMobile) {
+    return (
+      <div
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <div
+          className="relative w-full max-w-md bg-[#121212] border-2 border-[#fbbf24] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[#27272a]">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#fbbf24] text-2xl" style={materialIconStyle}>
+                history
+              </span>
+              <h2 className="text-lg font-bold text-white tracking-tight">Transaction History</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <span className="material-symbols-outlined text-2xl" style={materialIconStyle}>
+                close
+              </span>
+            </button>
+          </div>
+
+          <div className="px-5 py-4 bg-black/20 flex flex-col gap-3">
+            <div className="relative w-full">
+              <span
+                className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"
+                style={materialIconStyle}
+              >
+                search
+              </span>
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-[#050505] border border-[#27272a] rounded-lg pl-10 pr-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#8b5cf6] transition-colors"
+              />
+            </div>
+            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as any)}
+                className="bg-[#050505] border border-[#27272a] rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-[#8b5cf6] min-w-[110px]"
+              >
+                <option value="all">All Types</option>
+                <option value="withdrawal">Withdrawal</option>
+                <option value="transfer">Transfer</option>
+                {/* <option value="claim">Claim</option> */}
+                <option value="stake">Stake</option>
+                <option value="unstake">Unstake</option>
+                <option value="staking_claim">Staking Rewards</option>
+                <option value="revenue_share">Revenue Share</option>
+              </select>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as any)}
+                className="bg-[#050505] border border-[#27272a] rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-[#8b5cf6] min-w-[110px]"
+              >
+                <option value="all">All Status</option>
+                <option value="success">Success</option>
+                <option value="failed">Failed</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
+          </div>
+
+          <div
+            className="flex-grow overflow-y-auto px-5 py-2 space-y-3"
+            style={{ scrollbarWidth: "thin", scrollbarColor: "#27272a #0a0a0a" }}
+          >
+            {loading && transactions.length === 0 ? (
+              <div className="flex justify-center items-center py-10">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#fbbf24]"></div>
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-gray-400 text-sm">No transactions found</p>
+              </div>
+            ) : (
+              transactions.map((tx) => {
+                // Safety check for transaction type
+                const txType = tx.type as TransactionType;
+                const typeConfig = TRANSACTION_TYPE_ICONS[txType] || {
+                  icon: "receipt",
+                  bgColor: "bg-gray-500/10",
+                  textColor: "text-gray-400"
+                };
+                const typeLabel = TRANSACTION_TYPE_LABELS[txType] || "Transaction";
+
+                const statusColor = getStatusColor(tx.status);
+                const isNegative = tx.type === "withdrawal" || tx.type === "transfer";
+                const reasonLabel =
+                  tx.status === "failed" && tx.errorMessage
+                    ? tx.errorMessage
+                    : tx.type === "claim" || tx.type === "staking_claim"
+                      ? "Daily Mining"
+                      : tx.type === "transfer"
+                        ? "User Transfer"
+                        : tx.type === "withdrawal"
+                          ? "Wallet Cashout"
+                          : tx.type === "revenue_share"
+                            ? "Revenue Share"
+                            : tx.type === "stake"
+                              ? "Staking"
+                              : tx.type === "unstake"
+                                ? "Unstaking"
+                                : "Transaction";
+
+                return (
+                  <div
+                    key={tx.id}
+                    className={`bg-[#050505]/40 border p-4 rounded-xl transition-colors ${
+                      tx.status === "failed" ? "border-[#ef4444]/20 hover:border-[#ef4444]/40" : "border-[#27272a] hover:border-[#8b5cf6]/50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                            typeConfig.bgColor
+                          } ${typeConfig.textColor}`}
+                        >
+                          <span className="material-symbols-outlined text-xl" style={materialIconStyle}>
+                            {typeConfig.icon}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-white font-semibold text-sm">
+                            {typeLabel}
+                          </div>
+                          <div className="text-gray-500 text-[11px] font-mono">
+                            {formatTimestamp(tx.timestamp)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div
+                          className={`font-bold text-sm ${
+                            isNegative
+                              ? tx.status === "failed"
+                                ? "text-[#ef4444]"
+                                : "text-white"
+                              : "text-[#22c55e]"
+                          }`}
+                        >
+                          {isNegative ? "- " : "+ "}
+                          {formatAmount(tx.amount, tx.token)}
+                        </div>
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border mt-1 ${statusColor}`}
+                        >
+                          {tx.status === "success" ? "SUCCESS" : tx.status === "failed" ? "FAILED" : "PENDING"}
+                        </span>
+                      </div>
+                    </div>
+                    {tx.status === "failed" && tx.errorMessage ? (
+                      <div className="text-[10px] text-[#ef4444] italic text-right">
+                        {tx.errorMessage}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-gray-500 text-right italic">
+                        {reasonLabel}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="px-5 py-4 bg-black/40 border-t border-[#27272a]">
+            <div className="flex justify-between items-center mb-3">
+              <div className="text-gray-500 text-[11px]">
+                Showing <span className="text-white font-bold">{transactions.length}</span> of{" "}
+                <span className="text-white font-bold">
+                  {stats?.totalTransactions ?? transactions.length}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#050505] border border-[#27272a] rounded-lg text-gray-400 text-sm hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!hasMore}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-lg" style={materialIconStyle}>
+                  chevron_left
+                </span>
+                Prev
+              </button>
+              <button
+                onClick={() => fetchTransactions(true)}
+                disabled={!hasMore || loading}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 rounded-lg text-white text-sm hover:bg-[#8b5cf6]/40 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+              >
+                {loading ? "Loading..." : "Next"}
+                <span className="material-symbols-outlined text-lg" style={materialIconStyle}>
+                  chevron_right
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -226,7 +442,7 @@ export default function TransactionHistoryModal({
             <option value="all">All Types</option>
             <option value="withdrawal">Withdrawal</option>
             <option value="transfer">Transfer</option>
-            <option value="claim">Claim</option>
+            {/* <option value="claim">Claim</option> */}
             <option value="stake">Stake</option>
             <option value="unstake">Unstake</option>
             <option value="staking_claim">Staking Rewards</option>
@@ -266,25 +482,35 @@ export default function TransactionHistoryModal({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#27272a]">
-                {transactions.map((tx) => (
-                  <tr
-                    key={tx.id}
-                    className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                    onClick={() => setExpandedTx(expandedTx === tx.id ? null : (tx.id || null))}
-                  >
-                    {/* Type */}
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded ${TRANSACTION_TYPE_ICONS[tx.type].bgColor} flex items-center justify-center ${TRANSACTION_TYPE_ICONS[tx.type].textColor}`}>
-                          <span className="material-symbols-outlined text-lg" style={materialIconStyle}>
-                            {TRANSACTION_TYPE_ICONS[tx.type].icon}
+                {transactions.map((tx) => {
+                  // Safety check for transaction type
+                  const txType = tx.type as TransactionType;
+                  const typeConfig = TRANSACTION_TYPE_ICONS[txType] || {
+                    icon: "receipt",
+                    bgColor: "bg-gray-500/10",
+                    textColor: "text-gray-400"
+                  };
+                  const typeLabel = TRANSACTION_TYPE_LABELS[txType] || "Transaction";
+
+                  return (
+                    <tr
+                      key={tx.id}
+                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      onClick={() => setExpandedTx(expandedTx === tx.id ? null : (tx.id || null))}
+                    >
+                      {/* Type */}
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded ${typeConfig.bgColor} flex items-center justify-center ${typeConfig.textColor}`}>
+                            <span className="material-symbols-outlined text-lg" style={materialIconStyle}>
+                              {typeConfig.icon}
+                            </span>
+                          </div>
+                          <span className="text-white font-medium whitespace-nowrap">
+                            {typeLabel}
                           </span>
                         </div>
-                        <span className="text-white font-medium whitespace-nowrap">
-                          {TRANSACTION_TYPE_LABELS[tx.type]}
-                        </span>
-                      </div>
-                    </td>
+                      </td>
 
                     {/* Date */}
                     <td className="px-6 py-5 text-center text-gray-400 text-sm font-mono whitespace-nowrap">
@@ -325,8 +551,8 @@ export default function TransactionHistoryModal({
                       </span>
                     </td>
                   </tr>
-
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}
