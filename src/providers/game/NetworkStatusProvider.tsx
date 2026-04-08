@@ -8,12 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import type { ConnectionQuality } from "@/types/game/supabase";
-import { logError } from "@/utils/errorLogger";
+import { logError } from "@/utils/game/errorLogger";
 import {
   getQueueLength,
   isQueueStale,
   clearQueue,
-} from "@/utils/offlineQueue";
+} from "@/utils/game/offlineQueue";
 
 const PING_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`

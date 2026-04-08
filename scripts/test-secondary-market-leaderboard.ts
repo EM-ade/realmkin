@@ -108,6 +108,7 @@ async function fetchSecondaryMarketLeaderboard(
       walletDocs.forEach((doc, idx) => {
         if (doc.exists) {
           const data = doc.data();
+          if (!data) return;
           const originalAddress = batch[idx];
           walletLookup.set(originalAddress, {
             userId: data.uid || data.userId,
@@ -178,6 +179,7 @@ async function fetchSecondaryMarketLeaderboard(
         userDocs.forEach((doc, idx) => {
           if (doc.exists) {
             const data = doc.data();
+            if (!data) return;
             userProfiles.set(batchIds[idx], {
               username: data.username || data.email?.split('@')[0] || `User${batchIds[idx].slice(-4)}`,
               avatarUrl: data.avatarUrl,

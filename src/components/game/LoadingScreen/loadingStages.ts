@@ -136,8 +136,8 @@ export async function loadStageSounds(
                 onProgress(Math.min(stageProgress, 100));
                 if (loadedCount === total) resolve();
               },
-              onloaderror: (_id, error) => {
-                console.warn(`[Sound] Failed to load ${soundId}:`, error);
+              onloaderror: () => {
+                console.warn(`[Sound] Failed to load ${soundId}`);
                 failedSounds.push(soundId);
                 loadedCount++;
                 stageProgress += (group.weight * 100) / total;

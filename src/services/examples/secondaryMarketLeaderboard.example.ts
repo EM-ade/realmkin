@@ -79,12 +79,3 @@ export async function example_CheckUserRank(walletAddress: string) {
   
   return userEntry || null;
 }
-
-// Export for use in your application
-export {
-  example_ReactComponent,
-  example_Top3Only,
-  example_WhaleBuyers,
-  example_TotalVolume,
-  example_CheckUserRank,
-};

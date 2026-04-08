@@ -15,7 +15,7 @@ interface GemStoreProps {
 }
 
 export function GemStore({ isOpen, onClose }: GemStoreProps) {
-  const { initiateGemPurchase, verifyAndCreditGems, isPurchasing, error, clearError } =
+  const { initiateGemPurchase, verifyAndCreditGems, isPurchasing, error: paymentError, clearError } =
     useSolanaPayment();
   const { play } = useSoundManager();
   const { connected } = useWallet();
@@ -35,6 +35,7 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
     pack: string;
   } | null>(null);
   const [solPrice, setSolPrice] = useState<number>(0);
+  const [storeError, setStoreError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSolPrice().then(setSolPrice);
@@ -59,6 +60,7 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
   const handleBuyGems = async (packId: string) => {
     play("button_click");
     clearError();
+    setStoreError(null);
     setSuccessState(null);
 
     if (!connected) {
@@ -67,7 +69,7 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
     }
 
     if (!player) {
-      setError("Player data not loaded. Please refresh.");
+      setStoreError("Player data not loaded. Please refresh.");
       return;
     }
 
@@ -81,7 +83,7 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
 
       if ("error" in result) {
         if (result.error === "cancelled") return;
-        setError(result.error || "Transaction failed. Check wallet connection.");
+        setStoreError(result.error || "Transaction failed. Check wallet connection.");
         return;
       }
 
@@ -93,7 +95,7 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
       );
 
       if (!verifyResult.success) {
-        setError(verifyResult.error || "Server verification failed.");
+        setStoreError(verifyResult.error || "Server verification failed.");
         return;
       }
 
@@ -103,7 +105,7 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
       setTimeout(() => setSuccessState(null), 3000);
     } catch (err) {
       console.error("[GemStore] Purchase error:", err);
-      setError("Unexpected error. Please try again.");
+      setStoreError("Unexpected error. Please try again.");
     }
   };
 
@@ -210,11 +212,11 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
               Acquire gems to accelerate village growth and employ additional builders.
             </p>
 
-            {(error || successState) && (
+            {(storeError || paymentError || successState) && (
               <div className={successState ? styles.successBanner : styles.errorBanner}>
                 {successState
                   ? `+${successState.gems} gems from ${successState.pack} purchase!`
-                  : error}
+                  : storeError || paymentError}
               </div>
             )}
 

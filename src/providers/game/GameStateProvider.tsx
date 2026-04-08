@@ -19,8 +19,8 @@ import {
   enqueueAction,
   readQueue,
   saveStateSnapshot,
-} from "@/utils/offlineQueue";
-import { logError } from "@/utils/errorLogger";
+} from "@/utils/game/offlineQueue";
+import { logError } from "@/utils/game/errorLogger";
 import { supabase } from "@/lib/supabase";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -309,7 +309,7 @@ export function GameStateProvider({ children }: { children: ReactNode }) {
         // Merge all queued actions into one save call
         const mergedChanges = Object.assign(
           {},
-          ...queue.actions.map((a) => a.data),
+          ...queue.actions.map((a: any) => a.data),
         );
         pendingChangesRef.current.push(mergedChanges);
         await forceSave();

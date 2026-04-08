@@ -6,9 +6,8 @@ import { useGameState } from "@/stores/gameStore";
 
 export function AutoPlayerIndicator() {
   const { player } = useAuth();
-  const playerState = useGameState((state) => state.player);
 
-  const hasAutominer = player?.has_autominer || playerState?.has_autominer;
+  const hasAutominer = player?.hasAutominer;
 
   if (!hasAutominer) return null;
 

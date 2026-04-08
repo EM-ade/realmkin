@@ -36,7 +36,7 @@ function FloatingGain({ gain, index, onComplete }: any) {
       initial={{ opacity: 0, y: 20, scale: 0.8 }}
       animate={{ opacity: 1, y: -20 - index * 30, scale: 1 }}
       exit={{ opacity: 0, y: -40 - index * 30, scale: 1.1 }}
-      transition={{ duration: 0.5, ease: "easeOut", exit: { duration: 0.4 } }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
       style={{
         left: gain.x ? `${gain.x}px` : "50%",
         top: gain.y ? `${gain.y}px` : "20%",

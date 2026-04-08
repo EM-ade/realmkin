@@ -137,9 +137,9 @@ export class SoundManager {
         volume: config.defaultVolume,
         loop: config.loop,
         html5: true, // Force HTML5 Audio for mobile compatibility
-        onloaderror: (_, err) => {
+        onloaderror: () => {
           if (isDev) {
-            console.warn(`[Sound] Failed to load: ${soundId}`, err);
+            console.warn(`[Sound] Failed to load: ${soundId}`);
           }
         },
         onend: () => {

@@ -823,9 +823,9 @@ export default function AccountPage() {
             claimFeeUsd={claimFeeEstimate?.totalFeeUsd || 0.1}
             accountsToCreate={claimFeeEstimate?.accountsToCreate}
             reason={revenueEligibility?.reason}
-            userTiers={revenueEligibility?.userTiers || []}
-            tierBreakdown={revenueEligibility?.tierBreakdown}
-            distributionMonth={revenueEligibility?.distributionMonth || "Current Month"}
+            userTiers={(revenueEligibility as any)?.userTiers || []}
+            tierBreakdown={(revenueEligibility as any)?.tierBreakdown}
+            distributionMonth={(revenueEligibility as any)?.distributionMonth || "Current Month"}
           />
         </section>
 

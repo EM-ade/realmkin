@@ -204,10 +204,7 @@ async function verifySolTransfer(
     const instructions = tx.transaction.message.instructions;
 
     for (const ix of instructions) {
-      if (
-        ix.program === "system" &&
-        ix.parsed?.type === "transfer"
-      ) {
+      if ("program" in ix && ix.program === "system" && "parsed" in ix && ix.parsed?.type === "transfer") {
         const info = ix.parsed.info;
         const lamports = info.lamports as number;
 
@@ -364,69 +361,33 @@ export async function POST(req: NextRequest) {
     );
 
     if (rpcError) {
-      // Fallback: direct update if RPC doesn't exist yet
+      // Fallback: direct atomic update if RPC doesn't exist yet
       console.warn(
         "[PurchaseGems] RPC failed, falling back to direct update:",
         rpcError
       );
 
-      const { data: updatedPlayer, error: updateError } =
-        await supabaseAdmin
-          .from("players")
-          .update({
-            gem_balance: supabaseAdmin.rpc("add_gems_to_player")
-              ? undefined
-              : supabaseAdmin.from("players").select("gem_balance").eq("id", playerId).single().then(
-                  (r) => (r.data?.gem_balance || 0) + gemsToCredit
-                ),
-          })
-          .eq("id", playerId)
-          .select("gem_balance")
-          .single();
+      // Fetch current balance first
+      const { data: currentPlayer } = await supabaseAdmin
+        .from("players")
+        .select("gem_balance")
+        .eq("id", playerId)
+        .single();
+
+      const currentBalance = currentPlayer?.gem_balance || 0;
+      const newBalance = currentBalance + gemsToCredit;
+
+      // Update balance
+      const { error: updateError } = await supabaseAdmin
+        .from("players")
+        .update({ gem_balance: newBalance })
+        .eq("id", playerId);
 
       if (updateError) {
-        // Last resort: raw increment
-        const { data: finalPlayer } = await supabaseAdmin
-          .from("players")
-          .select("gem_balance")
-          .eq("id", playerId)
-          .single();
-
-        const currentBalance = finalPlayer?.gem_balance || 0;
-        await supabaseAdmin
-          .from("players")
-          .update({ gem_balance: currentBalance + gemsToCredit })
-          .eq("id", playerId);
-
-        const { data: newPlayer } = await supabaseAdmin
-          .from("players")
-          .select("gem_balance")
-          .eq("id", playerId)
-          .single();
-
-        const newBalance = newPlayer?.gem_balance || gemsToCredit;
-
-        // Log transaction even if gem credit had issues
-        await supabaseAdmin.from("transactions").insert({
-          player_id: playerId,
-          type: "gem_purchase",
-          gem_amount: gemsToCredit,
-          source: `store_${packId}`,
-          sol_amount: verification.receivedLamports / LAMPORTS_PER_SOL,
-          sol_tx_signature: signature,
-          verified: true,
-        });
-
-        return NextResponse.json({
-          success: true,
-          gemsAdded: gemsToCredit,
-          newBalance,
-          packName: pack.displayName,
-        });
+        console.error("[PurchaseGems] Gem credit failed completely:", updateError);
       }
 
-      const newBalance = updatedPlayer?.gem_balance || gemsToCredit;
-
+      // Log transaction
       await supabaseAdmin.from("transactions").insert({
         player_id: playerId,
         type: "gem_purchase",

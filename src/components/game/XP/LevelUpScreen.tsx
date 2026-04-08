@@ -82,7 +82,7 @@ export function LevelUpScreen() {
             </div>
             <div className={styles.rewardDetails}>
               <h3>
-                {reward.type === "building_unlock"
+                {(reward.type as string) === "building_unlock"
                   ? "New Unlock!"
                   : reward.type === "gems"
                     ? `+${reward.amount} Gems`

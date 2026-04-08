@@ -9,9 +9,7 @@ import { useAuth } from "@/components/game/providers/GameAuthProvider";
 
 export function useAutoPlayer() {
   const { player } = useAuth();
-  const playerState = useGameState((state) => state.player);
-
-  const hasAutominer = player?.has_autominer || playerState?.has_autominer;
+  const hasAutominer = player?.hasAutominer;
   const isPlaying = useGameState((state) => state.currentScene) === "Village";
 
   const [lastCollection, setLastCollection] =
