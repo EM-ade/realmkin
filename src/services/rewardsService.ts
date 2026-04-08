@@ -510,13 +510,48 @@ class RewardsService {
     nfts: Array<{ contractAddress: string }> = [],
   ): Promise<UserRewards> {
     const userRewardsRef = doc(db, "userRewards", userId);
-    const existingDoc = await getDoc(userRewardsRef);
+    let existingDoc = await getDoc(userRewardsRef);
+    const normalizedWallet = walletAddress.trim();
 
     const now = new Date();
     const weeklyRate =
       nfts.length > 0
         ? await this.calculateWeeklyRate(nfts, userId)
         : nftCount * this.WEEKLY_RATE_PER_NFT;
+
+    const walletQuery = query(
+      collection(db, "userRewards"),
+      where("walletAddress", "==", normalizedWallet),
+      limit(1),
+    );
+    const walletSnapshot = await getDocs(walletQuery);
+    const walletDoc = walletSnapshot.docs[0];
+
+    if (walletDoc && walletDoc.id !== userId) {
+      if (!existingDoc.exists()) {
+        console.warn(
+          "⚠️ Wallet already linked to another user. Migrating rewards to current user.",
+        );
+        await runTransaction(db, async (transaction) => {
+          const existingWalletRef = walletDoc.ref;
+          const existingWalletSnap = await transaction.get(existingWalletRef);
+          if (!existingWalletSnap.exists()) return;
+          const existingWalletData = existingWalletSnap.data() as UserRewards;
+          transaction.set(userRewardsRef, {
+            ...existingWalletData,
+            userId,
+            walletAddress: normalizedWallet,
+            updatedAt: now,
+          });
+          transaction.delete(existingWalletRef);
+        });
+        existingDoc = await getDoc(userRewardsRef);
+      } else {
+        console.warn(
+          "⚠️ Wallet already linked to another user. Using current user document.",
+        );
+      }
+    }
 
     if (existingDoc.exists()) {
       const existingData = existingDoc.data() as UserRewards;

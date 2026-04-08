@@ -1,0 +1,229 @@
+{
+  "groupName": "buildings",
+  "spriteSize": 512,
+  "padding": 8,
+  "columns": 8,
+  "rows": 3,
+  "sheetWidth": 4168,
+  "sheetHeight": 1568,
+  "totalSprites": 24,
+  "sprites": [
+    {
+      "name": "farm-l3",
+      "index": 0,
+      "column": 0,
+      "row": 0,
+      "x": 8,
+      "y": 8,
+      "sourceFile": "Enchanted Farm Asset.png"
+    },
+    {
+      "name": "farm-l2",
+      "index": 1,
+      "column": 1,
+      "row": 0,
+      "x": 528,
+      "y": 8,
+      "sourceFile": "Expanded Organized Farm.png"
+    },
+    {
+      "name": "town-hall-l3",
+      "index": 2,
+      "column": 2,
+      "row": 0,
+      "x": 1048,
+      "y": 8,
+      "sourceFile": "Grand Castle Keep Asset.png"
+    },
+    {
+      "name": "house-l1",
+      "index": 3,
+      "column": 3,
+      "row": 0,
+      "x": 1568,
+      "y": 8,
+      "sourceFile": "Level 1 - Nomad Tent.png"
+    },
+    {
+      "name": "iron-mine-l1",
+      "index": 4,
+      "column": 4,
+      "row": 0,
+      "x": 2088,
+      "y": 8,
+      "sourceFile": "Level 1 - Shallow Iron Mine.png"
+    },
+    {
+      "name": "quarry-l1",
+      "index": 5,
+      "column": 5,
+      "row": 0,
+      "x": 2608,
+      "y": 8,
+      "sourceFile": "Level 1 - Stone Pit.png"
+    },
+    {
+      "name": "warehouse-l1",
+      "index": 6,
+      "column": 6,
+      "row": 0,
+      "x": 3128,
+      "y": 8,
+      "sourceFile": "Level 1 - Storage Hut.png"
+    },
+    {
+      "name": "lumber-mill-l1",
+      "index": 7,
+      "column": 7,
+      "row": 0,
+      "x": 3648,
+      "y": 8,
+      "sourceFile": "Level 1 - Woodcutter Hut.png"
+    },
+    {
+      "name": "barracks-l2",
+      "index": 8,
+      "column": 0,
+      "row": 1,
+      "x": 8,
+      "y": 528,
+      "sourceFile": "Level 2 - Barracks.png"
+    },
+    {
+      "name": "iron-mine-l2",
+      "index": 9,
+      "column": 1,
+      "row": 1,
+      "x": 528,
+      "y": 528,
+      "sourceFile": "Level 2 - Deep Mine.png"
+    },
+    {
+      "name": "quarry-l2",
+      "index": 10,
+      "column": 2,
+      "row": 1,
+      "x": 1048,
+      "y": 528,
+      "sourceFile": "Level 2 - Quarry.png"
+    },
+    {
+      "name": "lumber-mill-l2",
+      "index": 11,
+      "column": 3,
+      "row": 1,
+      "x": 1568,
+      "y": 528,
+      "sourceFile": "Level 2 - Sawmill.png"
+    },
+    {
+      "name": "house-l2",
+      "index": 12,
+      "column": 4,
+      "row": 1,
+      "x": 2088,
+      "y": 528,
+      "sourceFile": "Level 2 - Timber House.png"
+    },
+    {
+      "name": "warehouse-l2",
+      "index": 13,
+      "column": 5,
+      "row": 1,
+      "x": 2608,
+      "y": 528,
+      "sourceFile": "Level 2 - Warehouse.png"
+    },
+    {
+      "name": "quarry-l3",
+      "index": 14,
+      "column": 6,
+      "row": 1,
+      "x": 3128,
+      "y": 528,
+      "sourceFile": "Level 3 - Crystal Quarry.png"
+    },
+    {
+      "name": "warehouse-l3",
+      "index": 15,
+      "column": 7,
+      "row": 1,
+      "x": 3648,
+      "y": 528,
+      "sourceFile": "Level 3 - Enchanted Vault.png"
+    },
+    {
+      "name": "lumber-mill-l3",
+      "index": 16,
+      "column": 0,
+      "row": 2,
+      "x": 8,
+      "y": 1048,
+      "sourceFile": "Level 3 - Mystic Lumber Mill.png"
+    },
+    {
+      "name": "house-l3",
+      "index": 17,
+      "column": 1,
+      "row": 2,
+      "x": 528,
+      "y": 1048,
+      "sourceFile": "Level 3 - Stone Manor.png"
+    },
+    {
+      "name": "iron-mine-l3",
+      "index": 18,
+      "column": 2,
+      "row": 2,
+      "x": 1048,
+      "y": 1048,
+      "sourceFile": "Level 3 - Volcanic Mine.png"
+    },
+    {
+      "name": "barracks-l3",
+      "index": 19,
+      "column": 3,
+      "row": 2,
+      "x": 1568,
+      "y": 1048,
+      "sourceFile": "Level 3 - War Academy.png"
+    },
+    {
+      "name": "town-hall-l2",
+      "index": 20,
+      "column": 4,
+      "row": 2,
+      "x": 2088,
+      "y": 1048,
+      "sourceFile": "Medium Stone Town Hall.png"
+    },
+    {
+      "name": "town-hall-l1",
+      "index": 21,
+      "column": 5,
+      "row": 2,
+      "x": 2608,
+      "y": 1048,
+      "sourceFile": "Rustic Thatched Town Hall.png"
+    },
+    {
+      "name": "barracks-l1",
+      "index": 22,
+      "column": 6,
+      "row": 2,
+      "x": 3128,
+      "y": 1048,
+      "sourceFile": "Training Camp Asset.png"
+    },
+    {
+      "name": "farm-l1",
+      "index": 23,
+      "column": 7,
+      "row": 2,
+      "x": 3648,
+      "y": 1048,
+      "sourceFile": "Wheat Field Plot Asset.png"
+    }
+  ],
+  "generatedAt": "2026-02-22T20:04:37.389Z"
+}

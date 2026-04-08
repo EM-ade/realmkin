@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/config/firebaseAdmin";
 
-// Admin SDK is initialized centrally in src/config/firebaseAdmin.ts
+// ⚠️ DEPRECATED: This endpoint is deprecated and will be removed.
+// New stakes should use /api/staking/stake which writes to staking_positions collection.
+// This endpoint writes to users/{uid}/stakes/ which is NOT displayed on the staking page.
+// TODO: Migrate all stakes from this endpoint to the new system.
+const DEPRECATED_WARNING = "⚠️ DEPRECATED: /api/stake is deprecated. Use /api/staking/stake instead. This endpoint writes to legacy collection not displayed on staking page.";
 
 export async function POST(request: NextRequest) {
+  // Log deprecation warning
+  console.warn(DEPRECATED_WARNING);
+
   try {
     const body = await request.json();
     const { uid, wallet, amount, lockPeriod, txSignature } = body;

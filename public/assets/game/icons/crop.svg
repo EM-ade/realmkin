@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Crop/Wheat Icon - Wheat stalk -->
+  <g>
+    <!-- Stem -->
+    <line x1="16" y1="28" x2="16" y2="8" stroke="#4ADE80" stroke-width="2"/>
+    <!-- Wheat grains -->
+    <ellipse cx="16" cy="8" rx="3" ry="5" fill="#FFD700" transform="rotate(0 16 8)"/>
+    <ellipse cx="16" cy="8" rx="3" ry="5" fill="none" stroke="#B8860B" stroke-width="1" transform="rotate(0 16 8)"/>
+    <ellipse cx="10" cy="12" rx="3" ry="5" fill="#FFD700" transform="rotate(-30 10 12)"/>
+    <ellipse cx="10" cy="12" rx="3" ry="5" fill="none" stroke="#B8860B" stroke-width="1" transform="rotate(-30 10 12)"/>
+    <ellipse cx="22" cy="12" rx="3" ry="5" fill="#FFD700" transform="rotate(30 22 12)"/>
+    <ellipse cx="22" cy="12" rx="3" ry="5" fill="none" stroke="#B8860B" stroke-width="1" transform="rotate(30 22 12)"/>
+    <ellipse cx="12" cy="18" rx="3" ry="5" fill="#FFD700" transform="rotate(-20 12 18)"/>
+    <ellipse cx="20" cy="18" rx="3" ry="5" fill="#FFD700" transform="rotate(20 20 18)"/>
+  </g>
+</svg>

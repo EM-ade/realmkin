@@ -1,0 +1,76 @@
+{
+  "groupName": "buildings",
+  "spriteSize": 64,
+  "padding": 2,
+  "columns": 8,
+  "rows": 1,
+  "sheetWidth": 530,
+  "sheetHeight": 68,
+  "totalSprites": 8,
+  "sprites": [
+    {
+      "name": "town_hall",
+      "index": 0,
+      "column": 0,
+      "row": 0,
+      "x": 2,
+      "y": 2
+    },
+    {
+      "name": "castle",
+      "index": 1,
+      "column": 1,
+      "row": 0,
+      "x": 68,
+      "y": 2
+    },
+    {
+      "name": "farm",
+      "index": 2,
+      "column": 2,
+      "row": 0,
+      "x": 134,
+      "y": 2
+    },
+    {
+      "name": "mine",
+      "index": 3,
+      "column": 3,
+      "row": 0,
+      "x": 200,
+      "y": 2
+    },
+    {
+      "name": "barracks",
+      "index": 4,
+      "column": 4,
+      "row": 0,
+      "x": 266,
+      "y": 2
+    },
+    {
+      "name": "marketplace",
+      "index": 5,
+      "column": 5,
+      "row": 0,
+      "x": 332,
+      "y": 2
+    },
+    {
+      "name": "house",
+      "index": 6,
+      "column": 6,
+      "row": 0,
+      "x": 398,
+      "y": 2
+    },
+    {
+      "name": "university",
+      "index": 7,
+      "column": 7,
+      "row": 0,
+      "x": 464,
+      "y": 2
+    }
+  ]
+}

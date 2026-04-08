@@ -1,0 +1,176 @@
+.bottomBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 24px 24px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 110;
+}
+
+/* Desktop layout: Center the buttons and bar */
+@media (min-width: 769px) {
+  .bottomBar {
+    max-width: 1000px;
+    left: 50%;
+    transform: translateX(-50%);
+    justify-content: space-around;
+    padding: 0 40px 24px 40px;
+    gap: 40px;
+  }
+
+  .centerGroup {
+    max-width: 400px;
+    min-width: 300px;
+  }
+
+  /* Increase button size slightly for desktop */
+  .cocButton {
+    min-width: 160px;
+    height: 60px;
+  }
+}
+
+.leftGroup,
+.rightGroup {
+  pointer-events: auto;
+}
+
+/* Base CoC Button Style */
+.cocButton {
+  position: relative;
+  border-radius: 12px;
+  padding: 8px 16px;
+  border: 3px solid #231912;
+  box-shadow: 0 6px 0 #231912; /* 3D Shadow */
+  cursor: pointer;
+  transition: all 0.05s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  height: 54px;
+}
+
+.cocButton:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #231912;
+}
+
+.buttonContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+}
+
+.buttonText {
+  font-family: "Lilita One", cursive;
+  font-size: 20px;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.buttonContent .material-symbols-outlined {
+  font-size: 28px;
+  filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
+}
+
+/* Specific Button Colors */
+.buildButton {
+  composes: cocButton;
+  background: linear-gradient(180deg, #f39c12 0%, #d35400 100%);
+}
+
+.attackButton {
+  composes: cocButton;
+  background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%);
+  min-width: 150px;
+}
+
+/* Production Progress Bar (Relocated from TopBar) */
+.centerGroup {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 20px;
+  max-width: 40%;
+}
+
+.productionContainer {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1.5px solid #231912;
+  border-radius: 5px;
+  overflow: visible;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 20px; /* Space for the bubble below or buttons */
+}
+
+.productionFill {
+  height: 100%;
+  background: linear-gradient(180deg, #4ade80 0%, #2ecc71 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
+  transition: width 0.1s linear;
+}
+
+.dayBubble {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #f39c12 0%, #d35400 100%);
+  border: 2px solid #231912;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-family: "Lilita One", cursive;
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  z-index: 5;
+}
+
+/* Mobile specific adjustments */
+@media (max-width: 768px) {
+  .bottomBar {
+    padding: 8px 12px 16px 12px; /* Tighter for mobile */
+  }
+
+  .centerGroup {
+    max-width: 50%;
+    padding: 0 10px;
+  }
+
+  .productionContainer {
+    height: 8px;
+    margin-bottom: 12px;
+  }
+
+  .dayBubble {
+    font-size: 10px;
+    padding: 1px 8px;
+    top: -20px;
+  }
+
+  .cocButton {
+    min-width: 100px;
+    height: 48px;
+    padding: 6px 12px;
+  }
+
+  .buttonText {
+    font-size: 16px;
+  }
+
+  .buttonContent .material-symbols-outlined {
+    font-size: 24px;
+  }
+}

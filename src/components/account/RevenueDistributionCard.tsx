@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 
+interface TierBreakdown {
+  holderShare?: { sol: number; empire: number; mkin: number };
+  tier3?: { sol: number; empire: number; mkin: number };
+  tier2?: { sol: number; empire: number; mkin: number };
+  tier1?: { sol: number; empire: number; mkin: number };
+}
+
 interface RevenueDistributionCardProps {
   mkinAmount: number;
   empireAmount: number;
@@ -16,6 +23,9 @@ interface RevenueDistributionCardProps {
     mkin: boolean;
   };
   reason?: string; // Reason why user is not eligible
+  userTiers?: string[]; // ['HOLDER_SHARE', 'TIER_3']
+  tierBreakdown?: TierBreakdown;
+  distributionMonth?: string; // e.g., "February 2026"
 }
 
 export default function RevenueDistributionCard({
@@ -29,6 +39,9 @@ export default function RevenueDistributionCard({
   claimFeeUsd,
   accountsToCreate,
   reason,
+  userTiers = [],
+  tierBreakdown,
+  distributionMonth = "Current Month",
 }: RevenueDistributionCardProps) {
   const [selectedTab, setSelectedTab] = useState<"mkin" | "empire" | "sol">("mkin");
 
@@ -78,16 +91,72 @@ export default function RevenueDistributionCard({
           </svg>
           <h2 className="text-white font-semibold">Revenue Distribution</h2>
         </div>
-        {eligible ? (
-          <span className="text-xs px-2 py-1 rounded bg-green-900/20 text-green-400 border border-green-500/20">
-            Eligible
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-2 py-1 rounded bg-purple-900/20 text-purple-400 border border-purple-500/20">
+            {distributionMonth}
           </span>
-        ) : (
-          <span className="text-xs px-2 py-1 rounded bg-gray-900/20 text-gray-400 border border-gray-500/20">
-            Not Eligible
-          </span>
-        )}
+          {eligible ? (
+            <span className="text-xs px-2 py-1 rounded bg-green-900/20 text-green-400 border border-green-500/20">
+              Eligible
+            </span>
+          ) : (
+            <span className="text-xs px-2 py-1 rounded bg-gray-900/20 text-gray-400 border border-gray-500/20">
+              Not Eligible
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* February 2026 Rewards Structure Banner */}
+      {eligible && (
+        <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg p-3 border border-purple-500/20 mb-4">
+          <h3 className="text-white font-medium text-xs mb-2">🔥 February Rewards Structure</h3>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="text-green-400">🏰</span>
+              <span className="text-gray-300">Holder: 35% royalty</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-blue-400">🔱</span>
+              <span className="text-gray-300">Tier 3: 12+ → 1.5 SOL</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-yellow-400">⚔️</span>
+              <span className="text-gray-300">Top 5: 300K MKIN</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-red-400">👑</span>
+              <span className="text-gray-300">Top 3: 450K EMPIRE</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User's Eligible Tiers */}
+      {eligible && userTiers.length > 0 && (
+        <div className="bg-green-900/10 border border-green-500/20 rounded-lg p-3 mb-4">
+          <p className="text-xs text-green-400 font-medium mb-2">✅ Your Eligible Tiers:</p>
+          <div className="flex flex-wrap gap-2">
+            {userTiers.map(tier => {
+              const tierInfo: Record<string, { label: string; color: string }> = {
+                HOLDER_SHARE: { label: '🏰 Holder', color: 'text-green-400' },
+                TIER_3: { label: '🔱 Special', color: 'text-blue-400' },
+                TIER_2: { label: '⚔️ Top 5', color: 'text-yellow-400' },
+                TIER_1: { label: '👑 Top 3', color: 'text-red-400' },
+              };
+              const info = tierInfo[tier] || { label: tier, color: 'text-gray-400' };
+              return (
+                <span
+                  key={tier}
+                  className={`text-xs px-2 py-1 rounded ${info.color} bg-gray-900/50 border border-gray-700`}
+                >
+                  {info.label}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
@@ -292,6 +361,43 @@ export default function RevenueDistributionCard({
               </div>
             </div>
           </div>
+
+          {/* Tier Breakdown (February 2026+) */}
+          {tierBreakdown && (
+            <div className="mt-4 pt-4 border-t border-gray-800">
+              <p className="text-xs text-gray-500 mb-2">Reward by Tier:</p>
+              <div className="space-y-2 text-xs">
+                {tierBreakdown.holderShare && tierBreakdown.holderShare.sol > 0 && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>🏰 Holder:</span>
+                    <span className="text-green-400">
+                      {tierBreakdown.holderShare.sol.toFixed(6)} SOL + {tierBreakdown.holderShare.mkin.toLocaleString()} MKIN
+                    </span>
+                  </div>
+                )}
+                {tierBreakdown.tier3 && tierBreakdown.tier3.sol > 0 && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>🔱 Tier 3:</span>
+                    <span className="text-blue-400">{tierBreakdown.tier3.sol.toFixed(6)} SOL</span>
+                  </div>
+                )}
+                {tierBreakdown.tier2 && tierBreakdown.tier2.mkin > 0 && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>⚔️ Tier 2:</span>
+                    <span className="text-yellow-400">{tierBreakdown.tier2.mkin.toLocaleString()} MKIN</span>
+                  </div>
+                )}
+                {tierBreakdown.tier1 && tierBreakdown.tier1.empire > 0 && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>👑 Tier 1:</span>
+                    <span className="text-red-400">
+                      {tierBreakdown.tier1.empire.toLocaleString()} EMPIRE + {tierBreakdown.tier1.mkin.toLocaleString()} MKIN
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
     </section>

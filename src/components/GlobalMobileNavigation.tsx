@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useDiscord } from "@/contexts/DiscordContext";
@@ -11,6 +12,11 @@ import MobileMenuOverlay from "@/components/MobileMenuOverlay";
 import DynamicIsland from "@/components/DynamicIsland";
 
 export default function GlobalMobileNavigation() {
+  const pathname = usePathname();
+
+  // Hide on kingdom game page
+  if (pathname?.startsWith("/game/kingdom")) return null;
+
   const [showMobileActions, setShowMobileActions] = useState(false);
 
   // Connect hooks here to pass to the overlay (centralized management)

@@ -1,0 +1,121 @@
+{
+  "groupName": "units",
+  "spriteSize": 256,
+  "padding": 8,
+  "columns": 6,
+  "rows": 2,
+  "sheetWidth": 1592,
+  "sheetHeight": 536,
+  "totalSprites": 12,
+  "sprites": [
+    {
+      "name": "swordsman-t1",
+      "index": 0,
+      "column": 0,
+      "row": 0,
+      "x": 8,
+      "y": 8,
+      "sourceFile": "Apprentice Swordsman (T1).png"
+    },
+    {
+      "name": "archer-t3",
+      "index": 1,
+      "column": 1,
+      "row": 0,
+      "x": 272,
+      "y": 8,
+      "sourceFile": "Elven Archer (T3).png"
+    },
+    {
+      "name": "archer-t1",
+      "index": 2,
+      "column": 2,
+      "row": 0,
+      "x": 536,
+      "y": 8,
+      "sourceFile": "Hunter (T1).png"
+    },
+    {
+      "name": "swordsman-t2",
+      "index": 3,
+      "column": 3,
+      "row": 0,
+      "x": 800,
+      "y": 8,
+      "sourceFile": "Knight (T2).png"
+    },
+    {
+      "name": "cavalry-t2",
+      "index": 4,
+      "column": 4,
+      "row": 0,
+      "x": 1064,
+      "y": 8,
+      "sourceFile": "Knight Charger (T2).png"
+    },
+    {
+      "name": "archer-t2",
+      "index": 5,
+      "column": 5,
+      "row": 0,
+      "x": 1328,
+      "y": 8,
+      "sourceFile": "Marksman (T2).png"
+    },
+    {
+      "name": "militia-t2",
+      "index": 6,
+      "column": 0,
+      "row": 1,
+      "x": 8,
+      "y": 272,
+      "sourceFile": "Militia Guard (Tier 2).png"
+    },
+    {
+      "name": "cavalry-t3",
+      "index": 7,
+      "column": 1,
+      "row": 1,
+      "x": 272,
+      "y": 272,
+      "sourceFile": "Mystic Knight (T3).png"
+    },
+    {
+      "name": "swordsman-t3",
+      "index": 8,
+      "column": 2,
+      "row": 1,
+      "x": 536,
+      "y": 272,
+      "sourceFile": "Paladin (T3).png"
+    },
+    {
+      "name": "militia-t3",
+      "index": 9,
+      "column": 3,
+      "row": 1,
+      "x": 800,
+      "y": 272,
+      "sourceFile": "Royal Guard (Tier 3).png"
+    },
+    {
+      "name": "cavalry-t1",
+      "index": 10,
+      "column": 4,
+      "row": 1,
+      "x": 1064,
+      "y": 272,
+      "sourceFile": "Scout on Horse (T1).png"
+    },
+    {
+      "name": "militia-t1",
+      "index": 11,
+      "column": 5,
+      "row": 1,
+      "x": 1328,
+      "y": 272,
+      "sourceFile": "Villager Militia (Tier 1).png"
+    }
+  ],
+  "generatedAt": "2026-02-22T20:04:37.735Z"
+}

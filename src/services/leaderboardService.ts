@@ -680,4 +680,228 @@ export async function fetchTopSecondaryMarketBuyers(limit: number = 3): Promise<
   }
 }
 
+/**
+ * Interface for secondary sale cache data
+ */
+interface SecondarySaleCacheData {
+  walletAddress?: string;
+  salesCount?: number;
+  hasSecondarySale?: boolean;
+  lastCheckedAt?: any;
+  lastPurchaseTime?: any;
+}
+
+/**
+ * Fetch secondary market leaderboard directly from Firestore
+ * Returns users who have purchased from the secondary market, sorted by total purchases
+ *
+ * @param limit - Maximum number of entries to return (default: 50)
+ * @returns Array of leaderboard entries with user info and purchase counts
+ *
+ * @example
+ * ```typescript
+ * const leaderboard = await fetchSecondaryMarketLeaderboard(50);
+ * // Returns: [
+ * //   { rank: 1, username: "JohnDoe", walletAddress: "8w1d...", totalPurchased: 15, avatarUrl?: string },
+ * //   ...
+ * // ]
+ * ```
+ */
+export async function fetchSecondaryMarketLeaderboard(
+  limit: number = 50
+): Promise<
+  Array<{
+    rank: number;
+    username: string;
+    walletAddress: string;
+    totalPurchased: number;
+    avatarUrl?: string;
+  }>
+> {
+  try {
+    // Step 1: Query all secondarySaleCache entries
+    const cacheSnapshot = await getDocs(collection(db, "secondarySaleCache"));
+
+    if (cacheSnapshot.empty) {
+      console.log("[Secondary Market Leaderboard] No cache data available");
+      return [];
+    }
+
+    // Step 2: Filter for users with sales and sort by salesCount descending
+    const sortedBuyers = cacheSnapshot.docs
+      .map((doc) => {
+        const data = doc.data() as SecondarySaleCacheData;
+        return {
+          id: doc.id,
+          walletAddress: data.walletAddress || doc.id,
+          salesCount: data.salesCount || 0,
+        };
+      })
+      .filter((buyer) => buyer.salesCount > 0)
+      .sort((a, b) => b.salesCount - a.salesCount)
+      .slice(0, limit);
+
+    if (sortedBuyers.length === 0) {
+      console.log("[Secondary Market Leaderboard] No users with secondary market purchases");
+      return [];
+    }
+
+    console.log(
+      `[Secondary Market Leaderboard] Found ${sortedBuyers.length} buyers, fetching user data...`
+    );
+
+    // Step 3: Batch lookup user IDs from wallets collection (primary source)
+    const walletAddresses = sortedBuyers.map((buyer) => buyer.walletAddress.toLowerCase());
+    const walletLookup = new Map<
+      string,
+      { userId: string; username?: string; source: string }
+    >();
+
+    // Fetch wallets in batches (Firestore limit: 500 per batch)
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < walletAddresses.length; i += BATCH_SIZE) {
+      const batch = walletAddresses.slice(i, i + BATCH_SIZE);
+      const walletDocs = await Promise.all(
+        batch.map((addr) =>
+          getDoc(doc(db, "wallets", addr))
+        )
+      );
+
+      walletDocs.forEach((doc, idx) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          const originalAddress = batch[idx];
+          walletLookup.set(originalAddress, {
+            userId: data.uid || data.userId,
+            username: data.username,
+            source: "wallets",
+          });
+        }
+      });
+    }
+
+    console.log(
+      `[Secondary Market Leaderboard] Found ${walletLookup.size} users in wallets collection`
+    );
+
+    // Step 4: For wallets not found, check userRewards (fallback)
+    const notFoundWallets = walletAddresses.filter(
+      (addr) => !walletLookup.has(addr)
+    );
+
+    if (notFoundWallets.length > 0) {
+      console.log(
+        `[Secondary Market Leaderboard] Checking userRewards for ${notFoundWallets.length} remaining wallets...`
+      );
+
+      // Query userRewards for all missing wallets
+      const userRewardsSnapshot = await getDocs(
+        collection(db, "userRewards")
+      );
+
+      userRewardsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        const walletAddr = data.walletAddress?.toLowerCase();
+        if (walletAddr && notFoundWallets.includes(walletAddr)) {
+          walletLookup.set(walletAddr, {
+            userId: doc.id,
+            source: "userRewards",
+          });
+        }
+      });
+
+      console.log(
+        `[Secondary Market Leaderboard] Found ${walletLookup.size} total users after userRewards check`
+      );
+    }
+
+    // Step 5: Batch get user profiles for all found userIds
+    const userIds = Array.from(
+      new Set(
+        Array.from(walletLookup.values())
+          .map((data) => data.userId)
+          .filter((id) => id)
+      )
+    );
+
+    console.log(
+      `[Secondary Market Leaderboard] Fetching ${userIds.length} user profiles...`
+    );
+
+    const userProfiles = new Map<
+      string,
+      { username: string; avatarUrl?: string }
+    >();
+
+    if (userIds.length > 0) {
+      // Batch get user documents
+      for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+        const batchIds = userIds.slice(i, i + BATCH_SIZE);
+        const userDocs = await Promise.all(
+          batchIds.map((id) => getDoc(doc(db, "users", id)))
+        );
+
+        userDocs.forEach((doc, idx) => {
+          if (doc.exists()) {
+            const data = doc.data();
+            userProfiles.set(batchIds[idx], {
+              username: data.username || data.email?.split("@")[0] || `User${batchIds[idx].slice(-4)}`,
+              avatarUrl: data.avatarUrl,
+            });
+          }
+        });
+      }
+    }
+
+    console.log(
+      `[Secondary Market Leaderboard] Fetched ${userProfiles.size} user profiles`
+    );
+
+    // Step 6: Build final leaderboard
+    const leaderboard = sortedBuyers.map((cacheData, index) => {
+      const walletAddress = cacheData.walletAddress;
+      const walletData = walletLookup.get(walletAddress.toLowerCase());
+
+      let userId = walletData?.userId || null;
+      let username = `User ${walletAddress.slice(0, 6)}`;
+      let avatarUrl: string | undefined = undefined;
+
+      // Get username from wallet lookup
+      if (walletData?.username) {
+        username = walletData.username;
+      }
+
+      // Get full profile data if userId found
+      if (userId) {
+        const profile = userProfiles.get(userId);
+        if (profile) {
+          username = profile.username || username;
+          avatarUrl = profile.avatarUrl;
+        }
+      }
+
+      return {
+        rank: index + 1,
+        userId: userId || walletAddress,
+        username,
+        walletAddress,
+        totalPurchased: cacheData.salesCount,
+        avatarUrl,
+      };
+    });
+
+    console.log(
+      `[Secondary Market Leaderboard] Successfully built leaderboard with ${leaderboard.length} entries`
+    );
+
+    return leaderboard;
+  } catch (error) {
+    console.error(
+      "[Secondary Market Leaderboard] Error fetching leaderboard:",
+      error
+    );
+    return [];
+  }
+}
+
 export default leaderboardService;

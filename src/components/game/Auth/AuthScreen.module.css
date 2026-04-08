@@ -1,0 +1,134 @@
+// src/ui/Auth/AuthScreen.module.css
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 50; /* below tutorial overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.3) blur(4px);
+  z-index: -1;
+}
+
+.modal {
+  background-color: #2b1f15;
+  border: 2px solid #8c6a2e;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.5),
+    inset 0 0 20px rgba(0, 0, 0, 0.4);
+  width: 90%;
+  max-width: 400px;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.header h2 {
+  font-family: "MedievalSharp", serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffaa00;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.1em;
+}
+
+.authOption {
+  width: 100%;
+  background: #1a120b;
+  border: 1px solid #5a4b37;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  color: #f1deb3;
+  font-family: "Manrope", sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.authOption:hover {
+  background: #33261a;
+  border-color: #8c6a2e;
+}
+
+.authPrimary {
+  border-color: #d4a017;
+  background: linear-gradient(180deg, #33261a 0%, #1a120b 100%);
+  box-shadow: inset 0 0 10px rgba(212, 160, 23, 0.1);
+}
+
+.buttonTitle {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.buttonSub {
+  font-size: 0.8rem;
+  color: rgba(241, 222, 179, 0.6);
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(140, 106, 46, 0.3);
+  margin: 1rem 0;
+  position: relative;
+}
+
+.divider::after {
+  content: "— or —";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #2b1f15;
+  padding: 0 10px;
+  color: rgba(241, 222, 179, 0.5);
+  font-size: 0.85rem;
+  font-family: "Manrope", sans-serif;
+}
+
+.footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.85rem;
+  color: rgba(241, 222, 179, 0.5);
+}
+
+.footerLink {
+  color: #d4a017;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.footerLink:hover {
+  color: #ffaa00;
+}

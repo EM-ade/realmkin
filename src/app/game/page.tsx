@@ -68,6 +68,13 @@ function GamePage() {
         status: "new",
       },
       {
+        title: "Kingdom",
+        description: "Build your village, train your army, and conquer the realm.",
+        imageSrc: "/kingdom.jpeg",
+        href: "/game/kingdom",
+        status: "new",
+      },
+      {
         title: "Word Blast",
         description: "Fast-paced spellcasting with letters—charge, blast, conquer.",
         imageSrc: "/block-blast.png",
