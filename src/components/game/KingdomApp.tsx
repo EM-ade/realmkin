@@ -17,6 +17,9 @@ import BuildPanel from "@/components/game/BuildPanel/BuildPanel";
 import { GemStore } from "@/components/game/GemStore/GemStore";
 import { LevelRewardsPopup } from "@/components/game/TopBar/LevelRewardsPopup";
 import { ProfilePanel } from "@/components/game/Profile/ProfilePanel";
+import { useLoadingContext } from "@/context/LoadingContext";
+import { LoadingBoot } from "@/components/game/LoadingScreen/LoadingBoot";
+import { LoadingScreen } from "@/components/game/LoadingScreen/LoadingScreen";
 import { useUIStore } from "@/stores/uiStore";
 import { useGameState } from "@/stores/gameStore";
 import { useAuth } from "@/components/game/providers/GameAuthProvider";
@@ -24,7 +27,6 @@ import { SoundProvider } from "@/audio/SoundProvider";
 import { AudioSettingsPanel } from "@/audio/AudioSettingsPanel";
 import { XPFloatingText } from "@/components/game/XP/XPFloatingText";
 import { LevelUpScreen } from "@/components/game/XP/LevelUpScreen";
-import { LoadingScreen } from "@/components/game/LoadingScreen/LoadingScreen";
 import { TutorialProvider } from "@/components/game/tutorial/TutorialProvider";
 import { TutorialOverlay } from "@/components/game/tutorial/TutorialOverlay";
 import { AutoPlayerCollectionToast } from "@/components/game/Notifications/AutoPlayerCollectionToast";
@@ -39,38 +41,14 @@ export function KingdomApp({ onGameReady }: KingdomAppProps) {
   const gameRef = useRef<Game | null>(null);
   const [isGameReady, setIsGameReady] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
-  const [appLoading, setAppLoading] = useState(true);
   const [levelRewardsOpen, setLevelRewardsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [villageReady, setVillageReady] = useState(false);
-  const loadingFadeCompleteRef = useRef(false);
+
+  // Loading gate system — replaces old appLoading/villageReady dual-state
+  const { screenVisible } = useLoadingContext();
 
   // Initialize AutoPlayer system
   const { lastCollection } = useAutoPlayer();
-
-  // Listen for village-ready signal from VillageScene
-  useEffect(() => {
-    const handleVillageReady = () => {
-      setVillageReady(true);
-    };
-    window.addEventListener("village-ready", handleVillageReady);
-    return () => window.removeEventListener("village-ready", handleVillageReady);
-  }, []);
-
-  // Only hide loading screen when BOTH loading is done AND village is rendered
-  const handleLoadingFadeComplete = () => {
-    loadingFadeCompleteRef.current = true;
-    if (villageReady) {
-      setAppLoading(false);
-    }
-  };
-
-  // If village becomes ready after loading finished, hide the loading screen
-  useEffect(() => {
-    if (villageReady && loadingFadeCompleteRef.current) {
-      setAppLoading(false);
-    }
-  }, [villageReady]);
 
   // Listen for level rewards open event
   useEffect(() => {
@@ -137,6 +115,9 @@ export function KingdomApp({ onGameReady }: KingdomAppProps) {
     <SoundProvider isGameReady={isGameReady}>
       <TutorialProvider>
         <div className="relative h-full w-full overflow-hidden bg-stone-900">
+          {/* Boot the loading gate system — runs all stages sequentially */}
+          <LoadingBoot />
+
           <div
             id="game-container"
             className="absolute inset-0 z-0 h-full w-full"
@@ -196,7 +177,8 @@ export function KingdomApp({ onGameReady }: KingdomAppProps) {
           {/* Tutorial overlay — always on top */}
           <TutorialOverlay />
 
-          {!appLoading && (
+          {/* Game UI — hidden until loading is fully complete */}
+          {!screenVisible && (
             <>
               <XPFloatingText />
               <LevelUpScreen />
@@ -204,9 +186,9 @@ export function KingdomApp({ onGameReady }: KingdomAppProps) {
             </>
           )}
 
-          {/* Top-most Cinematic Loading Overlay */}
-          {appLoading && (
-            <LoadingScreen onFadeComplete={handleLoadingFadeComplete} />
+          {/* Top-most Cinematic Loading Overlay — visible until ALL gates complete */}
+          {screenVisible && (
+            <LoadingScreen onFadeComplete={() => {}} />
           )}
         </div>
       </TutorialProvider>

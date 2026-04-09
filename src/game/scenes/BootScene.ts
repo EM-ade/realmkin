@@ -98,6 +98,16 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    // Track Phaser's own load completion for the gate system
+    this.load.on('complete', () => {
+      window.__loadingGates?.setGate('spritesLoaded', 'complete')
+    })
+
+    this.load.on('loaderror', (file: any) => {
+      console.warn('[BootScene] Asset failed to load:', file.key)
+      // Don't fail the gate for one missing asset — log and continue
+    })
+
     // Phaser asset loading happens silently — React loading screen handles the UI.
     // Load single-frame building images (Free Pack)
     const BASE_PATH = "/assets/game/buildings/";
@@ -270,6 +280,8 @@ export class BootScene extends Phaser.Scene {
       }
     }
 
+    // Phaser scene is fully created and ready
+    window.__loadingGates?.setGate('phaserReady', 'complete')
     this.scene.start("MainMenuScene");
   }
 }

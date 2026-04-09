@@ -486,13 +486,11 @@ export class VillageScene extends Phaser.Scene {
     this.buildingRenderer.renderDamagedOverlays();
     this.renderExistingLevelBadges();
 
-    // Signal that the village is fully rendered and ready for interaction
-    // This allows the LoadingScreen to wait until everything is visible
-    const signalVillageReady = () => {
-      window.dispatchEvent(new CustomEvent("village-ready"));
-    };
+    // Signal that the village grid is fully built — used by the gate-based loading system
     // Wait for chunked rendering to finish before signaling
-    this.time.delayedCall(500, signalVillageReady);
+    this.time.delayedCall(500, () => {
+      window.__loadingGates?.setGate('gridBuilt', 'complete')
+    });
 
     // ── Zoom and Panning Controls ─────────────────────────────────────────────
     const cam = this.cameras.main;

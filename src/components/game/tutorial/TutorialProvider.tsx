@@ -28,6 +28,7 @@ import {
 import { useGameState } from "@/stores/gameStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuth } from "@/components/game/providers/GameAuthProvider";
+import { useLoadingContext } from "@/context/LoadingContext";
 
 // ── Context type ──────────────────────────────────────────────────────────────
 export interface TutorialContextValue {
@@ -60,6 +61,7 @@ export function TutorialProvider({ children }: TutorialProviderProps) {
   const { currentScene } = useGameState();
   const { openBuildPanel, closeBuildPanel, buildPanelOpen } = useUIStore();
   const { player } = useAuth();
+  const { state: loadingState } = useLoadingContext();
 
   const [stepIndex, setStepIndex] = useState(0);
   const [isActive, setIsActive] = useState(false);
@@ -83,42 +85,20 @@ export function TutorialProvider({ children }: TutorialProviderProps) {
   // ── Activate when Village scene loads (first time only) ───────────────────
   useEffect(() => {
     if (currentScene !== "Village") return;
+
+    // HARD GUARDS — every single one must pass before tutorial can activate
+    if (!loadingState.isFullyReady) return;      // Loading screen still open
     const done = localStorage.getItem(TUTORIAL_STORAGE_KEY);
-    // Also skip if Supabase says tutorial is complete
+    if (done) return;                            // Already completed (localStorage)
     const supabaseDone = player?.tutorialComplete === true;
-    if (done || supabaseDone) return;
+    if (supabaseDone) return;                    // Already completed (Supabase)
 
-    // FIXED: Wait for UI to be fully ready AND loading screen to be dismissed before activating tutorial
-    const checkUIReady = () => {
-      // ISSUE 1 FIX: Ensure loading screen overlay is gone before activating
-      const loadingOverlay = document.querySelector('[class*="LoadingScreen"]') ||
-                             document.querySelector('[class*="loading"]');
-      const isVisible = loadingOverlay && !loadingOverlay.classList.contains('fadeOut') &&
-                        !loadingOverlay.classList.contains('hidden');
-
-      if (isVisible) {
-        console.log("[TutorialProvider] Loading screen still visible, waiting...");
-        setTimeout(checkUIReady, 500);
-        return;
-      }
-
-      const buildButton = document.querySelector('[data-tutorial="build-button"]');
-      if (buildButton) {
-        console.log("[TutorialProvider] UI is ready, activating tutorial...");
-        // Set the flag so canBuild knows tutorial is active
-        localStorage.setItem("kingdom-tutorial-active", "true");
-        setIsActive(true);
-      } else {
-        // UI not ready yet, check again in 500ms
-        console.log("[TutorialProvider] Waiting for UI to be ready...");
-        setTimeout(checkUIReady, 500);
-      }
-    };
-
-    // Start checking after a small delay for initial render
-    const t = setTimeout(checkUIReady, 1500);
-    return () => clearTimeout(t);
-  }, [currentScene]);
+    // ALL guards passed — safe to show tutorial
+    // Buildings are definitely loaded, Phaser grid is built, loading screen closed
+    console.log("[TutorialProvider] All gates complete, activating tutorial...");
+    localStorage.setItem("kingdom-tutorial-active", "true");
+    setIsActive(true);
+  }, [currentScene, loadingState.isFullyReady, player?.tutorialComplete]);
 
   const currentStep = isActive ? (TUTORIAL_STEPS[stepIndex] ?? null) : null;
 

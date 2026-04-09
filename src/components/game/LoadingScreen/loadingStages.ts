@@ -1,9 +1,15 @@
 // src/components/game/LoadingScreen/loadingStages.ts
+/**
+ * Loading stages for the gate-based loading system.
+ * Each stage sets its corresponding gates when complete.
+ */
+
 import { supabase } from "@/lib/supabase";
 import { useXPSystem } from "@/hooks/game/useXPSystem";
 import { SoundManager } from "@/audio/SoundManager";
 import { Howl } from "howler";
 import { SOUND_CONFIG } from "@/audio/soundConfig";
+import type { LoadingGate, GateStatus } from "@/types/loading.types";
 
 export interface LoadingStageResult {
   success: boolean;
@@ -11,28 +17,45 @@ export interface LoadingStageResult {
   data?: any;
 }
 
+// Helper to set gates via global reference
+const setGate = (gate: LoadingGate, status: GateStatus) => {
+  window.__loadingGates?.setGate(gate, status)
+}
+
 /**
  * Stage 1: Critical Auth
  * Check for existing session and verify validity.
  */
 export async function loadStageAuth(): Promise<LoadingStageResult> {
+  setGate('auth', 'loading')
   try {
     const {
       data: { session },
       error,
     } = await supabase.auth.getSession();
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      setGate('auth', 'failed')
+      return { success: false, error: error.message };
+    }
+    setGate('auth', 'complete')
     return { success: true, data: session };
   } catch (e: any) {
+    setGate('auth', 'failed')
     return { success: false, error: e.message };
   }
 }
 
 /**
  * Stage 2: Player Data (if authenticated)
- * Loads player data from Supabase.
+ * Loads player data from Supabase — buildings, resources, tutorial state.
+ * Sets ALL data gates simultaneously after successful load.
  */
 export async function loadStagePlayerData(): Promise<LoadingStageResult> {
+  setGate('playerData', 'loading')
+  setGate('buildings', 'loading')
+  setGate('resources', 'loading')
+  setGate('tutorialState', 'loading')
+
   try {
     const {
       data: { session },
@@ -42,7 +65,13 @@ export async function loadStagePlayerData(): Promise<LoadingStageResult> {
       "load-game",
       session?.access_token ? { headers: { Authorization: `Bearer ${session.access_token}` } } : {}
     );
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      setGate('playerData', 'failed')
+      setGate('buildings', 'failed')
+      setGate('resources', 'failed')
+      setGate('tutorialState', 'failed')
+      return { success: false, error: error.message };
+    }
 
     if (data) {
       const player = data.player;
@@ -59,7 +88,7 @@ export async function loadStagePlayerData(): Promise<LoadingStageResult> {
           effectiveLastAcknowledged
         );
 
-        // CRITICAL FIX: Import buildings into game store immediately so VillageScene can render them
+        // Import buildings into game store immediately so VillageScene can render them
         if (data.buildings && data.buildings.length > 0) {
           const { useGameState } = await import("@/stores/gameStore");
           useGameState.getState().importSupabaseData(data.buildings, {
@@ -83,19 +112,30 @@ export async function loadStagePlayerData(): Promise<LoadingStageResult> {
       }
     }
 
+    // Set ALL data gates complete simultaneously
+    setGate('playerData', 'complete')
+    setGate('buildings', 'complete')
+    setGate('resources', 'complete')
+    setGate('tutorialState', 'complete')
+
     return { success: true, data };
   } catch (e: any) {
+    setGate('playerData', 'failed')
+    setGate('buildings', 'failed')
+    setGate('resources', 'failed')
+    setGate('tutorialState', 'failed')
     return { success: false, error: e.message };
   }
 }
 
 /**
- * Stage 3: Sound Loading
+ * Stage 3: Sound Loading — integrated with gate system.
+ * Loads critical Howler sounds and reports completion via gate.
  */
-export async function loadStageSounds(
-  onProgress: (p: number) => void
-): Promise<LoadingStageResult> {
-  try {
+export async function loadStageSounds(): Promise<LoadingStageResult> {
+  setGate('soundsLoaded', 'loading')
+
+  return new Promise((resolve) => {
     const soundManager = SoundManager.getInstance();
     const failedSounds: string[] = [];
 
@@ -118,96 +158,106 @@ export async function loadStageSounds(
       },
     ];
 
-    let stageProgress = 0;
+    let totalSounds = 0
+    allGroups.forEach(g => totalSounds += g.sounds.length)
+    let loadedCount = 0
 
-    for (const group of allGroups) {
-      await new Promise<void>((resolve) => {
-        let loadedCount = 0;
-        const total = group.sounds.length;
-
-        if (total === 0) {
-          stageProgress += group.weight * 100;
-          onProgress(stageProgress);
-          resolve();
-          return;
+    const checkComplete = () => {
+      if (loadedCount >= totalSounds) {
+        // Don't fail the gate for missing sounds — just warn
+        if (failedSounds.length > 0) {
+          console.warn('[Sound] Failed to load:', failedSounds)
         }
-
-        group.sounds.forEach((soundId) => {
-          const config = (SOUND_CONFIG as Record<string, any>)[soundId];
-          if (!config) {
-            loadedCount++;
-            stageProgress += (group.weight * 100) / total;
-            onProgress(Math.min(stageProgress, 100));
-            if (loadedCount === total) resolve();
-            return;
-          }
-
-          const extensions = [".ogg", ".mp3"];
-          const sources = extensions.map((ext) => `${config.src}${ext}`);
-
-          try {
-            new Howl({
-              src: sources,
-              volume: config.defaultVolume,
-              loop: config.loop,
-              preload: true,
-              html5: true,
-              onload: () => {
-                loadedCount++;
-                stageProgress += (group.weight * 100) / total;
-                onProgress(Math.min(stageProgress, 100));
-                if (loadedCount === total) resolve();
-              },
-              onloaderror: () => {
-                console.warn(`[Sound] Failed to load ${soundId}`);
-                failedSounds.push(soundId);
-                loadedCount++;
-                stageProgress += (group.weight * 100) / total;
-                onProgress(Math.min(stageProgress, 100));
-                if (loadedCount === total) resolve();
-              },
-            });
-            soundManager.preloadSound(soundId);
-          } catch {
-            failedSounds.push(soundId);
-            loadedCount++;
-            stageProgress += (group.weight * 100) / total;
-            onProgress(Math.min(stageProgress, 100));
-            if (loadedCount === total) resolve();
-          }
-        });
-      });
+        setGate('soundsLoaded', 'complete')
+        resolve({ success: true })
+      }
     }
 
-    return { success: true };
-  } catch (e: any) {
-    console.warn("[Sound] Sound loading stage failed:", e.message);
-    return { success: true };
-  }
-}
+    // If no sounds to load, resolve immediately
+    if (totalSounds === 0) {
+      setGate('soundsLoaded', 'complete')
+      resolve({ success: true })
+      return
+    }
 
-/**
- * Stage 4: Game Assets
- */
-export async function loadStageAssets(
-  onProgress: (p: number) => void
-): Promise<LoadingStageResult> {
-  return new Promise((resolve) => {
-    let p = 0;
-    const interval = setInterval(() => {
-      p += 0.2;
-      onProgress(p);
-      if (p >= 1) {
-        clearInterval(interval);
-        resolve({ success: true });
+    for (const group of allGroups) {
+      for (const soundId of group.sounds) {
+        const config = (SOUND_CONFIG as Record<string, any>)[soundId];
+        if (!config) {
+          loadedCount++
+          checkComplete()
+          continue
+        }
+
+        const extensions = [".ogg", ".mp3"];
+        const sources = extensions.map((ext) => `${config.src}${ext}`);
+
+        try {
+          new Howl({
+            src: sources,
+            volume: config.defaultVolume,
+            loop: config.loop,
+            preload: true,
+            html5: true,
+            onload: () => {
+              loadedCount++
+              checkComplete()
+            },
+            onloaderror: () => {
+              console.warn(`[Sound] Failed to load ${soundId}`);
+              failedSounds.push(soundId);
+              loadedCount++
+              checkComplete()
+            },
+          });
+          soundManager.preloadSound(soundId);
+        } catch {
+          failedSounds.push(soundId);
+          loadedCount++
+          checkComplete()
+        }
       }
-    }, 300);
-  });
+    }
+  })
 }
 
 /**
- * Stage 5: Game Initialization
+ * Stage 4: Phaser Asset Loading (BootScene)
+ * This stage waits for the Phaser BootScene to dispatch the spritesLoaded gate.
+ * We poll for the gate to be complete.
  */
-export async function loadStageInit(): Promise<LoadingStageResult> {
-  return { success: true };
+export async function loadStageSprites(): Promise<LoadingStageResult> {
+  // The BootScene sets the 'spritesLoaded' gate when Phaser's loader completes.
+  // We just wait for it.
+  return new Promise((resolve) => {
+    const check = () => {
+      if (window.__loadingGates?.state.gates.spritesLoaded === 'complete') {
+        resolve({ success: true })
+      } else {
+        setTimeout(check, 100)
+      }
+    }
+    // Also set loading status
+    setGate('spritesLoaded', 'loading')
+    check()
+  })
+}
+
+/**
+ * Stage 5: Grid Building (VillageScene)
+ * Waits for the VillageScene to dispatch the gridBuilt gate after placing all buildings.
+ */
+export async function loadStageGridBuilt(): Promise<LoadingStageResult> {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (window.__loadingGates?.state.gates.gridBuilt === 'complete') {
+        resolve({ success: true })
+      } else {
+        setTimeout(check, 100)
+      }
+    }
+    // Also set loading status
+    setGate('gridBuilt', 'loading')
+    check()
+  })
 }

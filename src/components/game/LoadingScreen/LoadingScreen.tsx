@@ -1,12 +1,13 @@
 // src/components/game/LoadingScreen/LoadingScreen.tsx
 import React, { useState, useEffect, useRef } from "react";
-import { useLoadingOrchestrator } from "./useLoadingOrchestrator";
+import { useLoadingGates } from "@/hooks/useLoadingGates";
 import { LoadingBar } from "./LoadingBar";
 import { LoadingTip } from "./LoadingTip";
 import { useAuth } from "@/components/game/providers/GameAuthProvider";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { supabase } from "@/lib/supabase";
+import type { LoadingGate, GateStatus } from "@/types/loading.types";
 import styles from "./LoadingScreen.module.css";
 
 interface LoadingScreenProps {
@@ -15,10 +16,10 @@ interface LoadingScreenProps {
 
 export function LoadingScreen({ onFadeComplete }: LoadingScreenProps) {
   const {
-    visualProgress,
-    isComplete,
-    error: loadError,
-  } = useLoadingOrchestrator();
+    state,
+    progress,
+  } = useLoadingGates();
+  const isComplete = state.isFullyReady;
   const {
     player,
     isAuthenticated,
@@ -118,7 +119,7 @@ export function LoadingScreen({ onFadeComplete }: LoadingScreenProps) {
   };
 
   useEffect(() => {
-    // Only fade out once loading is done AND we have a player session
+    // Only fade out once ALL gates are complete AND we have a player session
     // AND they don't need username setup
     if (isComplete && isAuthenticated && !needsUsernameSetup) {
       setIsFading(true);
@@ -133,11 +134,10 @@ export function LoadingScreen({ onFadeComplete }: LoadingScreenProps) {
 
   useEffect(() => {
     // Automatically trigger signing when wallet connects
+    // Only start loading stages after auth is done
     if (
       publicKey &&
       !isAuthenticated &&
-      isComplete &&
-      !isAuthLoading &&
       !hasAttemptedSign.current
     ) {
       hasAttemptedSign.current = true;
@@ -145,7 +145,7 @@ export function LoadingScreen({ onFadeComplete }: LoadingScreenProps) {
         hasAttemptedSign.current = false; // Allow retry if failed
       });
     }
-  }, [publicKey, isAuthenticated, isComplete, isAuthLoading, loginWithWallet]);
+  }, [publicKey, isAuthenticated, loginWithWallet]);
 
   return (
     <div className={`${styles.overlay} ${isFading ? styles.fadeOut : ""}`}>
@@ -163,8 +163,44 @@ export function LoadingScreen({ onFadeComplete }: LoadingScreenProps) {
       <div className={styles.bottomSection}>
         {!isComplete ? (
           <>
-            <LoadingBar progress={visualProgress} />
+            <LoadingBar progress={progress} />
             <LoadingTip />
+            {/* Development mode: show individual gate status */}
+            {process.env.NODE_ENV === 'development' && (
+              <div style={{
+                position: 'fixed',
+                bottom: 10,
+                left: 10,
+                background: 'rgba(0,0,0,0.85)',
+                color: '#fff',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                padding: '8px 12px',
+                borderRadius: 8,
+                zIndex: 99999,
+                maxWidth: 300,
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 4, color: '#fbbf24' }}>
+                  Loading Gates ({progress}%)
+                </div>
+                {(Object.entries(state.gates) as [LoadingGate, GateStatus][]).map(([gate, status]) => (
+                  <div key={gate} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ color: status === 'complete' ? '#4ade80' : status === 'failed' ? '#ff6b6b' : status === 'loading' ? '#fbbf24' : '#888' }}>
+                      {status === 'complete' ? '✅' : status === 'failed' ? '❌' : status === 'loading' ? '⏳' : '⬜'}
+                    </span>
+                    <span style={{ flex: 1 }}>{gate}</span>
+                    <span style={{ color: status === 'complete' ? '#4ade80' : status === 'failed' ? '#ff6b6b' : '#888' }}>
+                      {status}
+                    </span>
+                  </div>
+                ))}
+                {state.failedGates.length > 0 && (
+                  <div style={{ color: '#ff6b6b', marginTop: 4 }}>
+                    Failed: {state.failedGates.join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         ) : !isAuthenticated ? (
           <div className={styles.authSuite}>
@@ -379,9 +415,9 @@ export function LoadingScreen({ onFadeComplete }: LoadingScreenProps) {
           </div>
         )}
 
-        {(loadError || authError) && (
+        {authError && (
           <div className={styles.errorMessage}>
-            {loadError || authError?.message}
+            {authError?.message}
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@
 
 import dynamic from "next/dynamic";
 import { GameAuthProvider } from "@/components/game/providers/GameAuthProvider";
+import { LoadingProvider } from "@/context/LoadingContext";
 
 // Dynamically import the game app wrapper with SSR disabled
 // This prevents Phaser from crashing during Next.js server-side rendering
@@ -36,7 +37,9 @@ export default function KingdomGameClient() {
       {/* Game wrapper — full viewport */}
       <div className="relative z-10 h-screen w-full">
         <GameAuthProvider>
-          <GameApp />
+          <LoadingProvider>
+            <GameApp />
+          </LoadingProvider>
         </GameAuthProvider>
       </div>
     </div>
