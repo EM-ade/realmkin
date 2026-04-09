@@ -20,26 +20,35 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
   const { play } = useSoundManager();
   const { connected } = useWallet();
   const { connectWallet } = useWeb3();
-  const unlockNextBuilder = useGameState((state) => state.unlockNextBuilder);
+  const playerGems = player?.gemBalance ?? 0;
   const gems = useGameState((state) => state.resources.gems);
   const unlockedBuilders = useGameState((state) => state.unlockedBuilders);
   const addResources = useGameState((state) => state.addResources);
+  const setUnlockedBuilders = useGameState((state) => state.setUnlockedBuilders);
 
   const { player } = useAuth();
 
-  const [newEmail, setNewEmail] = useState("");
-  const [changingEmail, setChangingEmail] = useState(false);
-  const [emailMsg, setEmailMsg] = useState("");
+  const [newUsername, setNewUsername] = useState("");
+  const [changingUsername, setChangingUsername] = useState(false);
+  const [usernameMsg, setUsernameMsg] = useState("");
   const [successState, setSuccessState] = useState<{
     gems: number;
     pack: string;
   } | null>(null);
   const [solPrice, setSolPrice] = useState<number>(0);
   const [storeError, setStoreError] = useState<string | null>(null);
+  const [autominerMsg, setAutominerMsg] = useState("");
 
   useEffect(() => {
     fetchSolPrice().then(setSolPrice);
   }, []);
+
+  // Pre-fill username field if player has one
+  useEffect(() => {
+    if (player?.username) {
+      setNewUsername(player.username);
+    }
+  }, [player]);
 
   const maxBuilders = 2;
 
@@ -109,66 +118,145 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
     }
   };
 
+  // ── Second Builder — persist to Supabase ──
   const handleBuyBuilder = async () => {
     play("button_click");
-    if (gems >= 500) {
-      if (unlockNextBuilder()) {
-        play("level_up");
-        onClose();
-      }
-    } else {
-      alert("Not enough gems!");
-    }
-  };
+    setStoreError(null);
 
-  const handleChangeEmail = async () => {
-    if (!newEmail || !player) return;
-    if (gems < 50) {
-      setEmailMsg("Not enough gems (Cost: 50)");
-      return;
-    }
-
-    setChangingEmail(true);
-    setEmailMsg("");
-    try {
-      const { data, error: fnErr } = await supabase.functions.invoke(
-        "change-player-email",
-        { body: { playerId: player.id, newEmail } }
-      );
-      if (fnErr) throw fnErr;
-      if (data?.error) throw new Error(data.error);
-
-      play("level_up");
-      setEmailMsg("Email successfully modified!");
-      setNewEmail("");
-    } catch (e: any) {
-      setEmailMsg(e.message || "Failed to change email");
-    } finally {
-      setChangingEmail(false);
-    }
-  };
-
-  const handleBuyAutominer = async () => {
-    play("button_click");
     if (!player) return;
-    if (gems < 500) {
-      alert("Not enough gems!");
+    if (playerGems < 500) {
+      setStoreError("Not enough gems! You need 500 gems.");
       return;
     }
 
     try {
+      // Deduct gems from Supabase
       const { error: dbErr } = await supabase
         .from("players")
-        .update({ has_autominer: true, gems: gems - 500 } as any)
+        .update({ gem_balance: playerGems - 500, builders_total: 2 })
         .eq("id", player.id);
 
       if (dbErr) throw dbErr;
+
+      // Update local Zustand state
+      addResources({ gems: -500 });
+      setUnlockedBuilders(2);
+
       play("level_up");
-      alert("Autominer Unlocked! Resources will now generate up to 8h while offline.");
       onClose();
-    } catch (e) {
-      console.error(e);
-      alert("Failed to unlock autominer");
+    } catch (err) {
+      console.error("[GemStore] Builder purchase failed:", err);
+      setStoreError("Failed to unlock builder. Please try again.");
+    }
+  };
+
+  // ── Autominer — sync local state after DB write ──
+  const handleBuyAutominer = async () => {
+    play("button_click");
+    setStoreError(null);
+    setAutominerMsg("");
+
+    if (!player) return;
+    if (playerGems < 500) {
+      setAutominerMsg("Not enough gems! You need 500 gems.");
+      return;
+    }
+
+    try {
+      // Deduct gems and enable autominer in Supabase
+      const { error: dbErr } = await supabase
+        .from("players")
+        .update({ has_autominer: true, gem_balance: playerGems - 500 })
+        .eq("id", player.id);
+
+      if (dbErr) throw dbErr;
+
+      // Update local Zustand gem count
+      addResources({ gems: -500 });
+
+      play("level_up");
+      setAutominerMsg("Unlocked! Resources generate while offline.");
+      setTimeout(() => {
+        setAutominerMsg("");
+        onClose();
+      }, 1500);
+    } catch (err) {
+      console.error("[GemStore] Autominer purchase failed:", err);
+      setAutominerMsg("Failed to unlock. Please try again.");
+    }
+  };
+
+  // ── Change Username (was Change Email) — 150 gems ──
+  const handleChangeUsername = async () => {
+    if (!player) return;
+    const trimmed = newUsername.trim();
+
+    if (trimmed.length < 3) {
+      setUsernameMsg("Username must be at least 3 characters");
+      return;
+    }
+    if (trimmed.length > 20) {
+      setUsernameMsg("Username must be 20 characters or less");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
+      setUsernameMsg("Only letters, numbers, and underscores allowed");
+      return;
+    }
+    if (playerGems < 150) {
+      setUsernameMsg("Not enough gems! You need 150 gems.");
+      return;
+    }
+
+    setChangingUsername(true);
+    setUsernameMsg("");
+
+    try {
+      // Check if username is taken by another player
+      const { data: existing } = await supabase
+        .from("players")
+        .select("id")
+        .eq("username", trimmed)
+        .neq("id", player.id)
+        .single();
+
+      if (existing) {
+        setUsernameMsg("This username is already taken!");
+        setChangingUsername(false);
+        return;
+      }
+
+      // Update username and deduct gems in Supabase
+      const { error: updateErr } = await supabase
+        .from("players")
+        .update({ username: trimmed, gem_balance: playerGems - 150 })
+        .eq("id", player.id);
+
+      if (updateErr) {
+        const errMsg = updateErr.message || "";
+        if (errMsg.includes("duplicate") || errMsg.includes("unique") || errMsg.includes("players_username_key")) {
+          setUsernameMsg("This username is already taken!");
+        } else {
+          setUsernameMsg(updateErr.message || "Failed to change username");
+        }
+        setChangingUsername(false);
+        return;
+      }
+
+      // Update local Zustand gem count
+      addResources({ gems: -150 });
+
+      play("level_up");
+      setUsernameMsg("Username changed successfully!");
+      setTimeout(() => {
+        setUsernameMsg("");
+        onClose();
+      }, 1500);
+    } catch (err) {
+      console.error("[GemStore] Username change failed:", err);
+      setUsernameMsg("Failed to change username. Please try again.");
+    } finally {
+      setChangingUsername(false);
     }
   };
 
@@ -271,7 +359,7 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
                       className={styles.buyBtn}
                       style={{ backgroundColor: "#8c6239", border: "1px solid #d4af37" }}
                       onClick={handleBuyBuilder}
-                      disabled={gems < 500}
+                      disabled={playerGems < 500}
                     >
                       500 💎
                     </button>
@@ -279,58 +367,68 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
                 )}
 
                 {!(player as any)?.has_autominer && (
-                  <div className={styles.packCard}>
-                    <div className={styles.packIcon}>⚙️</div>
-                    <div className={styles.packDetails}>
-                      <h3>Autominer</h3>
-                      <span className={styles.gemAmount}>
-                        Collect resources offline & online automatically.
-                      </span>
+                  <div className={styles.packCard} style={{ flexDirection: "column", alignItems: "stretch", gap: "0.5rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: 0, color: "#f1deb3", fontSize: "1rem", fontFamily: "MedievalSharp" }}>Autominer</h3>
+                        <span className={styles.gemAmount}>
+                          Collect resources offline &amp; online automatically.
+                        </span>
+                      </div>
+                      <button
+                        className={styles.buyBtn}
+                        style={{ backgroundColor: "#8c6239", border: "1px solid #d4af37" }}
+                        onClick={handleBuyAutominer}
+                        disabled={playerGems < 500}
+                      >
+                        500 💎
+                      </button>
                     </div>
-                    <button
-                      className={styles.buyBtn}
-                      style={{ backgroundColor: "#8c6239", border: "1px solid #d4af37" }}
-                      onClick={handleBuyAutominer}
-                      disabled={gems < 500}
-                    >
-                      500 💎
-                    </button>
+                    {autominerMsg && (
+                      <div style={{ fontSize: "0.8rem", color: autominerMsg.includes("Unlocked") ? "#4caf50" : "#ff4d4d", textAlign: "center" }}>
+                        {autominerMsg}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             ) : null}
 
             <div className={styles.upgradeSection}>
-              <h3 className={styles.upgradeTitle}>Account Security</h3>
+              <h3 className={styles.upgradeTitle}>Account</h3>
               <div className={styles.packCard} style={{ flexDirection: "column", alignItems: "stretch", gap: "0.5rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ flex: 1 }}>
                     <h3 style={{ margin: 0, color: "#f1deb3", fontSize: "1.2rem", fontFamily: "MedievalSharp" }}>
-                      Change Email
+                      Change Username
                     </h3>
                     <span style={{ fontSize: "0.85rem", color: "#aaa", fontFamily: "Inter" }}>
-                      Costs 50 Gems. Will require reverification.
+                      Costs 150 Gems. Choose wisely!
                     </span>
                   </div>
                   <button
                     className={styles.buyBtn}
                     style={{ backgroundColor: "#8c6239", border: "1px solid #d4af37", width: "auto", padding: "0.5rem 1rem" }}
-                    onClick={handleChangeEmail}
-                    disabled={gems < 50 || changingEmail || !newEmail}
+                    onClick={handleChangeUsername}
+                    disabled={playerGems < 150 || changingUsername || !newUsername.trim()}
                   >
-                    {changingEmail ? "Securing..." : "50 💎"}
+                    {changingUsername ? "Saving..." : "150 💎"}
                   </button>
                 </div>
                 <input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="New Email Address"
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => {
+                    setNewUsername(e.target.value);
+                    setUsernameMsg("");
+                  }}
+                  placeholder="New Username"
+                  maxLength={20}
                   style={{ padding: "0.5rem", background: "#1a120b", border: "1px solid #8c6a2e", color: "white", borderRadius: "4px", fontFamily: "Inter", outline: "none" }}
                 />
-                {emailMsg && (
-                  <div style={{ fontSize: "0.8rem", color: emailMsg.includes("success") ? "#4caf50" : "#ff4d4d" }}>
-                    {emailMsg}
+                {usernameMsg && (
+                  <div style={{ fontSize: "0.8rem", color: usernameMsg.includes("success") ? "#4caf50" : "#ff4d4d" }}>
+                    {usernameMsg}
                   </div>
                 )}
               </div>

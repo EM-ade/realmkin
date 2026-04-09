@@ -1,11 +1,12 @@
 // src/components/game/LoadingScreen/LoadingScreen.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLoadingOrchestrator } from "./useLoadingOrchestrator";
 import { LoadingBar } from "./LoadingBar";
 import { LoadingTip } from "./LoadingTip";
 import { useAuth } from "@/components/game/providers/GameAuthProvider";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { supabase } from "@/lib/supabase";
 import styles from "./LoadingScreen.module.css";
 
 interface LoadingScreenProps {
@@ -28,23 +29,105 @@ export function LoadingScreen({ onFadeComplete }: LoadingScreenProps) {
     isLoading: isAuthLoading,
   } = useAuth();
   const [isFading, setIsFading] = useState(false);
-  const [authMode, setAuthMode] = useState<"choices" | "email">("choices");
+  const [authMode, setAuthMode] = useState<"choices" | "email" | "username_setup">("choices");
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  const hasAttemptedSign = React.useRef(false);
+  const [setupUsername, setSetupUsername] = useState("");
+  const [setupError, setSetupError] = useState("");
+  const [isSettingUsername, setIsSettingUsername] = useState(false);
+  const hasAttemptedSign = useRef(false);
+  const hasCheckedUsername = useRef(false);
+
+  // Check if authenticated player needs username setup
+  const needsUsernameSetup = isAuthenticated && player && (
+    player.authMethod === "wallet" &&
+    (!player.username || player.username.startsWith("Hero_"))
+  );
+
+  useEffect(() => {
+    // If player needs username setup, switch to that mode
+    if (needsUsernameSetup && !hasCheckedUsername.current) {
+      hasCheckedUsername.current = true;
+      setAuthMode("username_setup");
+    }
+  }, [needsUsernameSetup]);
+
+  const handleSetupUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSetupError("");
+
+    const trimmed = setupUsername.trim();
+    if (trimmed.length < 3) {
+      setSetupError("Username must be at least 3 characters");
+      return;
+    }
+    if (trimmed.length > 20) {
+      setSetupError("Username must be 20 characters or less");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
+      setSetupError("Only letters, numbers, and underscores allowed");
+      return;
+    }
+
+    setIsSettingUsername(true);
+
+    try {
+      // Check if username is taken
+      const { data: existing } = await supabase
+        .from("players")
+        .select("id")
+        .eq("username", trimmed)
+        .neq("id", player?.id || "")
+        .single();
+
+      if (existing) {
+        setSetupError("This username is already taken!");
+        setIsSettingUsername(false);
+        return;
+      }
+
+      // Update player username
+      const { error: updateErr } = await supabase
+        .from("players")
+        .update({ username: trimmed })
+        .eq("id", player?.id);
+
+      if (updateErr) {
+        const errMsg = updateErr.message || "";
+        if (errMsg.includes("duplicate") || errMsg.includes("unique") || errMsg.includes("players_username_key")) {
+          setSetupError("This username is already taken!");
+        } else {
+          setSetupError(updateErr.message || "Failed to set username");
+        }
+        setIsSettingUsername(false);
+        return;
+      }
+
+      // Success — proceed to game
+      setIsFading(true);
+      setTimeout(() => onFadeComplete(), 800);
+    } catch (err) {
+      console.error("[LoadingScreen] Failed to set username:", err);
+      setSetupError("Failed to set username. Please try again.");
+    } finally {
+      setIsSettingUsername(false);
+    }
+  };
 
   useEffect(() => {
     // Only fade out once loading is done AND we have a player session
-    if (isComplete && isAuthenticated) {
+    // AND they don't need username setup
+    if (isComplete && isAuthenticated && !needsUsernameSetup) {
       setIsFading(true);
       const timer = setTimeout(() => {
         onFadeComplete();
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [isComplete, isAuthenticated, onFadeComplete]);
+  }, [isComplete, isAuthenticated, needsUsernameSetup, onFadeComplete]);
 
   const { publicKey } = useWallet();
 
@@ -236,6 +319,57 @@ export function LoadingScreen({ onFadeComplete }: LoadingScreenProps) {
                 </div>
               </form>
             )}
+
+            <div className={styles.versionText}>v1.1.0 BETA</div>
+          </div>
+        ) : authMode === "username_setup" ? (
+          // Username setup for new wallet users
+          <div className={styles.authSuite}>
+            <div className={styles.authHeader}>
+              <div className={styles.authHeaderDivider}>
+                <span className={styles.dash}>───</span>
+                <span className={styles.diamond}>◆</span>
+                <span className={styles.dash}>───</span>
+              </div>
+              <h2 className={styles.authTitle}>CHOOSE YOUR NAME</h2>
+              <p className={styles.authSubtitle}>
+                Pick a name to be known across the kingdom
+              </p>
+            </div>
+
+            <form className={styles.emailForm} onSubmit={handleSetupUsername}>
+              <input
+                type="text"
+                placeholder="Realm Username"
+                className={styles.authInput}
+                value={setupUsername}
+                onChange={(e) => {
+                  setSetupUsername(e.target.value);
+                  setSetupError("");
+                }}
+                autoFocus
+                maxLength={20}
+                required
+              />
+
+              {setupError && (
+                <p className={styles.errorMessage} style={{ marginBottom: 8 }}>
+                  {setupError}
+                </p>
+              )}
+
+              <p className={styles.hintText} style={{ fontSize: "11px", color: "#888", textAlign: "center", margin: "0 0 8px" }}>
+                3-20 characters · Letters, numbers, underscores
+              </p>
+
+              <button
+                type="submit"
+                className={styles.btnEnterRealm}
+                disabled={isSettingUsername || setupUsername.trim().length < 3}
+              >
+                ⚔ {isSettingUsername ? "Saving..." : "Enter the Realm"} ⚔
+              </button>
+            </form>
 
             <div className={styles.versionText}>v1.1.0 BETA</div>
           </div>

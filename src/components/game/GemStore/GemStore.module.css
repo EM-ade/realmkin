@@ -200,3 +200,43 @@
   font-size: 0.75rem;
   color: #7a6a50;
 }
+
+/* ── Mobile: reduce height ── */
+@media (max-width: 768px) {
+  .modal {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 16px;
+    width: 95%;
+    max-width: 360px;
+    border-radius: 12px;
+  }
+
+  .header h2 {
+    font-size: 1rem;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+  }
+
+  .packCard {
+    padding: 8px 12px;
+  }
+
+  .buyBtn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .packIcon {
+    font-size: 20px;
+    margin-right: 12px;
+  }
+
+  .footerInfo {
+    margin-top: 12px;
+    font-size: 0.65rem;
+  }
+}

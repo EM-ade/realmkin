@@ -8,6 +8,7 @@ import { useXPSystem } from "@/hooks/game/useXPSystem";
 import { supabase } from "@/lib/supabase";
 import styles from "./ProfilePanel.module.css";
 import { useSoundManager } from "@/audio/useSoundManager";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface ProfilePanelProps {
   isOpen: boolean;
@@ -19,7 +20,8 @@ export function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
   const { powerLevel, powerTier, breakdown } = usePowerLevel();
   const { currentLevel, currentXP, xpToNextLevel, xpProgress, completedMilestones } = useXPSystem();
   const { buildings } = useGameState();
-  const { play } = useSoundManager();
+  const { isMuted, toggleMute } = useSoundManager();
+  const isMobile = useIsMobile();
 
   // Close on Escape
   useEffect(() => {
@@ -31,9 +33,8 @@ export function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
   }, [isOpen, onClose]);
 
   const handleClose = useCallback(() => {
-    play("modal_close");
     onClose();
-  }, [onClose, play]);
+  }, [onClose]);
 
   if (!player) return null;
 
@@ -85,9 +86,30 @@ export function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
               <h2 className={styles.panelTitle}>
                 <span>👤</span> Profile
               </h2>
-              <button className={styles.closeButton} onClick={handleClose}>
-                ✕
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Sound Toggle — always visible on mobile, hidden on desktop */}
+                {isMobile && (
+                  <button
+                    onClick={toggleMute}
+                    style={{
+                      backgroundColor: "rgba(0,0,0,0.4)",
+                      color: isMuted ? "#ff6b6b" : "#fbbf24",
+                      border: "1px solid rgba(251,191,36,0.3)",
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      lineHeight: 1,
+                    }}
+                    title={isMuted ? "Unmute" : "Mute"}
+                  >
+                    {isMuted ? "🔇" : "🔊"}
+                  </button>
+                )}
+                <button className={styles.closeButton} onClick={handleClose}>
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* Scrollable Content */}

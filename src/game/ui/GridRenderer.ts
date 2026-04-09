@@ -370,9 +370,21 @@ export class GridRenderer {
       this.hideHoverEffect();
     });
 
-    // Click event - call callback if provided
-    hitZone.on("pointerdown", () => {
-      if (this.onTileClick) {
+    // Click event — defer to pointerup to distinguish tap from pan
+    const PAN_THRESHOLD = 10; // pixels
+    let pointerDownX = 0;
+    let pointerDownY = 0;
+
+    hitZone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      pointerDownX = pointer.x;
+      pointerDownY = pointer.y;
+    });
+
+    hitZone.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      const moved = Math.sqrt(
+        (pointer.x - pointerDownX) ** 2 + (pointer.y - pointerDownY) ** 2,
+      );
+      if (moved <= PAN_THRESHOLD && this.onTileClick) {
         this.onTileClick(col, row);
       }
     });

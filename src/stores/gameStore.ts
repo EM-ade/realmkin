@@ -148,6 +148,7 @@ export interface GameState {
   setProductionProgress: (progress: number) => void;
   moveBuilding: (buildingId: string, newSlot: number) => void;
   unlockNextBuilder: () => boolean;
+  setUnlockedBuilders: (count: number) => void;
 
   // Obstacles
   startClearingObstacle: (obstacleId: string) => void;
@@ -337,6 +338,10 @@ export const useGameState = create<GameState>((set, get) => ({
       resources: { ...state.resources, gems: state.resources.gems - 500 },
     });
     return true;
+  },
+
+  setUnlockedBuilders: (count) => {
+    set({ unlockedBuilders: Math.min(count, MAX_BUILDERS) });
   },
 
   // ── Building helpers ──────────────────────────────────────────────────────

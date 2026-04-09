@@ -7,6 +7,7 @@ import styles from "./TopBar.module.css";
 import { XPDisplay } from "./XPDisplay";
 import { AutoPlayerIndicator } from "./AutoPlayerIndicator";
 import { getPowerTier } from "@/game/config/powerFormula";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // Resource type mapping for the top bar
 type ResourceType = "wood" | "clay" | "iron" | "crop" | "gems";
@@ -60,12 +61,22 @@ function formatNumber(num: number | undefined | null): string {
   return num.toString();
 }
 
+// Compact format for mobile — shorter strings
+function formatCompact(num: number | undefined | null): string {
+  if (num === undefined || num === null) return "0";
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+  if (num >= 10000) return (num / 1000).toFixed(0) + "K";
+  if (num >= 1000) return (num / 1000).toFixed(0) + "K";
+  return num.toString();
+}
+
 export function TopBar({ onAudioSettings }: { onAudioSettings?: () => void }) {
   const store = useGameState();
   const { isMuted, toggleMute } = useSoundManager();
   const { openGemStore } = useUIStore();
   const { player } = useAuth();
   const { powerLevel } = usePowerLevel();
+  const isMobile = useIsMobile();
 
   // Get game state values
   const resources = store.resources;
@@ -86,13 +97,13 @@ export function TopBar({ onAudioSettings }: { onAudioSettings?: () => void }) {
 
   return (
     <div
-      className={styles.topBar}
+      className={`${styles.topBar} ${isMobile ? styles.topBarMobile : ""}`}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
 
-      {/* Audio Settings Toggle */}
-      {onAudioSettings && (
+      {/* Audio Settings Toggle — hidden on mobile, moved to profile panel */}
+      {onAudioSettings && !isMobile && (
         <button
           onClick={() => {
             toggleMute();
@@ -144,30 +155,30 @@ export function TopBar({ onAudioSettings }: { onAudioSettings?: () => void }) {
 
           {/* Username + Level */}
           <div
-            className={styles.profileNameArea}
+            className={`${styles.profileNameArea} ${isMobile ? styles.profileNameAreaMobile : ""}`}
             onClick={openProfile}
             role="button"
             tabIndex={0}
             aria-label="Open profile"
             style={{ cursor: "pointer" }}
           >
-            <span className={styles.profileName}>{username}</span>
+            <span className={`${styles.profileName} ${isMobile ? styles.profileNameMobile : ""}`}>{username}</span>
             <XPDisplay />
           </div>
 
           <AutoPlayerIndicator />
         </div>
 
-        {/* Center Section: Builders & Shield/Stats */}
-        <div className={styles.centerSection}>
-          <div className={styles.builderStatus}>
+        {/* Center Section: Builders & Army */}
+        <div className={`${styles.centerSection} ${isMobile ? styles.centerSectionMobile : ""}`}>
+          <div className={`${styles.builderStatus} ${isMobile ? styles.builderStatusMobile : ""}`}>
             <span className="material-symbols-outlined">construction</span>
             <span className={styles.statusValue}>
               {buildersFree}/{builderCount.total}
             </span>
           </div>
 
-          <div className={styles.armyStatus}>
+          <div className={`${styles.armyStatus} ${isMobile ? styles.armyStatusMobile : ""}`}>
             <span className="material-symbols-outlined">swords</span>
             <span className={styles.statusValue}>
               {totalUnits}/{Math.floor(maxArmySize)}
@@ -176,8 +187,8 @@ export function TopBar({ onAudioSettings }: { onAudioSettings?: () => void }) {
         </div>
 
         {/* Right Section: Resources & Gems */}
-        <div className={styles.resourcesSection}>
-          <div className={styles.resourcesGrid}>
+        <div className={`${styles.resourcesSection} ${isMobile ? styles.resourcesSectionMobile : ""}`}>
+          <div className={`${styles.resourcesGrid} ${isMobile ? styles.resourcesGridMobile : ""}`}>
             {RESOURCES.map((resource) => {
               const current = resources[resource.key];
               const cap = store.getWarehouseCapacity();
@@ -186,38 +197,48 @@ export function TopBar({ onAudioSettings }: { onAudioSettings?: () => void }) {
               return (
                 <div
                   key={resource.key}
-                  className={`${styles.resourceWell} ${isFull ? styles.wellFull : ""}`}
+                  className={`${styles.resourceWell} ${isMobile ? styles.resourceWellMobile : ""} ${isFull ? styles.wellFull : ""}`}
                 >
-                  <div className={styles.wellData}>
-                    <div className={styles.resRow}>
-                      <span className={styles.resName}>{resource.name}</span>
-                      {isFull && <span className={styles.fullTag}>FULL</span>}
-                    </div>
-                    <span className={styles.resValue}>
-                      {formatNumber(current)}
-                      <span className={styles.resCap}>
-                        {" "}
-                        / {formatNumber(cap)}
-                      </span>
+                  <div className={`${styles.wellData} ${isMobile ? styles.wellDataMobile : ""}`}>
+                    {!isMobile && (
+                      <div className={styles.resRow}>
+                        <span className={styles.resName}>{resource.name}</span>
+                        {isFull && <span className={styles.fullTag}>FULL</span>}
+                      </div>
+                    )}
+                    <span className={`${styles.resValue} ${isMobile ? styles.resValueMobile : ""}`}>
+                      <img src={resource.icon} alt={resource.name} className={styles.resInlineIcon} />
+                      {isMobile ? formatCompact(current) : formatNumber(current)}
+                      {!isMobile && (
+                        <span className={styles.resCap}>
+                          {" "}
+                          / {formatNumber(cap)}
+                        </span>
+                      )}
                     </span>
                   </div>
-                  <div className={styles.resIconBox}>
-                    <img src={resource.icon} alt={resource.name} />
-                  </div>
+                  {!isMobile && (
+                    <div className={styles.resIconBox}>
+                      <img src={resource.icon} alt={resource.name} />
+                    </div>
+                  )}
                 </div>
               );
             })}
 
-            <div className={`${styles.resourceWell} ${styles.gemWell}`}>
-              <div className={styles.wellData}>
-                <span className={styles.resName}>Gems</span>
-                <span className={styles.resValue}>
-                  {formatNumber(resources.gems)}
+            <div className={`${styles.resourceWell} ${styles.gemWell} ${isMobile ? styles.resourceWellMobile : ""}`}>
+              <div className={`${styles.wellData} ${isMobile ? styles.wellDataMobile : ""}`}>
+                {!isMobile && <span className={styles.resName}>Gems</span>}
+                <span className={`${styles.resValue} ${isMobile ? styles.resValueMobile : ""}`}>
+                  <span className="material-symbols-outlined" style={{ fontSize: isMobile ? "14px" : undefined, marginRight: isMobile ? "2px" : undefined }}>diamond</span>
+                  {isMobile ? formatCompact(resources.gems) : formatNumber(resources.gems)}
                 </span>
               </div>
-              <div className={styles.resIconBox}>
-                <span className="material-symbols-outlined">diamond</span>
-              </div>
+              {!isMobile && (
+                <div className={styles.resIconBox}>
+                  <span className="material-symbols-outlined">diamond</span>
+                </div>
+              )}
               <button className={styles.addGemSmall} onClick={openGemStore}>
                 +
               </button>
