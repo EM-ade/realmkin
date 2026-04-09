@@ -20,13 +20,13 @@ export function GemStore({ isOpen, onClose }: GemStoreProps) {
   const { play } = useSoundManager();
   const { connected } = useWallet();
   const { connectWallet } = useWeb3();
-  const playerGems = player?.gemBalance ?? 0;
   const gems = useGameState((state) => state.resources.gems);
   const unlockedBuilders = useGameState((state) => state.unlockedBuilders);
   const addResources = useGameState((state) => state.addResources);
   const setUnlockedBuilders = useGameState((state) => state.setUnlockedBuilders);
 
   const { player } = useAuth();
+  const playerGems = player?.gemBalance ?? 0;
 
   const [newUsername, setNewUsername] = useState("");
   const [changingUsername, setChangingUsername] = useState(false);
