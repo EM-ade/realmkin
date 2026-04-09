@@ -360,16 +360,45 @@
   }
 
   .mainContainer {
-    gap: 4px;
-    flex-wrap: nowrap;
+    gap: 0;
+    flex-wrap: wrap;
     padding-top: 0;
   }
 
-  /* Profile section - smaller on mobile */
+  /* Profile section - on mobile it stays on its own row */
   .profileSection {
     padding: 2px;
     border-radius: 14px 6px 6px 14px;
+    gap: 6px;
+    flex-shrink: 1;
+  }
+
+  /* Builder/warrior row — sits below profile, full width, centered */
+  .mobileStatsRow {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+    padding: 3px 0 2px;
+    pointer-events: auto;
+  }
+
+  .builderStatusMobile,
+  .armyStatusMobile {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 10px;
     gap: 4px;
+  }
+
+  .builderStatusMobile .material-symbols-outlined,
+  .armyStatusMobile .material-symbols-outlined {
+    font-size: 13px;
+  }
+
+  .mobileStatsRow .statusValue {
+    font-size: 11px;
   }
 
   .profileAvatar {
@@ -401,10 +430,12 @@
     white-space: nowrap;
   }
 
-  /* Center section - horizontal row on mobile */
+  /* Center section - horizontal row (placed in profileSection on mobile) */
   .centerSectionMobile {
     flex-direction: row;
     gap: 4px;
+    width: 100%;
+    padding-top: 2px;
   }
 
   .builderStatusMobile,
@@ -424,9 +455,10 @@
     font-size: 11px;
   }
 
-  /* Resources section - compact stacked on mobile */
+  /* Resources section - wider, shifted left on mobile */
   .resourcesSectionMobile {
-    align-items: flex-end;
+    align-items: flex-start;
+    margin-right: 4vw;
   }
 
   .resourcesGridMobile {
@@ -437,12 +469,12 @@
   }
 
   .resourceWellMobile {
-    height: 20px;
+    height: 22px;
     min-width: auto;
-    padding: 0 3px;
+    padding: 0 6px;
     border-radius: 8px;
-    gap: 3px;
-    width: 58px;
+    gap: 4px;
+    width: 80px;
   }
 
   .wellDataMobile {
@@ -477,9 +509,9 @@
   }
 
   .resourceWellMobile {
-    height: 18px;
-    padding: 0 2px;
-    width: 52px;
+    height: 20px;
+    padding: 0 4px;
+    width: 68px;
   }
 
   .resValueMobile {

@@ -277,7 +277,7 @@ export const TOWN_HALL_CONFIG: Record<1 | 2 | 3 | 4 | 5, TownHallLevelConfig> =
     2: {
       level: 2,
       buildTimeMs: 5 * 60_000,
-      upgradeCost: { wood: 200, clay: 200, iron: 100, crop: 200 },
+      upgradeCost: { wood: 100, clay: 100, iron: 100, crop: 100 },
       maxWarehouses: 1,
       intrinsicStorageCap: 500,
     },

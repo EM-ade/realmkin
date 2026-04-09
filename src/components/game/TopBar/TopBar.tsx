@@ -130,9 +130,9 @@ export function TopBar({ onAudioSettings }: { onAudioSettings?: () => void }) {
       )}
 
       <div className={styles.mainContainer}>
-        {/* Left Section: Profile + Level */}
+        {/* Left Section: Profile + Level + Builders/Army */}
         <div
-          className={styles.profileSection}
+          className={`${styles.profileSection} ${isMobile ? styles.profileSectionMobile : ""}`}
           style={{ display: "flex", alignItems: "center", gap: 12 }}
         >
           {/* Clickable Profile Avatar */}
@@ -167,24 +167,45 @@ export function TopBar({ onAudioSettings }: { onAudioSettings?: () => void }) {
           </div>
 
           <AutoPlayerIndicator />
+
+          {/* Builders & Army — on mobile, placed under profile in a row */}
+          {isMobile && (
+            <div className={styles.centerSectionMobile}>
+              <div className={styles.builderStatusMobile}>
+                <span className="material-symbols-outlined">construction</span>
+                <span className={styles.statusValue}>
+                  {buildersFree}/{builderCount.total}
+                </span>
+              </div>
+
+              <div className={styles.armyStatusMobile}>
+                <span className="material-symbols-outlined">swords</span>
+                <span className={styles.statusValue}>
+                  {totalUnits}/{Math.floor(maxArmySize)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Center Section: Builders & Army */}
-        <div className={`${styles.centerSection} ${isMobile ? styles.centerSectionMobile : ""}`}>
-          <div className={`${styles.builderStatus} ${isMobile ? styles.builderStatusMobile : ""}`}>
-            <span className="material-symbols-outlined">construction</span>
-            <span className={styles.statusValue}>
-              {buildersFree}/{builderCount.total}
-            </span>
-          </div>
+        {/* Center Section: Builders & Army (desktop only) */}
+        {!isMobile && (
+          <div className={styles.centerSection}>
+            <div className={styles.builderStatus}>
+              <span className="material-symbols-outlined">construction</span>
+              <span className={styles.statusValue}>
+                {buildersFree}/{builderCount.total}
+              </span>
+            </div>
 
-          <div className={`${styles.armyStatus} ${isMobile ? styles.armyStatusMobile : ""}`}>
-            <span className="material-symbols-outlined">swords</span>
-            <span className={styles.statusValue}>
-              {totalUnits}/{Math.floor(maxArmySize)}
-            </span>
+            <div className={styles.armyStatus}>
+              <span className="material-symbols-outlined">swords</span>
+              <span className={styles.statusValue}>
+                {totalUnits}/{Math.floor(maxArmySize)}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right Section: Resources & Gems */}
         <div className={`${styles.resourcesSection} ${isMobile ? styles.resourcesSectionMobile : ""}`}>
