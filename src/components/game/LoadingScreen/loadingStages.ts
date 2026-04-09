@@ -58,6 +58,28 @@ export async function loadStagePlayerData(): Promise<LoadingStageResult> {
           [],
           effectiveLastAcknowledged
         );
+
+        // CRITICAL FIX: Import buildings into game store immediately so VillageScene can render them
+        if (data.buildings && data.buildings.length > 0) {
+          const { useGameState } = await import("@/stores/gameStore");
+          useGameState.getState().importSupabaseData(data.buildings, {
+            wood: player.wood ?? 100,
+            stone: player.stone ?? 100,
+            iron: player.iron ?? 100,
+            food: player.food ?? 100,
+            gem_balance: player.gem_balance ?? 50,
+          });
+        } else if (player) {
+          // Even without buildings, import resources for new/empty players
+          const { useGameState } = await import("@/stores/gameStore");
+          useGameState.getState().addResources({
+            wood: player.wood ?? 100,
+            clay: player.stone ?? 100,
+            iron: player.iron ?? 100,
+            crop: player.food ?? 100,
+            gems: player.gem_balance ?? 50,
+          });
+        }
       }
     }
 

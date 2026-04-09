@@ -34,7 +34,7 @@ import {
 import { canPlace, getFootprintCells } from "@/game/utils/OccupiedGrid";
 import { BuildingRenderer } from "@/game/ui/BuildingRenderer";
 import { CollectorOverlay } from "@/game/ui/CollectorOverlay";
-import { ObjectivesOverlay } from "@/game/ui/ObjectivesOverlay";
+// import { ObjectivesOverlay } from "@/game/ui/ObjectivesOverlay"; // REMOVED — objectives panel no longer needed
 import { PhaserSoundBridge } from "@/audio/PhaserSoundBridge";
 import {
   GAME_EVENT_BUILD,
@@ -96,7 +96,7 @@ export class VillageScene extends Phaser.Scene {
   private panelOpen = false;
   private hudTexts: Record<string, Phaser.GameObjects.Text> = {};
   private resourceTickTimer?: Phaser.Time.TimerEvent;
-  private objectivesPanel!: Phaser.GameObjects.Container;
+  // private objectivesPanel!: Phaser.GameObjects.Container; // REMOVED
   // private dayText!: Phaser.GameObjects.Text; // Removed
   private uiContainer!: Phaser.GameObjects.Container;
   private uiCamera!: Phaser.Cameras.Scene2D.Camera;
@@ -105,7 +105,7 @@ export class VillageScene extends Phaser.Scene {
   private gridRenderer!: GridRenderer;
   private buildingRenderer!: BuildingRenderer;
   private collectorOverlay!: CollectorOverlay;
-  private objectivesOverlay!: ObjectivesOverlay;
+  // private objectivesOverlay!: ObjectivesOverlay; // REMOVED
 
   // Per-tile tracking (cleared on each create)
   private slotPos = new Map<number, SlotPos>();
@@ -199,10 +199,11 @@ export class VillageScene extends Phaser.Scene {
     // Title — hidden (HUD strip replaces it, saves vertical space)
     // Kept minimal: show in HUD bar center
 
-    this.objectivesPanel = this.add
-      .container(0, 0)
-      .setDepth(250)
-      .setScrollFactor(0);
+    // Objectives panel — REMOVED (clutters screen, scenario objectives not needed)
+    // this.objectivesPanel = this.add
+    //   .container(0, 0)
+    //   .setDepth(250)
+    //   .setScrollFactor(0);
 
     // Initialize tick bar graphics (used for legacy purposes, can be removed later)
     // this.tickBarGraphics = this.add.graphics();
@@ -219,12 +220,12 @@ export class VillageScene extends Phaser.Scene {
     });
     this.collectorOverlay.setSlotPos(this.slotPos);
 
-    // Initialize objectives overlay
-    this.objectivesOverlay = new ObjectivesOverlay({
-      scene: this,
-      container: this.objectivesPanel,
-    });
-    this.objectivesOverlay.refresh();
+    // Initialize objectives overlay — REMOVED
+    // this.objectivesOverlay = new ObjectivesOverlay({
+    //   scene: this,
+    //   container: this.objectivesPanel,
+    // });
+    // this.objectivesOverlay.refresh();
 
     // this.createEndTurnButton(width, height); // Removed - handled by React BottomBar
     // No longer need Phuket HUD timer
@@ -484,6 +485,14 @@ export class VillageScene extends Phaser.Scene {
     this.renderExistingBuildings();
     this.buildingRenderer.renderDamagedOverlays();
     this.renderExistingLevelBadges();
+
+    // Signal that the village is fully rendered and ready for interaction
+    // This allows the LoadingScreen to wait until everything is visible
+    const signalVillageReady = () => {
+      window.dispatchEvent(new CustomEvent("village-ready"));
+    };
+    // Wait for chunked rendering to finish before signaling
+    this.time.delayedCall(500, signalVillageReady);
 
     // ── Zoom and Panning Controls ─────────────────────────────────────────────
     const cam = this.cameras.main;
@@ -867,7 +876,7 @@ export class VillageScene extends Phaser.Scene {
       this.builderHudText.setText(`🔨 ${free}/${total} free`);
       this.builderHudText.setColor(free === 0 ? "#ff8866" : "#88ddff");
     }
-    this.objectivesOverlay.refresh();
+    // this.objectivesOverlay.refresh(); // REMOVED — objectives panel no longer exists
   }
 
   // ── End Turn button ────────────────────────────────────────────────────────
@@ -979,67 +988,11 @@ export class VillageScene extends Phaser.Scene {
     });
   }
 
-  // ── Objectives overlay ─────────────────────────────────────────────────────
-  private createObjectivesOverlay(width: number): void {
-    this.objectivesPanel.removeAll(true);
-    const store = useGameState.getState();
-    const scenario = SCENARIOS.find((s) => s.id === store.currentScenario);
-    if (!scenario) return;
+  // ── Objectives overlay — REMOVED ─────────────────────────────────────────────────────
+  // private createObjectivesOverlay(width: number): void { /* REMOVED */ }
 
-    const pw = 220,
-      lineH = 26,
-      pad = 12;
-    const ph = lineH * (scenario.objectives.length + 1) + pad * 2;
-    const px = width - pw - 10,
-      py = 100;
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0x231912, 0.95); // CoC wood/border color
-    bg.fillRoundedRect(px, py, pw, ph, 12);
-    bg.lineStyle(3, 0x000000, 1);
-    bg.strokeRoundedRect(px, py, pw, ph, 12);
-    this.objectivesPanel.add(bg);
-
-    this.objectivesPanel.add(
-      this.add
-        .text(px + pw / 2, py + pad, "OBJECTIVES", {
-          fontSize: "16px",
-          fontFamily: "Bangers, cursive, Arial Black",
-          color: "#FFD700",
-          stroke: "#000",
-          strokeThickness: 3,
-        })
-        .setOrigin(0.5, 0),
-    );
-
-    scenario.objectives.forEach((obj, i) => {
-      const done = store.completedObjectives.includes(obj.id);
-      const icon = done ? "✓" : "○";
-      const col = done ? "#4ade80" : "#ffffff";
-      this.objectivesPanel.add(
-        this.add.text(
-          px + 12,
-          py + pad + lineH * (i + 1),
-          `${icon} ${obj.description}`,
-          {
-            fontSize: "12px",
-            fontFamily: "Manrope, sans-serif",
-            color: col,
-            wordWrap: { width: pw - 24 },
-            stroke: "#000",
-            strokeThickness: 2,
-          },
-        ),
-      );
-    });
-  }
-
-  // DEPRECATED: Use objectivesOverlay.refresh instead
-  // @ts-ignore - intentionally unused, kept for backward compatibility
-  private _refreshObjectivesOverlay(): void {
-    const { width } = this.cameras.main;
-    this.createObjectivesOverlay(width);
-  }
+  // ── DEPRECATED: Use objectivesOverlay.refresh instead — REMOVED ──
+  // private _refreshObjectivesOverlay(): void { /* REMOVED */ }
 
   // ── Render all existing buildings from store (CHUNKED to prevent freeze) ──
   private renderExistingBuildingsChunked(index: number = 0, chunkSize: number = 3): void {

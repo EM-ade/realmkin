@@ -27,6 +27,7 @@ import {
 } from "./tutorialSteps";
 import { useGameState } from "@/stores/gameStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useAuth } from "@/components/game/providers/GameAuthProvider";
 
 // ── Context type ──────────────────────────────────────────────────────────────
 export interface TutorialContextValue {
@@ -58,6 +59,7 @@ interface TutorialProviderProps {
 export function TutorialProvider({ children }: TutorialProviderProps) {
   const { currentScene } = useGameState();
   const { openBuildPanel, closeBuildPanel, buildPanelOpen } = useUIStore();
+  const { player } = useAuth();
 
   const [stepIndex, setStepIndex] = useState(0);
   const [isActive, setIsActive] = useState(false);
@@ -66,21 +68,25 @@ export function TutorialProvider({ children }: TutorialProviderProps) {
   );
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Check if already completed + load persisted building context ──────────
+  // ── Check if already completed (localStorage + Supabase) + load persisted building context ──────────
   useEffect(() => {
     const done = localStorage.getItem(TUTORIAL_STORAGE_KEY);
-    if (!done) {
+    // Also check Supabase tutorial_complete flag for existing players
+    const supabaseDone = player?.tutorialComplete === true;
+    if (!done && !supabaseDone) {
       // Load persisted building ID if any
       const bId = localStorage.getItem("kingdom-tutorial-building-id");
       if (bId) setTutorialBuildingId(bId);
     }
-  }, []);
+  }, [player]);
 
   // ── Activate when Village scene loads (first time only) ───────────────────
   useEffect(() => {
     if (currentScene !== "Village") return;
     const done = localStorage.getItem(TUTORIAL_STORAGE_KEY);
-    if (done) return;
+    // Also skip if Supabase says tutorial is complete
+    const supabaseDone = player?.tutorialComplete === true;
+    if (done || supabaseDone) return;
 
     // FIXED: Wait for UI to be fully ready AND loading screen to be dismissed before activating tutorial
     const checkUIReady = () => {

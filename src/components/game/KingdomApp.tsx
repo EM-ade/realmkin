@@ -42,9 +42,35 @@ export function KingdomApp({ onGameReady }: KingdomAppProps) {
   const [appLoading, setAppLoading] = useState(true);
   const [levelRewardsOpen, setLevelRewardsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [villageReady, setVillageReady] = useState(false);
+  const loadingFadeCompleteRef = useRef(false);
 
   // Initialize AutoPlayer system
   const { lastCollection } = useAutoPlayer();
+
+  // Listen for village-ready signal from VillageScene
+  useEffect(() => {
+    const handleVillageReady = () => {
+      setVillageReady(true);
+    };
+    window.addEventListener("village-ready", handleVillageReady);
+    return () => window.removeEventListener("village-ready", handleVillageReady);
+  }, []);
+
+  // Only hide loading screen when BOTH loading is done AND village is rendered
+  const handleLoadingFadeComplete = () => {
+    loadingFadeCompleteRef.current = true;
+    if (villageReady) {
+      setAppLoading(false);
+    }
+  };
+
+  // If village becomes ready after loading finished, hide the loading screen
+  useEffect(() => {
+    if (villageReady && loadingFadeCompleteRef.current) {
+      setAppLoading(false);
+    }
+  }, [villageReady]);
 
   // Listen for level rewards open event
   useEffect(() => {
@@ -180,7 +206,7 @@ export function KingdomApp({ onGameReady }: KingdomAppProps) {
 
           {/* Top-most Cinematic Loading Overlay */}
           {appLoading && (
-            <LoadingScreen onFadeComplete={() => setAppLoading(false)} />
+            <LoadingScreen onFadeComplete={handleLoadingFadeComplete} />
           )}
         </div>
       </TutorialProvider>
