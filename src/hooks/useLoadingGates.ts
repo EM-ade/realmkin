@@ -22,6 +22,7 @@ const INITIAL_GATES: Record<LoadingGate, GateStatus> = {
   spritesLoaded: 'pending',
   soundsLoaded:  'pending',
   gridBuilt:     'pending',
+  needsLogin:    'pending',
 }
 
 // Global reference so Phaser scenes can access setGate without React context
@@ -62,17 +63,29 @@ export const useLoadingGates = () => {
         failedGates: newFailed,
       }
 
-      // Log every gate change in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log(
-          `[Loading] Gate "${gate}" → ${status}`,
-          `| Ready: ${newState.isFullyReady}`,
-          `| Progress: ${getProgressPercent(newState)}%`,
-          `| Time: ${Date.now() - newState.startTime}ms`
-        )
-      }
+      // Update stateRef immediately so Phaser can see the change
+      stateRef.current = newState
 
       return newState
+    })
+  }, [])
+
+  const resetGates = useCallback((preserveGates: LoadingGate[] = []) => {
+    setState(prev => {
+      const newGates = { ...INITIAL_GATES }
+      // Preserve specified gates if they're already complete
+      for (const gate of preserveGates) {
+        if (prev.gates[gate] === 'complete') {
+          newGates[gate] = 'complete'
+        }
+      }
+      return {
+        ...prev,
+        gates: newGates,
+        isFullyReady: false,
+        failedGates: [],
+        startTime: Date.now(),
+      }
     })
   }, [])
 
@@ -84,5 +97,5 @@ export const useLoadingGates = () => {
     }
   }, [setGate])
 
-  return { state, setGate, progress: getProgressPercent(state) }
+  return { state, setGate, resetGates, progress: getProgressPercent(state) }
 }

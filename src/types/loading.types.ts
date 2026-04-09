@@ -13,6 +13,7 @@ export type LoadingGate =
   | 'spritesLoaded'     // All Phaser textures loaded
   | 'soundsLoaded'      // All critical Howler sounds loaded
   | 'gridBuilt'         // Building sprites placed on Phaser grid
+  | 'needsLogin'        // No session - login form should show
 
 export type GateStatus = 'pending' | 'loading' | 'complete' | 'failed'
 

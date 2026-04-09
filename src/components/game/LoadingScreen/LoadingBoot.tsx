@@ -3,7 +3,7 @@
  * This component should be mounted once at the app root, inside LoadingProvider.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import {
   loadStageAuth,
   loadStagePlayerData,
@@ -11,49 +11,103 @@ import {
   loadStageSprites,
   loadStageGridBuilt,
 } from '@/components/game/LoadingScreen/loadingStages'
-import { useLoadingGates } from '@/hooks/useLoadingGates'
+import { useLoadingContext } from '@/context/LoadingContext'
+import { supabase } from '@/lib/supabase'
+
+const PRESERVE_GATES = ['soundsLoaded', 'spritesLoaded', 'phaserReady', 'gridBuilt'] as const
 
 export function LoadingBoot() {
-  const { setGate } = useLoadingGates()
-  const hasRun = useRef(false)
+  const { setGate, resetGates, setShowLogin, state } = useLoadingContext()
+  const isBooting = useRef(false)
+  const isPostLoginBoot = useRef(false)
+  const bootId = useRef(0)
 
-  useEffect(() => {
-    if (hasRun.current) return
-    hasRun.current = true
+  const runBootSequence = useCallback(async (isReRun: boolean = false) => {
+    const currentBootId = ++bootId.current
+    
+    if (isBooting.current) return
+    isBooting.current = true
 
-    const boot = async () => {
-      try {
-        // Stage 1: Auth
-        const auth = await loadStageAuth()
-        if (!auth.success) {
-          console.warn('[LoadingBoot] Auth stage failed:', auth.error)
-          // Don't block — user can still log in manually
-          return
-        }
+    try {
+      // Always run auth
+      const auth = await loadStageAuth()
+      
+      // Check if this boot is still the current one
+      if (currentBootId !== bootId.current) return
+      
+      if (!auth.success || !auth.data) {
+        setGate('needsLogin', 'complete')
+        return
+      }
 
-        // Stage 2: Player Data (buildings, resources, tutorial state)
-        const playerData = await loadStagePlayerData()
-        if (!playerData.success) {
-          console.warn('[LoadingBoot] Player data stage failed:', playerData.error)
-          // Continue — new players may not have data yet
-        }
+      setGate('needsLogin', 'pending')
 
-        // Stage 3: Sounds (preload critical Howler sounds)
-        await loadStageSounds()
+      // Always reload player data (fresh data after login)
+      const playerData = await loadStagePlayerData()
+      
+      // Check if this boot is still the current one
+      if (currentBootId !== bootId.current) return
+      
+      if (!playerData.success) {
+        console.warn('[LoadingBoot] Player data stage failed:', playerData.error)
+      }
 
-        // Stage 4: Wait for Phaser sprites to load (set by BootScene)
-        await loadStageSprites()
+      // Skip loading Phaser assets if they're already complete
+      if (isReRun) {
+        setGate('soundsLoaded', 'complete')
+        setGate('spritesLoaded', 'complete')
+        setGate('phaserReady', 'complete')
+        setGate('gridBuilt', 'complete')
+        isBooting.current = false
+        return
+      }
 
-        // Stage 5: Wait for VillageScene to finish placing buildings
-        await loadStageGridBuilt()
+      await loadStageSounds()
+      
+      // Check if this boot is still the current one
+      if (currentBootId !== bootId.current) return
+      
+      await loadStageSprites()
+      await loadStageGridBuilt()
 
-      } catch (err) {
-        console.error('[LoadingBoot] Boot sequence error:', err)
+    } catch (err) {
+      console.error('[LoadingBoot] Boot sequence error:', err)
+    } finally {
+      if (currentBootId === bootId.current) {
+        isBooting.current = false
       }
     }
-
-    boot()
   }, [setGate])
+
+  useEffect(() => {
+    runBootSequence(false)
+  }, [runBootSequence])
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event) => {
+        if (event === 'SIGNED_IN') {
+          // Mark that this is a post-login boot
+          isPostLoginBoot.current = true
+          
+          // Cancel any running boot
+          bootId.current++
+          isBooting.current = false
+          
+          // Reset gates but preserve Phaser/game-related ones
+          resetGates([...PRESERVE_GATES])
+          setShowLogin(false)
+          
+          // Start fresh boot (will skip Phaser loading)
+          runBootSequence(true)
+        }
+      }
+    )
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [resetGates, setShowLogin, runBootSequence])
 
   return null
 }

@@ -8,6 +8,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   type ReactNode,
 } from 'react'
 import { useLoadingGates } from '@/hooks/useLoadingGates'
@@ -16,8 +17,11 @@ import type { LoadingState, LoadingGate, GateStatus } from '@/types/loading.type
 interface LoadingContextValue {
   state: LoadingState
   setGate: (gate: LoadingGate, status: GateStatus) => void
+  resetGates: (preserveGates?: LoadingGate[]) => void
   progress: number
   screenVisible: boolean
+  showLogin: boolean
+  setShowLogin: (show: boolean) => void
 }
 
 const LoadingContext = createContext<LoadingContextValue | null>(null)
@@ -29,10 +33,24 @@ export function useLoadingContext() {
 }
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
-  const { state, setGate, progress } = useLoadingGates()
+  const { state, setGate, resetGates, progress } = useLoadingGates()
   const [screenVisible, setScreenVisible] = useState(true)
+  const [showLogin, setShowLogin] = useState(false)
 
-  // When ALL gates are complete, wait 500ms then fade out
+  const setGateFn = useCallback((gate: LoadingGate, status: GateStatus) => {
+    setGate(gate, status)
+  }, [setGate])
+
+  const resetGatesFn = useCallback((preserveGates?: LoadingGate[]) => {
+    resetGates(preserveGates)
+  }, [resetGates])
+
+  useEffect(() => {
+    if (state.gates.needsLogin === 'complete') {
+      setShowLogin(true)
+    }
+  }, [state.gates.needsLogin])
+
   useEffect(() => {
     if (state.isFullyReady && screenVisible) {
       const timer = setTimeout(() => {
@@ -43,7 +61,7 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   }, [state.isFullyReady, screenVisible])
 
   return (
-    <LoadingContext.Provider value={{ state, setGate, progress, screenVisible }}>
+    <LoadingContext.Provider value={{ state, setGate: setGateFn, resetGates: resetGatesFn, progress, screenVisible, showLogin, setShowLogin }}>
       {children}
     </LoadingContext.Provider>
   )

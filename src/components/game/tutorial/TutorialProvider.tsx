@@ -29,6 +29,7 @@ import { useGameState } from "@/stores/gameStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuth } from "@/components/game/providers/GameAuthProvider";
 import { useLoadingContext } from "@/context/LoadingContext";
+import { supabase } from "@/lib/supabase";
 
 // ── Context type ──────────────────────────────────────────────────────────────
 export interface TutorialContextValue {
@@ -73,10 +74,14 @@ export function TutorialProvider({ children }: TutorialProviderProps) {
   // ── Check if already completed (localStorage + Supabase) + load persisted building context ──────────
   useEffect(() => {
     const done = localStorage.getItem(TUTORIAL_STORAGE_KEY);
-    // Also check Supabase tutorial_complete flag for existing players
     const supabaseDone = player?.tutorialComplete === true;
+    
+    // If Supabase says done but localStorage doesn't, sync localStorage
+    if (supabaseDone && !done) {
+      localStorage.setItem(TUTORIAL_STORAGE_KEY, "true");
+    }
+    
     if (!done && !supabaseDone) {
-      // Load persisted building ID if any
       const bId = localStorage.getItem("kingdom-tutorial-building-id");
       if (bId) setTutorialBuildingId(bId);
     }
@@ -85,17 +90,14 @@ export function TutorialProvider({ children }: TutorialProviderProps) {
   // ── Activate when Village scene loads (first time only) ───────────────────
   useEffect(() => {
     if (currentScene !== "Village") return;
-
-    // HARD GUARDS — every single one must pass before tutorial can activate
-    if (!loadingState.isFullyReady) return;      // Loading screen still open
+    if (!loadingState.isFullyReady) return;
+    
     const done = localStorage.getItem(TUTORIAL_STORAGE_KEY);
-    if (done) return;                            // Already completed (localStorage)
+    if (done) return;
+    
     const supabaseDone = player?.tutorialComplete === true;
-    if (supabaseDone) return;                    // Already completed (Supabase)
+    if (supabaseDone) return;
 
-    // ALL guards passed — safe to show tutorial
-    // Buildings are definitely loaded, Phaser grid is built, loading screen closed
-    console.log("[TutorialProvider] All gates complete, activating tutorial...");
     localStorage.setItem("kingdom-tutorial-active", "true");
     setIsActive(true);
   }, [currentScene, loadingState.isFullyReady, player?.tutorialComplete]);
@@ -119,9 +121,24 @@ export function TutorialProvider({ children }: TutorialProviderProps) {
     if (stepIndex >= TUTORIAL_STEPS.length) {
       setIsActive(false);
       localStorage.setItem(TUTORIAL_STORAGE_KEY, "true");
-      localStorage.removeItem("kingdom-tutorial-active"); // FIXED: Clear the tutorial active flag
+      localStorage.removeItem("kingdom-tutorial-active");
+
+      // Update Supabase to mark tutorial as complete
+      if (player?.id) {
+        supabase
+          .from("players")
+          .update({ tutorial_complete: true })
+          .eq("id", player.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error("[TutorialProvider] Failed to update tutorial_complete in Supabase:", error);
+            } else {
+              console.log("[TutorialProvider] Updated tutorial_complete to true in Supabase");
+            }
+          });
+      }
     }
-  }, [isActive, stepIndex]);
+  }, [isActive, stepIndex, player]);
 
   // ── Skip tutorial ─────────────────────────────────────────────────────────
   const skip = useCallback(() => {

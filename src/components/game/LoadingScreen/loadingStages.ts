@@ -37,6 +37,19 @@ export async function loadStageAuth(): Promise<LoadingStageResult> {
       setGate('auth', 'failed')
       return { success: false, error: error.message };
     }
+    if (!session) {
+      setGate('auth', 'failed')
+      return { success: false, error: 'No session' };
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser(
+      session.access_token
+    );
+    if (userError || !user) {
+      setGate('auth', 'failed')
+      return { success: false, error: userError?.message || 'Session invalid' };
+    }
+
     setGate('auth', 'complete')
     return { success: true, data: session };
   } catch (e: any) {
