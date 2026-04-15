@@ -14,6 +14,10 @@ import DynamicIsland from "./DynamicIsland";
 
 export default function GlobalNavigation() {
   const pathname = usePathname();
+
+  // Hide on kingdom game page
+  if (pathname?.startsWith("/game/kingdom")) return null;
+
   const { user, userData } = useAuth();
   const {
     account,

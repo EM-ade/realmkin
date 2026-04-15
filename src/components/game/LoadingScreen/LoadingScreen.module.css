@@ -1,0 +1,587 @@
+/* src/ui/LoadingScreen/LoadingScreen.module.css */
+.overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 500;
+  background: #0a0005; /* Dark fallback for letterboxing */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4rem 1rem;
+  overflow: hidden;
+}
+
+.background {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover; /* Edge-to-edge coverage */
+  object-position: center;
+  z-index: -1;
+}
+
+.titleContainer {
+  margin-top: 5vh;
+  text-align: center;
+  z-index: 10;
+}
+
+.mainTitle {
+  font-family: "MedievalSharp", serif;
+  font-size: clamp(3rem, 10vw, 5rem);
+  color: #d4a017;
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: clamp(0.2rem, 1vw, 0.5rem);
+  text-shadow:
+    2px 2px 5px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(212, 160, 23, 0.4);
+}
+
+.subTitle {
+  font-family: "Inter", sans-serif;
+  font-size: clamp(0.9rem, 3vw, 1.2rem);
+  color: #ffd700;
+  opacity: 0.9;
+  margin-top: 0.5rem;
+  letter-spacing: clamp(0.1rem, 0.5vw, 0.2rem);
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.bottomSection {
+  width: 100%;
+  max-width: 800px;
+  min-width: min(300px, 90vw);
+  margin-bottom: 5vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 10;
+}
+
+.progressContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.percentage {
+  font-family: "Inter", sans-serif;
+  color: #ffd700;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.barTrack {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.barFill {
+  height: 100%;
+  background: linear-gradient(to right, #d4a017, #ffd700);
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+  position: relative;
+}
+
+.barFillActive::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  from {
+    left: -50%;
+  }
+  to {
+    left: 150%;
+  }
+}
+
+.tipContainer {
+  text-align: center;
+  min-height: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tipText {
+  color: rgba(255, 255, 255, 0.85);
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+  font-style: italic;
+  animation: fadeInOut 2s infinite ease-in-out;
+}
+
+.version {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.5rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.75rem;
+  z-index: 10;
+}
+
+.fadeOut {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease-in-out;
+}
+
+/* ── AUTH SUITE - MEDIEVAL PANEL ────────────────────────────────────────── */
+.authSuite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2.5rem 2.5rem 2rem 2.5rem;
+  background: rgba(10, 5, 2, 0.88);
+  backdrop-filter: blur(12px);
+  border: 2px solid transparent;
+  border-image: linear-gradient(180deg, #8b6914 0%, #c9960c 50%, #8b6914 100%) 1;
+  border-radius: 4px;
+  box-shadow:
+    0 0 60px rgba(201, 150, 12, 0.15),
+    0 25px 50px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 215, 0, 0.1);
+  animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  max-width: 480px;
+  min-width: min(320px, 90vw);
+  position: relative;
+}
+
+/* Corner ornaments */
+.authSuite::before,
+.authSuite::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #c9960c 0%, #8b6914 100%);
+  transform: rotate(45deg);
+}
+
+.authSuite::before {
+  top: -6px;
+  left: -6px;
+}
+
+.authSuite::after {
+  top: -6px;
+  right: -6px;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Auth Header */
+.authHeader {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.authHeaderDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: #5c4a1e;
+}
+
+.dash {
+  color: #5c4a1e;
+}
+
+.diamond {
+  color: #c9960c;
+  font-size: 0.8rem;
+}
+
+.authTitle {
+  font-family: "MedievalSharp", serif;
+  font-size: 1.8rem;
+  color: #c9960c;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  text-shadow:
+    0 1px 0 rgba(255, 215, 0, 0.5),
+    0 -1px 0 rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(201, 150, 12, 0.3);
+}
+
+.authSubtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  font-family: "Inter", sans-serif;
+}
+
+/* Auth Content */
+.authContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* Wallet Button Styles */
+.walletButtonWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.walletButtonOverride {
+  background: linear-gradient(
+    135deg,
+    #1a0a2e 0%,
+    #2d1052 50%,
+    #1a0a2e 100%
+  ) !important;
+  border: 1px solid #7b2fbe !important;
+  border-top-color: #9945ff !important;
+  border-radius: 3px !important;
+  color: #e8d5ff !important;
+  font-family: "MedievalSharp", serif !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow:
+    inset 0 1px 0 rgba(153, 69, 255, 0.3),
+    0 4px 15px rgba(123, 47, 190, 0.4) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.walletButtonOverride::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  transition: left 0.4s ease;
+}
+
+.walletButtonOverride:hover::after {
+  left: 100%;
+}
+
+.walletButtonOverride:hover {
+  background: linear-gradient(
+    135deg,
+    #2d1052 0%,
+    #4a1a8a 50%,
+    #2d1052 100%
+  ) !important;
+  border-color: #9945ff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(153, 69, 255, 0.5),
+    0 4px 25px rgba(153, 69, 255, 0.6) !important;
+  transform: translateY(-1px) !important;
+}
+
+.walletSubtext {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  text-align: center;
+  margin: 0;
+}
+
+/* OR Divider */
+.orDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #5c4a1e, transparent);
+}
+
+.or {
+  color: #5c4a1e;
+  font-size: 0.85rem;
+  font-family: "Inter", sans-serif;
+}
+
+/* Email Button */
+.btnEmail {
+  width: 100%;
+  padding: 13px 24px;
+  background: transparent;
+  border: 1px solid #5c4a1e;
+  color: #c9960c;
+  font-family: "MedievalSharp", serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnEmail:hover {
+  background: rgba(201, 150, 12, 0.08);
+  border-color: #c9960c;
+  color: #ffd700;
+  box-shadow: 0 0 20px rgba(201, 150, 12, 0.2);
+}
+
+/* Auth Footer */
+.authFooter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(92, 74, 30, 0.3);
+  width: 100%;
+}
+
+.footerText {
+  color: #8b6914;
+  font-size: 0.85rem;
+  font-family: "Inter", sans-serif;
+}
+
+.signInLink {
+  background: none;
+  border: none;
+  color: #c9960c;
+  font-size: 0.85rem;
+  font-family: "Inter", sans-serif;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.signInLink:hover {
+  color: #ffd700;
+}
+
+/* Email Form */
+.emailForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.formHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.backButton {
+  background: transparent;
+  border: none;
+  color: #8b6914;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.backButton:hover {
+  color: #c9960c;
+}
+
+.formTitle {
+  font-family: "MedievalSharp", serif;
+  font-size: 1.5rem;
+  color: #c9960c;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.authInput {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #3d2e0a;
+  border-bottom-color: #5c4a1e;
+  color: #e8d5a3;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  border-radius: 3px;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.authInput::placeholder {
+  color: #5c4a2e;
+  font-style: italic;
+}
+
+.authInput:focus {
+  border-color: #c9960c;
+  box-shadow:
+    0 0 0 1px rgba(201, 150, 12, 0.2),
+    inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.btnEnterRealm {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(180deg, #c9960c 0%, #8b6400 50%, #6b4d00 100%);
+  border: 1px solid #8b6914;
+  border-top-color: #e8b020;
+  color: #1a0f00;
+  font-family: "MedievalSharp", serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 215, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(255, 180, 0, 0.3);
+}
+
+.btnEnterRealm:hover:not(:disabled) {
+  background: linear-gradient(180deg, #e8b020 0%, #c9960c 50%, #8b6400 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 215, 0, 0.6),
+    0 6px 20px rgba(201, 150, 12, 0.4);
+  transform: translateY(-1px);
+}
+
+.btnEnterRealm:active:not(:disabled) {
+  transform: translateY(1px);
+  background: linear-gradient(180deg, #8b6400 0%, #6b4d00 100%);
+}
+
+.btnEnterRealm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.forgotPassword {
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.forgotLink {
+  background: none;
+  border: none;
+  color: #5c4a1e;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.forgotLink:hover {
+  color: #8b6914;
+}
+
+.versionText {
+  text-align: center;
+  color: #3d2e0a;
+  font-size: 0.75rem;
+  margin-top: 1rem;
+  font-family: "Inter", sans-serif;
+}
+
+/* Welcome Back */
+.welcomeBack {
+  font-family: "MedievalSharp", serif;
+  color: #ffd700;
+  font-size: 1.5rem;
+  text-align: center;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.errorMessage {
+  color: #ffffff;
+  background: #cc0000;
+  border: 2px solid #ff4d4d;
+  padding: 1rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 1.5rem;
+  width: 100%;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: slideUpFade 0.3s ease-out;
+}

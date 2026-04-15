@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kingdom Sprite Sheets Preview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0a0a;
+      color: #f5f5f5;
+      padding: 40px 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #D4AF37;
+      margin-bottom: 10px;
+      font-size: 2.5rem;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 40px;
+    }
+    .sprite-sheet-container {
+      max-width: 1200px;
+      margin: 0 auto 60px;
+      background: #1a1a1a;
+      border: 2px solid #D4AF37;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .sprite-sheet-header {
+      background: linear-gradient(135deg, #D4AF37 0%, #AA8C2C 100%);
+      color: #0a0a0a;
+      padding: 15px 20px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    .sprite-sheet-image {
+      display: block;
+      max-width: 100%;
+      margin: 20px auto;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .sprite-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 10px;
+      padding: 20px;
+    }
+    .sprite-item {
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      padding: 10px;
+      text-align: center;
+    }
+    .sprite-item img {
+      width: 64px;
+      height: 64px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: #1a1a1a;
+    }
+    .sprite-item span {
+      display: block;
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: #aaa;
+    }
+    .stats {
+      display: flex;
+      gap: 20px;
+      padding: 15px 20px;
+      background: #0a0a0a;
+      font-size: 0.9rem;
+    }
+    .stat { display: flex; gap: 8px; }
+    .stat-label { color: #888; }
+    .stat-value { color: #D4AF37; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🏰 Kingdom Sprite Sheets</h1>
+  <p class="subtitle">Pixel Art Asset Preview</p>
+  
+  
+  <div class="sprite-sheet-container">
+    <div class="sprite-sheet-header">
+      BUILDINGS - 8 Sprites
+    </div>
+    
+    <img src="./buildings-sprites.png" alt="buildings" class="sprite-sheet-image" />
+    
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">Size:</span>
+        <span class="stat-value">530x68px</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Sprite Size:</span>
+        <span class="stat-value">64x64px</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Grid:</span>
+        <span class="stat-value">8x1</span>
+      </div>
+    </div>
+    
+    <div class="sprite-grid">
+      
+      <div class="sprite-item">
+        <img src="./buildings-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 87.54716981132076% 
+                 2.941176470588232% 
+                 2px
+               );
+             " 
+             alt="town_hall" 
+        />
+        <span>town_hall</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./buildings-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 75.09433962264151% 
+                 2.941176470588232% 
+                 68px
+               );
+             " 
+             alt="castle" 
+        />
+        <span>castle</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./buildings-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 62.64150943396227% 
+                 2.941176470588232% 
+                 134px
+               );
+             " 
+             alt="farm" 
+        />
+        <span>farm</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./buildings-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 50.18867924528302% 
+                 2.941176470588232% 
+                 200px
+               );
+             " 
+             alt="mine" 
+        />
+        <span>mine</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./buildings-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 37.735849056603776% 
+                 2.941176470588232% 
+                 266px
+               );
+             " 
+             alt="barracks" 
+        />
+        <span>barracks</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./buildings-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 25.28301886792454% 
+                 2.941176470588232% 
+                 332px
+               );
+             " 
+             alt="marketplace" 
+        />
+        <span>marketplace</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./buildings-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 12.830188679245282% 
+                 2.941176470588232% 
+                 398px
+               );
+             " 
+             alt="house" 
+        />
+        <span>house</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./buildings-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 0.37735849056603854% 
+                 2.941176470588232% 
+                 464px
+               );
+             " 
+             alt="university" 
+        />
+        <span>university</span>
+      </div>
+      
+    </div>
+  </div>
+  
+  <div class="sprite-sheet-container">
+    <div class="sprite-sheet-header">
+      UNITS - 5 Sprites
+    </div>
+    
+    <img src="./units-sprites.png" alt="units" class="sprite-sheet-image" />
+    
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">Size:</span>
+        <span class="stat-value">332x68px</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Sprite Size:</span>
+        <span class="stat-value">64x64px</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Grid:</span>
+        <span class="stat-value">8x1</span>
+      </div>
+    </div>
+    
+    <div class="sprite-grid">
+      
+      <div class="sprite-item">
+        <img src="./units-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 80.12048192771084% 
+                 2.941176470588232% 
+                 2px
+               );
+             " 
+             alt="Villager" 
+        />
+        <span>Villager</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./units-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 60.24096385542169% 
+                 2.941176470588232% 
+                 68px
+               );
+             " 
+             alt="soilder" 
+        />
+        <span>soilder</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./units-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 40.36144578313253% 
+                 2.941176470588232% 
+                 134px
+               );
+             " 
+             alt="Archer" 
+        />
+        <span>Archer</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./units-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 20.48192771084338% 
+                 2.941176470588232% 
+                 200px
+               );
+             " 
+             alt="knight" 
+        />
+        <span>knight</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./units-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 0.6024096385542066% 
+                 2.941176470588232% 
+                 266px
+               );
+             " 
+             alt="wizard" 
+        />
+        <span>wizard</span>
+      </div>
+      
+    </div>
+  </div>
+  
+  <div class="sprite-sheet-container">
+    <div class="sprite-sheet-header">
+      TERRAIN - 5 Sprites
+    </div>
+    
+    <img src="./terrain-sprites.png" alt="terrain" class="sprite-sheet-image" />
+    
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">Size:</span>
+        <span class="stat-value">332x68px</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Sprite Size:</span>
+        <span class="stat-value">64x64px</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Grid:</span>
+        <span class="stat-value">8x1</span>
+      </div>
+    </div>
+    
+    <div class="sprite-grid">
+      
+      <div class="sprite-item">
+        <img src="./terrain-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 80.12048192771084% 
+                 2.941176470588232% 
+                 2px
+               );
+             " 
+             alt="grass" 
+        />
+        <span>grass</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./terrain-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 60.24096385542169% 
+                 2.941176470588232% 
+                 68px
+               );
+             " 
+             alt="water" 
+        />
+        <span>water</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./terrain-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 40.36144578313253% 
+                 2.941176470588232% 
+                 134px
+               );
+             " 
+             alt="cobblestone" 
+        />
+        <span>cobblestone</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./terrain-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 20.48192771084338% 
+                 2.941176470588232% 
+                 200px
+               );
+             " 
+             alt="dirt" 
+        />
+        <span>dirt</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./terrain-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 0.6024096385542066% 
+                 2.941176470588232% 
+                 266px
+               );
+             " 
+             alt="forrest" 
+        />
+        <span>forrest</span>
+      </div>
+      
+    </div>
+  </div>
+  
+  <div class="sprite-sheet-container">
+    <div class="sprite-sheet-header">
+      RESOURCES - 5 Sprites
+    </div>
+    
+    <img src="./resources-sprites.png" alt="resources" class="sprite-sheet-image" />
+    
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">Size:</span>
+        <span class="stat-value">332x68px</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Sprite Size:</span>
+        <span class="stat-value">64x64px</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Grid:</span>
+        <span class="stat-value">8x1</span>
+      </div>
+    </div>
+    
+    <div class="sprite-grid">
+      
+      <div class="sprite-item">
+        <img src="./resources-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 80.12048192771084% 
+                 2.941176470588232% 
+                 2px
+               );
+             " 
+             alt="gold=coin" 
+        />
+        <span>gold=coin</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./resources-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 60.24096385542169% 
+                 2.941176470588232% 
+                 68px
+               );
+             " 
+             alt="wheat" 
+        />
+        <span>wheat</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./resources-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 40.36144578313253% 
+                 2.941176470588232% 
+                 134px
+               );
+             " 
+             alt="wooden-log" 
+        />
+        <span>wooden-log</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./resources-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 20.48192771084338% 
+                 2.941176470588232% 
+                 200px
+               );
+             " 
+             alt="stone" 
+        />
+        <span>stone</span>
+      </div>
+      
+      <div class="sprite-item">
+        <img src="./resources-sprites.png" 
+             style="
+               clip-path: inset(
+                 2px 
+                 0.6024096385542066% 
+                 2.941176470588232% 
+                 266px
+               );
+             " 
+             alt="ore" 
+        />
+        <span>ore</span>
+      </div>
+      
+    </div>
+  </div>
+  
+</body>
+</html>

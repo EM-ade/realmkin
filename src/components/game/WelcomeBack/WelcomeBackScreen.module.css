@@ -1,0 +1,244 @@
+/* WelcomeBack Screen — Medieval dark brown/gold aesthetic */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(10, 6, 2, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.panel {
+  background: linear-gradient(160deg, #2a1a0a 0%, #1a0f05 50%, #220f00 100%);
+  border: 2px solid #7a5a2a;
+  border-radius: 16px;
+  padding: 36px 40px 32px;
+  max-width: 520px;
+  width: 90vw;
+  box-shadow:
+    0 0 60px rgba(180, 130, 40, 0.3),
+    0 24px 80px rgba(0, 0, 0, 0.8);
+  animation: slideUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(40px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.title {
+  font-family: "Cinzel", "Georgia", serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #d4a840;
+  text-shadow: 0 0 20px rgba(212, 168, 64, 0.5);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.swords {
+  font-size: 1.4rem;
+  filter: drop-shadow(0 0 8px rgba(212, 168, 64, 0.4));
+}
+
+.awayText {
+  text-align: center;
+  color: #b89a6a;
+  font-size: 0.95rem;
+  margin: 0 0 20px;
+}
+
+.awayText strong {
+  color: #d4a840;
+}
+
+/* Sections */
+.section {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(122, 90, 42, 0.4);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+.sectionTitle {
+  font-size: 0.85rem;
+  color: #b89a6a;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
+}
+
+/* Resources */
+.resourceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+
+.resourceItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resourceEmoji {
+  font-size: 1.1rem;
+}
+
+.resourceLabel {
+  color: #a08060;
+  font-size: 0.85rem;
+  flex: 1;
+}
+
+.resourceValue {
+  color: #d4a840;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 60px;
+  text-align: right;
+}
+
+.autominerBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(122, 90, 42, 0.3);
+  color: #8ab87a;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* No autominer box */
+.noAutominerBox {
+  text-align: center;
+}
+
+.noAutominerBox p {
+  color: #806050;
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+
+.autominerCta {
+  background: linear-gradient(135deg, #4a2d0a, #6a3d10);
+  border: 1px solid #7a5a2a;
+  border-radius: 8px;
+  color: #d4a840;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.autominerCta:hover {
+  background: linear-gradient(135deg, #5a3510, #7a4d1a);
+  border-color: #d4a840;
+  box-shadow: 0 0 12px rgba(212, 168, 64, 0.25);
+}
+
+/* Buildings */
+.buildingList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.buildingItem {
+  color: #b89a6a;
+  font-size: 0.88rem;
+}
+
+.buildingName {
+  color: #d4c090;
+  font-weight: 600;
+}
+
+/* Streak */
+.streakBox {
+  background: linear-gradient(
+    135deg,
+    rgba(180, 80, 0, 0.2),
+    rgba(120, 50, 0, 0.2)
+  );
+  border: 1px solid rgba(180, 100, 0, 0.5);
+  border-radius: 10px;
+  padding: 12px 18px;
+  text-align: center;
+  color: #d4904a;
+  font-size: 0.92rem;
+  margin-bottom: 14px;
+}
+
+.streakBox strong {
+  color: #f0a840;
+}
+
+.streakGems {
+  color: #a0c0ff;
+  font-weight: 600;
+}
+
+/* Continue button */
+.continueBtn {
+  width: 100%;
+  background: linear-gradient(135deg, #d4a840, #b88020);
+  border: none;
+  border-radius: 10px;
+  color: #1a0f05;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 14px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  box-shadow: 0 4px 20px rgba(212, 168, 64, 0.3);
+}
+
+.continueBtn:hover {
+  background: linear-gradient(135deg, #e8bc50, #c89030);
+  box-shadow: 0 6px 28px rgba(212, 168, 64, 0.5);
+  transform: translateY(-1px);
+}
+
+.continueBtn:active {
+  transform: translateY(0);
+}

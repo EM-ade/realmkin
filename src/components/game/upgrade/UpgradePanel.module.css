@@ -1,0 +1,347 @@
+/* ──────────────────────────────────────────────────────────────────────────────
+   UPGRADE PANEL — Clash of Clans Aesthetic
+   Wood, Stone, & Bubbly UI Theme
+   ────────────────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Manrope:wght@600;800&display=swap");
+
+:root {
+  --coc-gold: #ffd700;
+  --coc-elixir: #ff00ff;
+  --coc-border: #231912;
+  --coc-wood-dark: #3d2b1f;
+  --coc-wood-light: #5d4037;
+  --coc-green: #44af2c;
+  --coc-green-dark: #2d7a1c;
+}
+
+/* ── Panel Wrapper ─────────────────────────────────────────────────────────── */
+.upgradePanelWrapper {
+  position: fixed;
+  left: 0;
+  top: 60px; /* Aligned below TopBar */
+  bottom: 0;
+  z-index: 110;
+  pointer-events: auto;
+
+  width: 300px;
+
+  background: rgba(35, 25, 15, 0.95);
+  border-right: 4px solid var(--coc-border);
+  box-shadow: 10px 0 20px rgba(0, 0, 0, 0.5);
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  /* Wood grain texture */
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 40px,
+    rgba(0, 0, 0, 0.03) 40px,
+    rgba(0, 0, 0, 0.03) 80px
+  );
+}
+
+/* ── Panel Header ──────────────────────────────────────────────────────────── */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+  border-bottom: 3px solid var(--coc-border);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.panelTitle {
+  font-family: "Bangers", cursive;
+  font-size: 22px;
+  color: #fff;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 #000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.closeButton {
+  background: #c0392b;
+  border: 2px solid var(--coc-border);
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  box-shadow: 0 3px 0 var(--coc-border);
+  transition: transform 0.1s ease;
+}
+
+/* ── Content ───────────────────────────────────────────────────────────────── */
+.panelContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+}
+
+/* ── Level Progress Section ────────────────────────────────────────────────── */
+.levelSection {
+  margin-bottom: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px solid var(--coc-border);
+}
+
+.levelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.levelText {
+  font-family: "Bangers", cursive;
+  font-size: 16px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.levelCount {
+  font-family: "Manrope", sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  color: #a1887f;
+}
+
+.progressBar {
+  width: 100%;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--coc-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ── Stats Section ─────────────────────────────────────────────────────────── */
+.statsSection {
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-family: "Bangers", cursive;
+  font-size: 14px;
+  color: #d7ccc8;
+  text-align: center;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.statRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background: #4e342e;
+  border: 2px solid var(--coc-border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  box-shadow: 0 2px 0 var(--coc-border);
+}
+
+.statName {
+  font-family: "Manrope", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statValues {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statCurrent {
+  font-family: "Manrope", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d7ccc8;
+}
+
+.statArrow {
+  color: #a1887f;
+  font-size: 10px;
+}
+
+.statNext {
+  font-family: "Manrope", sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.statDiff {
+  font-family: "Manrope", sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  color: #4ade80;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* ── Cost Section ──────────────────────────────────────────────────────────── */
+.costSection {
+  margin-bottom: 20px;
+}
+
+.costGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.costCard {
+  background: #3d2b1f;
+  border: 2px solid var(--coc-border);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.costCardUnaffordable {
+  background: #4e2a2a;
+}
+
+.costIcon {
+  width: 24px;
+  height: 24px;
+}
+
+.costAmount {
+  font-family: "Bangers", cursive;
+  font-size: 16px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.costAmountAffordable {
+  color: #fff;
+}
+.costAmountUnaffordable {
+  color: #ff6b6b;
+}
+
+.costOwned {
+  font-family: "Manrope", sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  color: #a1887f;
+  text-transform: uppercase;
+}
+
+/* ── Actions ───────────────────────────────────────────────────────────────── */
+.actionsSection {
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 3px solid var(--coc-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upgradeButton {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(180deg, #44af2c 0%, #2d7a1c 100%);
+  border: 3px solid var(--coc-border);
+  border-radius: 12px;
+  font-family: "Bangers", cursive;
+  font-size: 20px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--coc-border);
+  transition: transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.upgradeButton:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--coc-border);
+}
+
+.upgradeButton:disabled {
+  background: #7f8c8d;
+  box-shadow: 0 3px 0 var(--coc-border);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cancelButton {
+  background: transparent;
+  border: none;
+  font-family: "Manrope", sans-serif;
+  font-weight: 800;
+  font-size: 11px;
+  color: #a1887f;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ── Max Level ─────────────────────────────────────────────────────────────── */
+.maxLevelBadge {
+  background: linear-gradient(180deg, #f1c40f 0%, #f39c12 100%);
+  border: 3px solid var(--coc-border);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.maxLevelText {
+  font-family: "Bangers", cursive;
+  font-size: 24px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+}
+
+/* ── Backdrop ──────────────────────────────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 105;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+}
+
+.backdropVisible {
+  pointer-events: auto;
+}
+
+.backdropHidden {
+  pointer-events: none;
+}

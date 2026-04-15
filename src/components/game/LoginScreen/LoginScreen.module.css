@@ -1,0 +1,157 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50; /* Above everything except tutorials maybe */
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Bangers", cursive;
+}
+
+.modal {
+  width: 90%;
+  max-width: 480px;
+  background: linear-gradient(180deg, #3a2b20 0%, #291e16 100%);
+  border: 4px solid #5a4030;
+  border-radius: 12px;
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.8),
+    inset 0 2px 4px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.modal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v20h2v2H20v-1.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 4h20v2H24v-2zm0 4h20v2H24v-2zm0 4h20v2H24v-2zm0 4h20v2H24v-2z' fill='%23000000' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.header {
+  padding: 1.5rem;
+  background: linear-gradient(180deg, #2b1f16 0%, #1a120c 100%);
+  border-bottom: 2px solid #111;
+  text-align: center;
+  position: relative;
+}
+
+.header h2 {
+  font-size: 2.5rem;
+  color: #ffb74d;
+  margin: 0;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 15px rgba(255, 183, 77, 0.3);
+  letter-spacing: 2px;
+}
+
+.headerDeco {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 10px;
+  background: radial-gradient(ellipse at center, #ffb74d 0%, transparent 70%);
+  opacity: 0.5;
+}
+
+.content {
+  padding: 2rem 1.5rem;
+  position: relative;
+}
+
+/* Customizing the wallet adapter button to look medieval */
+.walletButtonOverride {
+  background: linear-gradient(180deg, #443224 0%, #2c2017 100%) !important;
+  border: 2px solid #5a4030 !important;
+  border-radius: 8px !important;
+  color: #ffcc80 !important;
+  font-family: "Bangers", cursive !important;
+  font-size: 1.25rem !important;
+  letter-spacing: 1px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4) !important;
+  transition: all 0.2s ease !important;
+}
+
+.walletButtonOverride:hover {
+  background: linear-gradient(180deg, #5a4030 0%, #3a2b20 100%) !important;
+  border-color: #ffb74d !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.signButton {
+  background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+  border: 2px solid #1b5e20;
+  border-radius: 8px;
+  color: white;
+  padding: 0.75rem 2rem;
+  font-family: "Bangers", cursive;
+  font-size: 1.5rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 250px;
+}
+
+.signButton:hover:not(:disabled) {
+  background: linear-gradient(180deg, #66bb6a 0%, #388e3c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+}
+
+.signButton:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.signButton:disabled {
+  filter: grayscale(80%) brightness(50%);
+  cursor: not-allowed;
+}
+
+.error {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 6px;
+  color: #ef4444;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.loadingPulse {
+  font-size: 2rem;
+  color: #ffb74d;
+  animation: pulse 2s infinite ease-in-out;
+  text-shadow: 0 0 10px rgba(255, 183, 77, 0.5);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.6;
+  }
+}

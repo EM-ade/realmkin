@@ -1,0 +1,49 @@
+{
+  "groupName": "resources",
+  "spriteSize": 128,
+  "padding": 4,
+  "columns": 4,
+  "rows": 1,
+  "sheetWidth": 532,
+  "sheetHeight": 136,
+  "totalSprites": 4,
+  "sprites": [
+    {
+      "name": "clay",
+      "index": 0,
+      "column": 0,
+      "row": 0,
+      "x": 4,
+      "y": 4,
+      "sourceFile": "Clay Resource Icon.png"
+    },
+    {
+      "name": "crop",
+      "index": 1,
+      "column": 1,
+      "row": 0,
+      "x": 136,
+      "y": 4,
+      "sourceFile": "Crop Resource Icon.png"
+    },
+    {
+      "name": "iron",
+      "index": 2,
+      "column": 2,
+      "row": 0,
+      "x": 268,
+      "y": 4,
+      "sourceFile": "Iron Resource Icon.png"
+    },
+    {
+      "name": "wood",
+      "index": 3,
+      "column": 3,
+      "row": 0,
+      "x": 400,
+      "y": 4,
+      "sourceFile": "Wood Resource Icon.png"
+    }
+  ],
+  "generatedAt": "2026-02-22T20:04:37.831Z"
+}

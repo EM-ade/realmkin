@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Clay/Stone Icon - Rock formation -->
+  <g>
+    <polygon points="16,4 26,14 24,26 8,26 6,14" fill="#787878"/>
+    <polygon points="16,4 26,14 24,26 8,26 6,14" fill="none" stroke="#505050" stroke-width="1.5"/>
+    <!-- Facets -->
+    <line x1="16" y1="4" x2="16" y2="26" stroke="#505050" stroke-width="1" opacity="0.5"/>
+    <line x1="6" y1="14" x2="26" y2="14" stroke="#505050" stroke-width="1" opacity="0.5"/>
+    <!-- Highlights -->
+    <polygon points="16,6 22,12 16,18 10,12" fill="#909090" opacity="0.4"/>
+  </g>
+</svg>

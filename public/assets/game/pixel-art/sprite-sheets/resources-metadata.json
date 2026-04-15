@@ -1,0 +1,52 @@
+{
+  "groupName": "resources",
+  "spriteSize": 64,
+  "padding": 2,
+  "columns": 8,
+  "rows": 1,
+  "sheetWidth": 332,
+  "sheetHeight": 68,
+  "totalSprites": 5,
+  "sprites": [
+    {
+      "name": "gold=coin",
+      "index": 0,
+      "column": 0,
+      "row": 0,
+      "x": 2,
+      "y": 2
+    },
+    {
+      "name": "wheat",
+      "index": 1,
+      "column": 1,
+      "row": 0,
+      "x": 68,
+      "y": 2
+    },
+    {
+      "name": "wooden-log",
+      "index": 2,
+      "column": 2,
+      "row": 0,
+      "x": 134,
+      "y": 2
+    },
+    {
+      "name": "stone",
+      "index": 3,
+      "column": 3,
+      "row": 0,
+      "x": 200,
+      "y": 2
+    },
+    {
+      "name": "ore",
+      "index": 4,
+      "column": 4,
+      "row": 0,
+      "x": 266,
+      "y": 2
+    }
+  ]
+}
