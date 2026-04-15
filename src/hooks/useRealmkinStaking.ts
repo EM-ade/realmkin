@@ -433,11 +433,13 @@ export function useRealmkinStaking() {
       );
 
       toast.loading("Unstaking tokens...", { id: "unstake-fee" });
-      await StakingAPI.unstake(amount, signature);
+      const res = await StakingAPI.unstake(amount, signature);
+
+      const newMkinAmount = res?.newMkinAmount ?? (amount / (res?.conversionRatio || 2500000));
 
       toast.success(
-        `Unstaked ${amount} MKIN! (Fee: ${feeAmount.toFixed(4)} SOL)`,
-        { id: "unstake-fee" }
+        `Unstaked ${amount.toLocaleString()} MKIN → ${newMkinAmount.toLocaleString(undefined, { maximumFractionDigits: 8 })} new $MKIN`,
+        { id: "unstake-fee", duration: 8000 }
       );
       fetchData();
       fetchWalletBalance(); // Refresh wallet balance
