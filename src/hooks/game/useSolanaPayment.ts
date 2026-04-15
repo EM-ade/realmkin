@@ -15,38 +15,19 @@ import {
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { SEASON1_GEM_PACKS } from "@/game/config/pricingConfig";
+
+export type GemPackId = "handful" | "pouch" | "chest" | "vault";
 
 export interface GemPack {
-  id: "handful" | "pouch" | "chest";
+  id: GemPackId;
   name: string;
   gems: number;
   usdPrice: number;
   displayName: string;
 }
 
-export const GEM_PACKS: GemPack[] = [
-  {
-    id: "handful",
-    name: "Handful",
-    gems: 80,
-    usdPrice: 0.15,
-    displayName: "Handful",
-  },
-  {
-    id: "pouch",
-    name: "Pouch",
-    gems: 200,
-    usdPrice: 0.30,
-    displayName: "Pouch",
-  },
-  {
-    id: "chest",
-    name: "Chest",
-    gems: 475,
-    usdPrice: 0.65,
-    displayName: "Chest",
-  },
-];
+export const GEM_PACKS: GemPack[] = SEASON1_GEM_PACKS;
 
 const TREASURY_WALLET_STR = process.env.NEXT_PUBLIC_TREASURY_WALLET || "11111111111111111111111111111111";
 

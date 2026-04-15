@@ -144,7 +144,7 @@ export function WelcomeBackScreen() {
             <div className={styles.noAutominerBox}>
               <p>💤 Your village didn't produce while you were away.</p>
               <button className={styles.autominerCta} onClick={dismissGains}>
-                🛒 Get the Autominer (150 gems) to earn resources offline!
+                🛒 Get the Autominer (500 gems) to earn resources offline!
               </button>
             </div>
           )}

@@ -67,13 +67,30 @@ export interface WarehouseLevelConfig {
   additionalCapacity: number;
 }
 
-// ── Gem Skip Formula ──────────────────────────────────────────────────────────
+// ── Speed-Up Tiers (Season 1) ─────────────────────────────────────────────────
 /**
- * Cost in gems to instantly complete a remaining build time.
- * Formula matches gameStore.finishConstructionInstantly:
- *   gemCost = ceil(remainingMs / GEM_SKIP_MS_PER_GEM)
+ * Tiered speed-up pricing from pricingConfig.
+ * Players won't pay for 7-day skips often, but 1-day skips become habitual.
  */
-export const GEM_SKIP_MS_PER_GEM = 10_000; // 1 gem per 10 seconds
+export const SPEED_UP_TIERS = [
+  { maxRemainingMs: 30 * 60 * 1000, gemCost: 10 },
+  { maxRemainingMs: 24 * 60 * 60 * 1000, gemCost: 110 },
+  { maxRemainingMs: 3 * 24 * 60 * 60 * 1000, gemCost: 350 },
+  { maxRemainingMs: 7 * 24 * 60 * 60 * 1000, gemCost: 700 },
+] as const;
+
+/**
+ * Calculate gem cost for speed-up based on remaining time.
+ * Uses tiered pricing instead of linear formula.
+ */
+export function calcGemSkipCost(remainingMs: number): number {
+  for (const tier of SPEED_UP_TIERS) {
+    if (remainingMs <= tier.maxRemainingMs) {
+      return tier.gemCost;
+    }
+  }
+  return SPEED_UP_TIERS[SPEED_UP_TIERS.length - 1].gemCost;
+}
 
 // ── Resource Building Tick Intervals ─────────────────────────────────────────
 /**
@@ -96,35 +113,35 @@ export const FARM_CONFIG: ResourceBuildingConfig = {
   levels: {
     1: {
       level: 1,
-      buildTimeMs: 30_000,
+      buildTimeMs: 4 * 60 * 60 * 1000,
       upgradeCost: { wood: 50, clay: 30, iron: 10, crop: 0 },
       productionPerTick: 10,
       collectorCapacity: 200,
     },
     2: {
       level: 2,
-      buildTimeMs: 2 * 60_000,
+      buildTimeMs: 12 * 60 * 60 * 1000,
       upgradeCost: { wood: 90, clay: 54, iron: 18, crop: 0 },
       productionPerTick: 10,
       collectorCapacity: 300,
     },
     3: {
       level: 3,
-      buildTimeMs: 8 * 60_000,
+      buildTimeMs: 1.5 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 162, clay: 97, iron: 32, crop: 0 },
       productionPerTick: 10,
       collectorCapacity: 450,
     },
     4: {
       level: 4,
-      buildTimeMs: 20 * 60_000,
+      buildTimeMs: 3 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 292, clay: 175, iron: 58, crop: 0 },
       productionPerTick: 10,
       collectorCapacity: 600,
     },
     5: {
       level: 5,
-      buildTimeMs: 45 * 60_000,
+      buildTimeMs: 5 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 525, clay: 315, iron: 105, crop: 0 },
       productionPerTick: 10,
       collectorCapacity: 800,
@@ -140,35 +157,35 @@ export const LUMBER_MILL_CONFIG: ResourceBuildingConfig = {
   levels: {
     1: {
       level: 1,
-      buildTimeMs: 30_000,
+      buildTimeMs: 4 * 60 * 60 * 1000,
       upgradeCost: { wood: 0, clay: 20, iron: 10, crop: 30 },
       productionPerTick: 10,
       collectorCapacity: 150,
     },
     2: {
       level: 2,
-      buildTimeMs: 2 * 60_000,
+      buildTimeMs: 12 * 60 * 60 * 1000,
       upgradeCost: { wood: 0, clay: 36, iron: 18, crop: 54 },
       productionPerTick: 10,
       collectorCapacity: 225,
     },
     3: {
       level: 3,
-      buildTimeMs: 6 * 60_000,
+      buildTimeMs: 1.5 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 0, clay: 65, iron: 32, crop: 97 },
       productionPerTick: 10,
       collectorCapacity: 340,
     },
     4: {
       level: 4,
-      buildTimeMs: 15 * 60_000,
+      buildTimeMs: 3 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 0, clay: 117, iron: 58, crop: 175 },
       productionPerTick: 10,
       collectorCapacity: 460,
     },
     5: {
       level: 5,
-      buildTimeMs: 35 * 60_000,
+      buildTimeMs: 5 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 0, clay: 210, iron: 104, crop: 315 },
       productionPerTick: 10,
       collectorCapacity: 620,
@@ -184,35 +201,35 @@ export const QUARRY_CONFIG: ResourceBuildingConfig = {
   levels: {
     1: {
       level: 1,
-      buildTimeMs: 45_000,
+      buildTimeMs: 4 * 60 * 60 * 1000,
       upgradeCost: { wood: 50, clay: 0, iron: 20, crop: 50 },
       productionPerTick: 10,
       collectorCapacity: 120,
     },
     2: {
       level: 2,
-      buildTimeMs: 3 * 60_000,
+      buildTimeMs: 12 * 60 * 60 * 1000,
       upgradeCost: { wood: 90, clay: 0, iron: 36, crop: 90 },
       productionPerTick: 10,
       collectorCapacity: 180,
     },
     3: {
       level: 3,
-      buildTimeMs: 10 * 60_000,
+      buildTimeMs: 1.5 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 162, clay: 0, iron: 65, crop: 162 },
       productionPerTick: 10,
       collectorCapacity: 270,
     },
     4: {
       level: 4,
-      buildTimeMs: 28 * 60_000,
+      buildTimeMs: 3 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 292, clay: 0, iron: 117, crop: 292 },
       productionPerTick: 10,
       collectorCapacity: 370,
     },
     5: {
       level: 5,
-      buildTimeMs: 60 * 60_000,
+      buildTimeMs: 5 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 525, clay: 0, iron: 210, crop: 525 },
       productionPerTick: 10,
       collectorCapacity: 500,
@@ -228,35 +245,35 @@ export const IRON_MINE_CONFIG: ResourceBuildingConfig = {
   levels: {
     1: {
       level: 1,
-      buildTimeMs: 60_000,
+      buildTimeMs: 6 * 60 * 60 * 1000,
       upgradeCost: { wood: 80, clay: 50, iron: 0, crop: 80 },
       productionPerTick: 10,
       collectorCapacity: 100,
     },
     2: {
       level: 2,
-      buildTimeMs: 4 * 60_000,
+      buildTimeMs: 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 144, clay: 90, iron: 0, crop: 144 },
       productionPerTick: 10,
       collectorCapacity: 150,
     },
     3: {
       level: 3,
-      buildTimeMs: 12 * 60_000,
+      buildTimeMs: 2 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 259, clay: 162, iron: 0, crop: 259 },
       productionPerTick: 10,
       collectorCapacity: 225,
     },
     4: {
       level: 4,
-      buildTimeMs: 35 * 60_000,
+      buildTimeMs: 4 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 466, clay: 292, iron: 0, crop: 466 },
       productionPerTick: 10,
       collectorCapacity: 310,
     },
     5: {
       level: 5,
-      buildTimeMs: 90 * 60_000,
+      buildTimeMs: 7 * 24 * 60 * 60 * 1000,
       upgradeCost: { wood: 840, clay: 525, iron: 0, crop: 840 },
       productionPerTick: 10,
       collectorCapacity: 420,
@@ -265,44 +282,43 @@ export const IRON_MINE_CONFIG: ResourceBuildingConfig = {
 };
 
 // ── Town Hall ─────────────────────────────────────────────────────────────────
-export const TOWN_HALL_CONFIG: Record<1 | 2 | 3 | 4 | 5, TownHallLevelConfig> =
-  {
-    1: {
-      level: 1,
-      buildTimeMs: 0,
-      upgradeCost: { wood: 0, clay: 0, iron: 0, crop: 0 },
-      maxWarehouses: 0,
-      intrinsicStorageCap: 500,
-    },
-    2: {
-      level: 2,
-      buildTimeMs: 5 * 60_000,
-      upgradeCost: { wood: 100, clay: 100, iron: 100, crop: 100 },
-      maxWarehouses: 1,
-      intrinsicStorageCap: 500,
-    },
-    3: {
-      level: 3,
-      buildTimeMs: 15 * 60_000,
-      upgradeCost: { wood: 400, clay: 400, iron: 200, crop: 400 },
-      maxWarehouses: 2,
-      intrinsicStorageCap: 500,
-    },
-    4: {
-      level: 4,
-      buildTimeMs: 40 * 60_000,
-      upgradeCost: { wood: 800, clay: 800, iron: 400, crop: 800 },
-      maxWarehouses: 3,
-      intrinsicStorageCap: 500,
-    },
-    5: {
-      level: 5,
-      buildTimeMs: 120 * 60_000,
-      upgradeCost: { wood: 1_600, clay: 1_600, iron: 800, crop: 1_600 },
-      maxWarehouses: 4,
-      intrinsicStorageCap: 500,
-    },
-  };
+export const TOWN_HALL_CONFIG: Record<1 | 2 | 3 | 4 | 5, TownHallLevelConfig> = {
+  1: {
+    level: 1,
+    buildTimeMs: 0,
+    upgradeCost: { wood: 0, clay: 0, iron: 0, crop: 0 },
+    maxWarehouses: 0,
+    intrinsicStorageCap: 500,
+  },
+  2: {
+    level: 2,
+    buildTimeMs: 8 * 60 * 60 * 1000,
+    upgradeCost: { wood: 100, clay: 100, iron: 100, crop: 100 },
+    maxWarehouses: 1,
+    intrinsicStorageCap: 500,
+  },
+  3: {
+    level: 3,
+    buildTimeMs: 24 * 60 * 60 * 1000,
+    upgradeCost: { wood: 400, clay: 400, iron: 200, crop: 400 },
+    maxWarehouses: 2,
+    intrinsicStorageCap: 500,
+  },
+  4: {
+    level: 4,
+    buildTimeMs: 2.5 * 24 * 60 * 60 * 1000,
+    upgradeCost: { wood: 800, clay: 800, iron: 400, crop: 800 },
+    maxWarehouses: 3,
+    intrinsicStorageCap: 500,
+  },
+  5: {
+    level: 5,
+    buildTimeMs: 4.5 * 24 * 60 * 60 * 1000,
+    upgradeCost: { wood: 1_600, clay: 1_600, iron: 800, crop: 1_600 },
+    maxWarehouses: 4,
+    intrinsicStorageCap: 500,
+  },
+};
 
 // ── Warehouse ─────────────────────────────────────────────────────────────────
 export const WAREHOUSE_CONFIG: Record<1 | 2 | 3 | 4 | 5, WarehouseLevelConfig> =
@@ -380,8 +396,4 @@ export function getCollectorCapacity(
   level: 1 | 2 | 3 | 4 | 5,
 ): number {
   return RESOURCE_BUILDING_MAP[building].levels[level].collectorCapacity;
-}
-
-export function calcGemSkipCost(remainingMs: number): number {
-  return Math.ceil(remainingMs / GEM_SKIP_MS_PER_GEM);
 }

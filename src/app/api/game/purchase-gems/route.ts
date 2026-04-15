@@ -38,9 +38,10 @@ const GEM_PACKS: Record<
   string,
   { gems: number; usdPrice: number; displayName: string }
 > = {
-  handful: { gems: 80, usdPrice: 0.15, displayName: "Handful" },
-  pouch: { gems: 200, usdPrice: 0.30, displayName: "Pouch" },
-  chest: { gems: 475, usdPrice: 0.65, displayName: "Chest" },
+  handful: { gems: 100, usdPrice: 1.99, displayName: "Handful" },
+  pouch: { gems: 280, usdPrice: 4.99, displayName: "Pouch" },
+  chest: { gems: 750, usdPrice: 9.99, displayName: "Chest" },
+  vault: { gems: 2000, usdPrice: 24.99, displayName: "Vault" },
 };
 
 // ── Solana connection (server-side) ──────────────────────────────────────────

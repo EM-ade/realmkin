@@ -67,13 +67,14 @@ function GamePage() {
         href: "/game/2048",
         status: "new",
       },
-      {
-        title: "Kingdom",
-        description: "Build your village, train your army, and conquer the realm.",
-        imageSrc: "/kingdom.jpeg",
-        href: "/game/kingdom",
-        status: "new",
-      },
+// TEMPORARILY DISABLED - Kingdom game in development
+  // {
+  //   title: "Kingdom",
+  //   description: "Build your village, train your army, and conquer the realm.",
+  //   imageSrc: "/kingdom.jpeg",
+  //   href: "/game/kingdom",
+  //   status: "new",
+  // },
       {
         title: "Word Blast",
         description: "Fast-paced spellcasting with letters—charge, blast, conquer.",

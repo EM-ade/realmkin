@@ -8,6 +8,8 @@ import {
 import { SCENARIOS } from "@/game/config/scenarios";
 import { getUnitTrainingCost } from "@/game/config/units";
 import { useXPSystem } from "@/hooks/game/useXPSystem";
+import { calcGemSkipCost, SPEED_UP_TIERS } from "@/game/config/gameConfig";
+import { BUILDER_SLOT_COSTS, MAX_BUILDERS as MAX_BUILDERS_CONFIG } from "@/game/config/pricingConfig";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // DEV MODE FLAG - Set to false for production build
@@ -189,7 +191,7 @@ export interface GameState {
 
 const STORAGE_KEY = "kingdom-v10"; // bumped: fix coordinate swap bug in UpgradePanel
 const TH_SLOT = 6 * 50 + 6; // Town Hall at (col=6, row=6)
-const MAX_BUILDERS = 2;
+const MAX_BUILDERS = 4;
 
 const INITIAL_RESOURCES: Resources = {
   wood: 100,
@@ -330,12 +332,19 @@ export const useGameState = create<GameState>((set, get) => ({
     const state = get();
     if (state.unlockedBuilders >= MAX_BUILDERS) return false;
 
-    // Check if player has enough gems (e.g., 500 gems)
-    if (state.resources.gems < 500) return false;
+    const nextSlot = state.unlockedBuilders + 1;
+    const gemCost =
+      nextSlot === 2
+        ? BUILDER_SLOT_COSTS.second
+        : nextSlot === 3
+        ? BUILDER_SLOT_COSTS.third
+        : BUILDER_SLOT_COSTS.fourth;
+
+    if (state.resources.gems < gemCost) return false;
 
     set({
       unlockedBuilders: state.unlockedBuilders + 1,
-      resources: { ...state.resources, gems: state.resources.gems - 500 },
+      resources: { ...state.resources, gems: state.resources.gems - gemCost },
     });
     return true;
   },
@@ -395,7 +404,7 @@ export const useGameState = create<GameState>((set, get) => ({
     const now = Date.now();
     const finishesAt = building.constructionFinishesAt ?? now;
     const remainingMs = Math.max(0, finishesAt - now);
-    const gemCost = Math.ceil(remainingMs / 10000); // 1 gem per 10 seconds
+    const gemCost = calcGemSkipCost(remainingMs);
 
     if (get().resources.gems < gemCost) return;
 
@@ -885,16 +894,27 @@ export const useGameState = create<GameState>((set, get) => ({
     return true;
   },
 
-  // ── Real-time resource tick ───────────────────────────────────────────────
-  tickResources: () => {
+// ── Real-time resource tick ───────────────────────────────────────────────
+tickResources: () => {
     const state = get();
     const prod: Resources = { wood: 0, clay: 0, iron: 0, crop: 0, gems: 0 };
+    const cap = get().getWarehouseCapacity();
+    const totalStored =
+      state.resources.wood +
+      state.resources.clay +
+      state.resources.iron +
+      state.resources.crop;
+    const storageUsedRatio = cap > 0 ? totalStored / cap : 0;
+    let storageSpeedMult = 1.0;
+    if (storageUsedRatio >= 1.0) storageSpeedMult = 0;
+    else if (storageUsedRatio >= 0.5) storageSpeedMult = 0.8;
     state.buildings.forEach((b) => {
       if (b.damaged || b.underConstruction) return; // Under construction doesn't produce
       const cfg = BUILDINGS[b.type];
       // Skip if it doesn't produce or if it has its own per-building collector timer
       if (!cfg?.production || cfg.tickIntervalMs) return;
-      const mult = 1 + (b.level - 1) * 0.5;
+      const mult =
+        (1 + (b.level - 1) * 0.5) * storageSpeedMult * 0.5; // level mult * soft cap * 50% reduction
       prod.wood += (cfg.production.wood ?? 0) * mult;
       prod.clay += (cfg.production.clay ?? 0) * mult;
       prod.iron += (cfg.production.iron ?? 0) * mult;
@@ -905,16 +925,27 @@ export const useGameState = create<GameState>((set, get) => ({
     return prod;
   },
 
-  // ── Campaign: end turn ────────────────────────────────────────────────────
-  endTurn: () => {
+// ── Campaign: end turn ────────────────────────────────────────────────────
+endTurn: () => {
     const state = get();
     const prod: Resources = { wood: 0, clay: 0, iron: 0, crop: 0, gems: 0 };
+    const cap = get().getWarehouseCapacity();
+    const totalStored =
+      state.resources.wood +
+      state.resources.clay +
+      state.resources.iron +
+      state.resources.crop;
+    const storageUsedRatio = cap > 0 ? totalStored / cap : 0;
+    let storageSpeedMult = 1.0;
+    if (storageUsedRatio >= 1.0) storageSpeedMult = 0;
+    else if (storageUsedRatio >= 0.5) storageSpeedMult = 0.8;
     state.buildings.forEach((b) => {
       if (b.damaged || b.underConstruction) return;
       const cfg = BUILDINGS[b.type];
       // Skip if it doesn't produce or if it has its own per-building collector timer
       if (!cfg?.production || cfg.tickIntervalMs) return;
-      const mult = 1 + (b.level - 1) * 0.5;
+      const mult =
+        (1 + (b.level - 1) * 0.5) * storageSpeedMult * 0.5; // level mult * soft cap * 50% reduction
       prod.wood += (cfg.production.wood ?? 0) * mult;
       prod.clay += (cfg.production.clay ?? 0) * mult;
       prod.iron += (cfg.production.iron ?? 0) * mult;

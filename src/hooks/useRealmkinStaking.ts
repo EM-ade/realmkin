@@ -422,11 +422,11 @@ export function useRealmkinStaking() {
       // Get fee amount from backend (it knows the current SOL price)
       toast.loading("Processing transaction fee...", { id: "unstake-fee" });
       
-      const feeResponse = await fetch("/api/get-sol-price?usd=2.90");
+      const feeResponse = await fetch("/api/get-sol-price?usd=2.50");
       const feeData = await feeResponse.json();
       const feeAmount = feeData.solAmount;
 
-      // User pays full $2.90 to staking vault, backend will split it
+      // User pays full $2.50 to staking vault, backend will split it
       const signature = await paySolFee(
         feeAmount,
         data.config.stakingWalletAddress
