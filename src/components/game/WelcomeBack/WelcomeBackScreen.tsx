@@ -9,6 +9,14 @@ interface ResourceCounterProps {
   emoji: string;
   value: number;
   delay?: number;
+  isNegative?: boolean;
+}
+
+interface ResourceCounterProps {
+  label: string;
+  emoji: string;
+  value: number;
+  delay?: number;
 }
 
 function ResourceCounter({
@@ -16,6 +24,7 @@ function ResourceCounter({
   emoji,
   value,
   delay = 0,
+  isNegative = false,
 }: ResourceCounterProps) {
   const [displayed, setDisplayed] = useState(0);
   const frameRef = useRef<number | null>(null);
@@ -48,8 +57,9 @@ function ResourceCounter({
     <div className={styles.resourceItem}>
       <span className={styles.resourceEmoji}>{emoji}</span>
       <span className={styles.resourceLabel}>{label}</span>
-      <span className={styles.resourceValue}>
-        +{displayed.toLocaleString()}
+      <span className={`${styles.resourceValue} ${isNegative ? styles.negative : ""}`}>
+        {isNegative ? "-" : "+"}
+        {displayed.toLocaleString()}
       </span>
     </div>
   );
@@ -88,6 +98,7 @@ export function WelcomeBackScreen() {
     streakUpdated,
     newStreak,
     streakGemsEarned,
+    resourceDecay,
   } = offlineGains;
 
   const hasResources = Object.values(resources).some((v) => v > 0);
@@ -148,9 +159,50 @@ export function WelcomeBackScreen() {
               </button>
             </div>
           )}
-        </div>
+</div>
 
-        {/* Completed buildings */}
+      {/* Resource decay warning */}
+      {resourceDecay?.applied && (
+        <div className={styles.decayBox}>
+          <h3 className={styles.decayTitle}>⚠️ Resources Decayed</h3>
+          <p className={styles.decayText}>
+            Your stored resources decayed while you were away.
+            The Autominer prevents decay!
+          </p>
+          <div className={styles.resourceGrid}>
+            <ResourceCounter
+              label="Wood"
+              emoji="🌾"
+              value={resourceDecay.decayAmount.wood}
+              delay={0}
+              isNegative
+            />
+            <ResourceCounter
+              label="Stone"
+              emoji="⛏️"
+              value={resourceDecay.decayAmount.stone}
+              delay={150}
+              isNegative
+            />
+            <ResourceCounter
+              label="Iron"
+              emoji="🔩"
+              value={resourceDecay.decayAmount.iron}
+              delay={300}
+              isNegative
+            />
+            <ResourceCounter
+              label="Food"
+              emoji="🍖"
+              value={resourceDecay.decayAmount.food}
+              delay={450}
+              isNegative
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Completed buildings */}
         {completedBuildings.length > 0 && (
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Buildings completed:</h3>

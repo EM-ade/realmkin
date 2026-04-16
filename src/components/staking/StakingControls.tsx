@@ -101,52 +101,7 @@ export function StakingControls({
         </div>
       </div>
 
-      {/* Unstake Confirmation Modal */}
-      {showUnstakeConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#0a0806] border border-[#f4c752]/30 rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-[#f4c752] text-lg font-bold uppercase tracking-wider mb-4 text-center">
-              Confirm Unstake
-            </h3>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-[#f7dca1]/60">Old MKIN unstaking</span>
-                <span className="text-[#f4c752] font-mono">
-                  {numAmount.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#f7dca1]/60">New $MKIN you'll receive</span>
-                <span className="text-[#f4c752] font-mono">
-                  {newMkinPreview.toLocaleString(undefined, {
-                    maximumFractionDigits: 8,
-                  })}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#f7dca1]/60">Network fee</span>
-                <span className="text-[#f4c752] font-mono">~$2.50</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setShowUnstakeConfirm(false)}
-                className="py-3 border border-[#f4c752]/30 text-[#f7dca1]/60 font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-[#f4c752]/10 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUnstakeConfirm}
-                className="py-3 bg-[#f4c752] text-black font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-[#f4c752]/90 transition-colors"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal removed - conversion shown inline after action completes */}
     </>
   );
 }

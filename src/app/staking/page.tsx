@@ -242,7 +242,7 @@ function StakingPage() {
 
             <div className="w-full max-w-3xl">
               <StakingControls
-                stakedAmount={stakingUser?.principal || 0}
+                stakedAmount={stakingUser?.principal /2500000 || 0}
                 walletBalance={walletBalance}
                 tokenSymbol="MKIN"
                 onStake={handleStake}

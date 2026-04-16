@@ -198,6 +198,13 @@ export interface Result<T = void> {
 // Offline Types
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface ResourceDecayInfo {
+  applied: boolean;
+  periods: number; // Number of 24-hour periods decayed
+  multiplier: number; // e.g., 0.85 for 1 period, 0.7225 for 2
+  decayAmount: PlayerResources; // Amount lost per resource
+}
+
 export interface OfflineGains {
   wasOffline: boolean;
   duration: number; // ms
@@ -213,6 +220,7 @@ export interface OfflineGains {
   streakUpdated: boolean;
   newStreak: number;
   streakGemsEarned: number;
+  resourceDecay?: ResourceDecayInfo; // Present if decay was applied
 }
 
 export interface QueuedAction {
