@@ -73,7 +73,6 @@ const paySolFee = async (amountSol: number, destinationAddr: string, connection:
     // Compile to ensure proper message
     const message = transaction.compileMessage();
     console.log("📝 Compiled message:", {
-      feePayer: message.feePayer?.toString() || 'not set',
       instructions: message.instructions.length,
       accountKeysLength: message.accountKeys.length
     });
