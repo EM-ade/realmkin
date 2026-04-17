@@ -108,7 +108,7 @@ function StakingPage() {
     await performClaim();
   };
 
-  // Handle NFT stake (fee disabled for testing)
+  // Handle NFT stake (with fee payment enabled)
   const handleNftStake = async () => {
     if (!isConnected) {
       toast.error("Please connect your wallet first");
@@ -119,8 +119,8 @@ function StakingPage() {
       return;
     }
 
-    // Call stakeNfts - fee is disabled on backend for testing
-    const result = await nftStaking.stakeNfts(selectedNfts, undefined, false);
+    // Call stakeNfts with payFee = true to pay the fee
+    const result = await nftStaking.stakeNfts(selectedNfts, undefined, true);
     
     if (result.success) {
       setSelectedNfts([]); // Clear selection after successful stake
@@ -235,6 +235,21 @@ function StakingPage() {
     const totalPool = nftStaking.poolStats?.totalPool || 0;
     const totalStaked = nftStaking.poolStats?.totalNftsStaked || 0;
     const feePerNft = nftStaking.poolStats?.feePerNft || 0.30;
+    const periodStatus = nftStaking.poolStats?.periodStatus || "open";
+    const periodMessage = nftStaking.poolStats?.periodMessage || "";
+    const isStakingOpen = periodStatus === "open" && nftStaking.poolStats?.stakingEnabled !== false;
+    const isStakingDisabled = nftStaking.poolStats?.stakingEnabled === false;
+    const isStakingClosed = periodStatus === "closed";
+
+    console.log("📊 NFT Staking Stats:", {
+      periodStatus,
+      periodStart: nftStaking.poolStats?.periodStart,
+      periodEnd: nftStaking.poolStats?.periodEnd,
+      stakingEnabled: nftStaking.poolStats?.stakingEnabled,
+      isStakingOpen,
+      isStakingDisabled,
+      isStakingClosed
+    });
 
     return (
       <div className="space-y-8">
@@ -258,10 +273,10 @@ function StakingPage() {
           </div>
           <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-4">
             <div className="text-[#f7dca1]/40 text-[10px] uppercase tracking-wider mb-1">
-              Per NFT
+              Period Status
             </div>
-            <div className="text-lg font-bold text-[#f4c752]">
-              {rewardPerNft.toFixed(2)} $MKIN
+            <div className={`text-lg font-bold ${isStakingOpen ? 'text-green-400' : isStakingClosed ? 'text-red-400' : 'text-yellow-400'}`}>
+              {periodStatus === "open" ? "Open" : periodStatus === "closed" ? "Closed" : "Upcoming"}
             </div>
           </div>
           <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-4">
@@ -365,7 +380,7 @@ function StakingPage() {
             <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] font-medium">
               Available NFTs ({nftStaking.walletNfts.length})
             </h3>
-            {selectedNfts.length > 0 && (
+            {selectedNfts.length > 0 && isStakingOpen && (
               <button
                 onClick={handleNftStake}
                 className="py-2 px-4 bg-[#f4c752] text-black text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-[#f4c752]/90"
@@ -429,9 +444,6 @@ function StakingPage() {
                     <div className="text-[#f7dca1]/40 text-[10px] uppercase">
                       {nft.collection}
                     </div>
-                    <div className="text-green-400 text-xs mt-1">
-                      +{rewardPerNft.toFixed(2)} $MKIN
-                    </div>
                   </div>
                 );
               })}
@@ -447,7 +459,12 @@ function StakingPage() {
           </div>
           <div className="flex justify-between items-center text-sm mt-2">
             <span className="text-[#f7dca1]/60">Staking Period</span>
-            <span className="text-[#f4c752]">30 days</span>
+            <span className="text-[#f4c752]">
+              {nftStaking.poolStats?.periodStart && nftStaking.poolStats?.periodEnd
+                ? `${nftStaking.poolStats.periodStart} - ${nftStaking.poolStats.periodEnd}`
+                : "30 days"
+              }
+            </span>
           </div>
         </div>
       </div>
@@ -510,7 +527,7 @@ function StakingPage() {
           <p className="text-[#f7dca1]/60 text-sm md:text-base tracking-wider max-w-2xl mx-auto">
             {activeTab === "token" 
               ? "Stake your $MKIN tokens to start mining rewards automatically. Boost your rate with Realmkin NFTs."
-              : `Stake your Realmkin NFTs to earn up to ${(nftStaking.poolStats?.estimatedRewardPerNft || (nftStaking.poolStats?.totalPool / nftStaking.poolStats?.totalEligibleNfts) || 0).toFixed(2)} $MKIN per NFT. Lock period: 30 days.`
+              : `Stake your Realmkin NFTs to earn ${(nftStaking.poolStats?.currentRewardPerNft || nftStaking.poolStats?.estimatedRewardPerNft || 0).toFixed(2)} $MKIN per NFT. ${nftStaking.poolStats?.periodMessage || `Lock until ${nftStaking.poolStats?.periodEnd || 'March 30, 2025'}.`} $0.30 fee per NFT.`
             }
           </p>
         </div>
