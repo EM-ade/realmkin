@@ -9,7 +9,7 @@ import environmentConfig from "@/config/environment";
 const networkConfig = environmentConfig.networkConfig;
 
 // Fee destination - gatekeeper wallet (where users send fees)
-const FEE_DESTINATION = process.env.NEXT_PUBLIC_FEE_DESTINATION || "ABjnax7QfDmG6wR2KJoNc3UyiouwTEZ3b5tnTrLLyNSp";
+const FEE_DESTINATION = process.env.NEXT_PUBLIC_TREASURY_WALLET || "8w1dD5Von2GBTa9cVASeC2A9F3gRrCqHA7QPds5pfXsM";
 
 // Helper: Get SOL price (uses multiple sources for reliability)
 const getSolPrice = async (): Promise<number> => {
@@ -48,38 +48,65 @@ const getSolPrice = async (): Promise<number> => {
 
 // Helper: Pay SOL fee
 const paySolFee = async (amountSol: number, destinationAddr: string, connection: any, publicKey: any, sendTransaction: any) => {
+  console.log("📝 paySolFee called:", { amountSol, destinationAddr });
+  
   if (!publicKey) throw new Error("Wallet not connected");
+  if (!connection) throw new Error("Connection not available");
 
   try {
-    const destPubkey = new PublicKey(destinationAddr);
-    const transaction = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: publicKey,
-        toPubkey: destPubkey,
-        lamports: Math.round(amountSol * LAMPORTS_PER_SOL),
-      })
-    );
+    // Get latest blockhash first
+    const blockhash = await connection.getLatestBlockhash();
+    
+    // Create transfer instruction
+    const transferIx = SystemProgram.transfer({
+      fromPubkey: publicKey,
+      toPubkey: new PublicKey(destinationAddr),
+      lamports: Math.round(amountSol * LAMPORTS_PER_SOL),
+    });
+    
+    // Create transaction with the instruction
+    const transaction = new Transaction({
+      feePayer: publicKey,
+      recentBlockhash: blockhash.blockhash,
+    }).add(transferIx);
+    
+    // Compile to ensure proper message
+    const message = transaction.compileMessage();
+    console.log("📝 Compiled message:", {
+      instructions: message.instructions.length,
+      accountKeysLength: message.accountKeys.length
+    });
 
-    const latestBlockhash = await connection.getLatestBlockhash();
-    transaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
-    transaction.recentBlockhash = latestBlockhash.blockhash;
-    transaction.feePayer = publicKey;
-
+    console.log("📝 Sending to wallet...");
+    
+    // Send
     const signature = await sendTransaction(transaction, connection);
+    console.log("📝 Signed, signature:", signature);
+    
+    // Confirm
     await connection.confirmTransaction(signature, "confirmed");
+    console.log("📝 Confirmed!");
+    
     return signature;
   } catch (e: any) {
-    if (e.message?.includes("User rejected")) {
-      throw new Error("Transaction cancelled");
+    console.error("📝 paySolFee error:", e);
+    if (e.message?.includes("User rejected") || e.message?.includes("Rejected")) {
+      throw new Error("Transaction cancelled. Please approve the fee payment to stake.");
+    }
+    if (e.message?.includes("no balance changes")) {
+      throw new Error("Phantom couldn't detect the transfer. Please try again.");
     }
     throw new Error(`Fee payment failed: ${e.message}`);
   }
 };
 
 export function useNftStaking() {
+  console.log("🔧 useNftStaking initialized, checking wallet state...");
   const { isConnected, uid, isAuthenticating } = useWeb3();
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
+
+  console.log("🔧 Wallet state:", { isConnected, hasConnection: !!connection, hasPublicKey: !!publicKey, hasSendTransaction: !!sendTransaction });
 
   const [poolStats, setPoolStats] = useState<any>(null);
   const [userStats, setUserStats] = useState<any>(null);
@@ -95,6 +122,7 @@ export function useNftStaking() {
   const fetchPoolStats = useCallback(async () => {
     try {
       const stats = await NftStakingAPI.getPoolStats();
+      console.log("📡 Pool stats received:", stats);
       setPoolStats(stats);
       return stats;
     } catch (e) {
@@ -174,13 +202,41 @@ export function useNftStaking() {
       let finalFeeSignature = feeSignature;
 
       // If payFee is true, pay the fee first
-      if (payFee && connection && publicKey && sendTransaction) {
+      if (payFee) {
+        console.log("🔄 Fee payment requested:", { 
+          hasConnection: !!connection, 
+          hasPublicKey: !!publicKey, 
+          hasSendTransaction: !!sendTransaction,
+          connectionType: typeof connection,
+          sendTransactionType: typeof sendTransaction
+        });
+        
+        if (!connection || !publicKey || !sendTransaction) {
+          toast.error("Wallet not ready for fee payment");
+          setIsStaking(false);
+          return { success: false, error: "Wallet not ready" };
+        }
+        
         const solPrice = await getSolPrice();
-        const feePerNft = 0.20; // $0.20 per NFT
+        console.log("💰 SOL price:", solPrice);
+        const feePerNft = 0.30; // $0.30 per NFT
         const totalFeeUsd = nftMints.length * feePerNft;
         const feeInSol = totalFeeUsd / solPrice;
+        console.log("💸 Fee calculation:", { totalFeeUsd, feeInSol, nftCount: nftMints.length });
 
-        toast(`Paying ${feeInSol.toFixed(4)} SOL fee...`);
+        // Validate fee amount
+        const minFeeLamports = 5000; // Minimum 0.000005 SOL
+        const feeLamports = Math.round(feeInSol * LAMPORTS_PER_SOL);
+        
+        if (feeLamports < minFeeLamports) {
+          toast.error("Fee amount too small to send");
+          setIsStaking(false);
+          return { success: false, error: "Fee calculation error" };
+        }
+        
+        console.log("💸 Fee in lamports:", feeLamports);
+
+        toast(`Paying ${feeInSol.toFixed(6)} SOL (${feeLamports} lamports) fee...`);
         
         try {
           finalFeeSignature = await paySolFee(feeInSol, FEE_DESTINATION, connection, publicKey, sendTransaction);
@@ -246,9 +302,12 @@ export function useNftStaking() {
 
     setIsClaiming(true);
     try {
+      console.log("📝 Calling claimRewards API...");
       const result = await NftStakingAPI.claimRewards();
+      console.log("📝 Claim result:", result);
+      
       if (result.claimed > 0) {
-        toast.success(`Claimed ${result.claimed} $MKIN!`);
+        toast.success(`Claimed ${result.claimed} $MKIN!${result.txSignature ? ` TX: ${result.txSignature.slice(0,8)}...` : ''}`);
       } else {
         toast("No rewards to claim");
       }
