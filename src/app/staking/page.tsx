@@ -136,6 +136,14 @@ function StakingPage() {
     setSelectedNfts([]);
   };
 
+  // Quick select percentage handler
+  const handleSelectPercent = (percent: number) => {
+    const walletNfts = nftStaking.walletNfts;
+    const count = Math.ceil(walletNfts.length * percent);
+    const selectedMints = walletNfts.slice(0, count).map((nft: any) => nft.mint);
+    setSelectedNfts(selectedMints);
+  };
+
   // Render Token Staking Content
   const renderTokenStaking = () => (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -377,17 +385,46 @@ function StakingPage() {
         {/* Available NFTs to Stake */}
         <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] font-medium">
-              Available NFTs ({nftStaking.walletNfts.length})
-            </h3>
-            {selectedNfts.length > 0 && isStakingOpen && (
-              <button
-                onClick={handleNftStake}
-                className="py-2 px-4 bg-[#f4c752] text-black text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-[#f4c752]/90"
-              >
-                Stake {selectedNfts.length} NFT${selectedNfts.length > 1 ? 's' : ''} (${(selectedNfts.length * (nftStaking.poolStats?.feePerNft || 0.20)).toFixed(2)})
-              </button>
-            )}
+            <div>
+              <h3 className="text-[#f7dca1]/60 text-xs uppercase tracking-[0.2em] font-medium">
+                Available NFTs ({selectedNfts.length} of {nftStaking.walletNfts.length} selected)
+              </h3>
+              <p className="text-[#f7dca1]/40 text-xs mt-1">
+                Click on the NFTs you want to stake
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {!isConnected || nftStaking.walletNfts.length === 0 ? null : (
+                <>
+                  <button
+                    onClick={() => handleSelectPercent(0.25)}
+                    className="py-1 px-2 bg-[#f4c752]/10 border border-[#f4c752]/30 text-[#f4c752] text-xs uppercase tracking-wider rounded hover:bg-[#f4c752]/20"
+                  >
+                    25%
+                  </button>
+                  <button
+                    onClick={() => handleSelectPercent(0.5)}
+                    className="py-1 px-2 bg-[#f4c752]/10 border border-[#f4c752]/30 text-[#f4c752] text-xs uppercase tracking-wider rounded hover:bg-[#f4c752]/20"
+                  >
+                    50%
+                  </button>
+                  <button
+                    onClick={() => handleSelectPercent(1)}
+                    className="py-1 px-2 bg-[#f4c752]/10 border border-[#f4c752]/30 text-[#f4c752] text-xs uppercase tracking-wider rounded hover:bg-[#f4c752]/20"
+                  >
+                    All
+                  </button>
+                </>
+              )}
+              {selectedNfts.length > 0 && isStakingOpen && (
+                <button
+                  onClick={handleNftStake}
+                  className="py-1 px-3 bg-[#f4c752] text-black text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-[#f4c752]/90"
+                >
+                  Stake {selectedNfts.length} NFT${selectedNfts.length > 1 ? 's' : ''} (${(selectedNfts.length * (nftStaking.poolStats?.feePerNft || 0.20)).toFixed(2)})
+                </button>
+              )}
+            </div>
           </div>
           
           {!isConnected ? (
@@ -406,7 +443,7 @@ function StakingPage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {nftStaking.walletNfts.slice(0, 8).map((nft: any) => {
+              {nftStaking.walletNfts.map((nft: any) => {
                 const isSelected = selectedNfts.includes(nft.mint);
                 return (
                   <div 
