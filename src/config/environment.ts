@@ -53,9 +53,18 @@ class EnvironmentConfig {
     return {
       isDevnet,
       cluster: isDevnet ? 'devnet' : 'mainnet',
+      // MIGRATED: Use NEW token (April 2026)
       tokenMint: isDevnet
+        ? process.env.NEXT_PUBLIC_NEW_MKIN_MINT_DEVNET || 'Caj9oo8RWhkus2rTEHzjhd14bv4DokC9kQhfi1AcAFiD'
+        : process.env.NEXT_PUBLIC_NEW_MKIN_MINT_MAINNET || 'Caj9oo8RWhkus2rTEHzjhd14bv4DokC9kQhfi1AcAFiD',
+      // Legacy token (use for reading old stakes if needed)
+      legacyTokenMint: isDevnet
         ? process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET || 'CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm'
         : process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 'BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA',
+      // Migration info
+      isMigrated: true,
+      migrationDate: '2026-04-20',
+      newTokenPriceUsd: 5.39,
       // Prioritize Helius RPC endpoints, fallback to public endpoints
       rpcUrl: isDevnet
         ? process.env.NEXT_PUBLIC_HELIUS_DEVNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com'
