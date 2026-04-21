@@ -6,11 +6,11 @@ const RPC_URL =
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 
   "https://api.mainnet-beta.solana.com";
 const STAKING_WALLET = process.env.NEXT_PUBLIC_STAKING_WALLET_ADDRESS || "";
-// Use the correct environment variable names based on network
+// MIGRATED: Now uses NEW token (April 2026)
 const isDevnet = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet';
 const TOKEN_MINT = isDevnet
-  ? process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET || 'CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm'
-  : process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 'BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA';
+  ? process.env.NEXT_PUBLIC_NEW_MKIN_MINT_DEVNET || 'Caj9oo8RWhkus2rTEHzjhd14bv4DokC9kQhfi1AcAFiD'
+  : process.env.NEXT_PUBLIC_NEW_MKIN_MINT_MAINNET || 'Caj9oo8RWhkus2rTEHzjhd14bv4DokC9kQhfi1AcAFiD';
 
 export interface TransactionVerification {
   isValid: boolean;

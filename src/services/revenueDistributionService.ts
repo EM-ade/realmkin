@@ -7,7 +7,8 @@ const GATEKEEPER_BASE =
 
 // Token mints
 const EMPIRE_MINT = new PublicKey("EmpirdtfUMfBQXEjnNmTngeimjfizfuSBD3TN9zqzydj");
-const MKIN_MINT = new PublicKey("BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA"); // Mainnet MKIN mint - must match backend
+// MIGRATED: Now uses NEW $MKIN token (April 2026)
+const MKIN_MINT = new PublicKey("Caj9oo8RWhkus2rTEHzjhd14bv4DokC9kQhfi1AcAFiD");
 
 // Claim fee in USD (updated to include $0.90 site fee)
 const CLAIM_FEE_USD = 1.00; // $0.10 base + $0.90 site fee

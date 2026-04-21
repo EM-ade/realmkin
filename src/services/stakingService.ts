@@ -317,11 +317,11 @@ class StakingService {
     try {
       const publicKey = new PublicKey(walletAddress);
       
-      // Use the correct environment variable names based on network
+      // MIGRATED: Now uses NEW token (April 2026)
       const isDevnet = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet';
       const tokenMintAddress = isDevnet
-        ? process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_DEVNET || 'CARXmxarjsCwvzpmjVB2x4xkAo8fMgsAVUBPREoUGyZm'
-        : process.env.NEXT_PUBLIC_MKIN_TOKEN_MINT_MAINNET || 'BKDGf6DnDHK87GsZpdWXyBqiNdcNb6KnoFcYbWPUhJLA';
+        ? process.env.NEXT_PUBLIC_NEW_MKIN_MINT_DEVNET || 'Caj9oo8RWhkus2rTEHzjhd14bv4DokC9kQhfi1AcAFiD'
+        : process.env.NEXT_PUBLIC_NEW_MKIN_MINT_MAINNET || 'Caj9oo8RWhkus2rTEHzjhd14bv4DokC9kQhfi1AcAFiD';
       
       if (!tokenMintAddress) {
         console.error("Token mint address not configured");
