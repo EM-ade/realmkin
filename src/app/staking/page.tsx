@@ -168,7 +168,9 @@ function StakingPage() {
               </div>
               <div className="text-xl font-bold text-[#f4c752]">
                 {(
-                  (stakingUser?.displayMiningRate || stakingUser?.totalMiningRate || 0) *
+                  (stakingUser?.displayMiningRate ||
+                    stakingUser?.totalMiningRate ||
+                    0) *
                   60 *
                   60 *
                   24 *
@@ -189,7 +191,7 @@ function StakingPage() {
               Total Staked (Pool)
             </div>
             <div className="text-xl font-bold text-[#f4c752]">
-              {(stakingPool?.totalStaked || 0).toLocaleString()} MKIN
+              {(stakingPool?.totalStaked / 2500000 || 0).toLocaleString()} MKIN
             </div>
           </div>
         </div>
@@ -199,7 +201,11 @@ function StakingPage() {
       <div className="lg:col-span-6 flex flex-col items-center space-y-8 animate-scale-in animation-delay-200">
         <div className="w-full max-w-3xl">
           <MiningConsole
-            stakingRate={stakingUser?.displayMiningRate || stakingUser?.totalMiningRate || 0}
+            stakingRate={
+              stakingUser?.displayMiningRate ||
+              stakingUser?.totalMiningRate ||
+              0
+            }
             unclaimedRewards={stakingUser?.pendingRewards || 0}
             onClaim={handleClaim}
             isRewardsPaused={isRewardsPaused}
@@ -210,7 +216,7 @@ function StakingPage() {
 
         <div className="w-full max-w-3xl">
           <StakingControls
-            stakedAmount={stakingUser?.principal /2500000 || 0}
+            stakedAmount={stakingUser?.principal || 0}
             walletBalance={walletBalance}
             tokenSymbol="MKIN"
             onStake={handleStake}
@@ -231,7 +237,11 @@ function StakingPage() {
               await refreshStakingData();
             }
           }}
-          lastUpdated={stakingUser?.activeBoosters?.[0]?.detectedAt ? new Date(stakingUser.activeBoosters[0].detectedAt) : null}
+          lastUpdated={
+            stakingUser?.activeBoosters?.[0]?.detectedAt
+              ? new Date(stakingUser.activeBoosters[0].detectedAt)
+              : null
+          }
         />
       </div>
     </div>
