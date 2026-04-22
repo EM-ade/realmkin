@@ -10,12 +10,11 @@ import {
   limit,
   serverTimestamp,
   writeBatch,
-  onSnapshot,
-  Unsubscribe,
   Timestamp,
   FieldValue,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { firebaseCache, createCacheKey } from "@/lib/firebaseCache";
 import { GameType, LeaderboardEntry } from "@/types/leaderboard";
 
 // Types for Firestore documents
@@ -334,27 +333,34 @@ class LeaderboardService {
     }
   }
 
-  // Get leaderboard entries
+  // Get leaderboard entries (with caching to reduce Firebase reads)
   async getLeaderboard(
     type: "totalScore" | "streak",
     limitCount: number = 100
   ): Promise<LeaderboardEntry[]> {
-    const collectionName = type === "totalScore" 
-      ? this.COLLECTIONS.TOTAL_SCORE 
+    const collectionName = type === "totalScore"
+      ? this.COLLECTIONS.TOTAL_SCORE
       : this.COLLECTIONS.STREAK;
-    
+
     const orderField = type === "totalScore" ? "totalScore" : "currentStreak";
-    
+    const cacheKey = createCacheKey(`leaderboard-${type}-${limitCount}`);
+
+    // Try cache first
+    const cached = firebaseCache.get<LeaderboardEntry[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     try {
       const q = query(
         collection(db, collectionName),
         orderBy(orderField, "desc"),
         limit(limitCount)
       );
-      
+
       const snapshot = await getDocs(q);
-      
-      return snapshot.docs.map((doc, index) => {
+
+      const entries = snapshot.docs.map((doc, index) => {
         const data = doc.data();
         return {
           userId: data.userId,
@@ -366,6 +372,11 @@ class LeaderboardService {
           lastUpdated: data.lastUpdated?.toMillis() || data.lastPlayed,
         };
       });
+
+      // Cache for 30 seconds
+      firebaseCache.set(cacheKey, entries, 30000);
+
+      return entries;
     } catch (error) {
       console.error("Error getting leaderboard:", error);
       throw error;
@@ -380,54 +391,61 @@ class LeaderboardService {
     return this.getLeaderboard(type, count);
   }
 
-  // Subscribe to real-time leaderboard updates
-  subscribeToLeaderboard(
-    type: "totalScore" | "streak",
-    limitCount: number = 100,
-    callback: (entries: LeaderboardEntry[]) => void
-  ): Unsubscribe {
-    const collectionName = type === "totalScore" 
-      ? this.COLLECTIONS.TOTAL_SCORE 
-      : this.COLLECTIONS.STREAK;
-    
-    const orderField = type === "totalScore" ? "totalScore" : "currentStreak";
-    
-    const q = query(
-      collection(db, collectionName),
-      orderBy(orderField, "desc"),
-      limit(limitCount)
-    );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const entries: LeaderboardEntry[] = snapshot.docs.map((doc, index) => {
-        const data = doc.data();
-        
-        if (type === "totalScore") {
-          const scoreData = data as TotalScoreEntry;
-          return {
-            userId: scoreData.userId,
-            username: scoreData.username,
-            rank: index + 1,
-            value: scoreData.totalScore,
-            gamesPlayed: scoreData.gamesPlayed,
-            breakdown: scoreData.breakdown,
-          };
-        } else {
-          const streakData = data as StreakEntry;
-          return {
-            userId: streakData.userId,
-            username: streakData.username,
-            rank: index + 1,
-            value: streakData.currentStreak,
-            valueLabel: `${streakData.currentStreak} days`,
-          };
-        }
-      });
-      
-      callback(entries);
-    });
-    
-    return unsubscribe;
+// DEPRECATED: Real-time subscriptions removed to reduce Firebase reads
+  // Use getLeaderboard() with client-side polling instead
+  // subscribeToLeaderboard(
+  //   type: "totalScore" | "streak",
+  //   limitCount: number = 100,
+  //   callback: (entries: LeaderboardEntry[]) => void
+  // ): Unsubscribe {
+  //   const collectionName = type === "totalScore"
+  //     ? this.COLLECTIONS.TOTAL_SCORE
+  //     : this.COLLECTIONS.STREAK;
+
+  //   const orderField = type === "totalScore" ? "totalScore" : "currentStreak";
+
+  //   const q = query(
+  //     collection(db, collectionName),
+  //     orderBy(orderField, "desc"),
+  //     limit(limitCount)
+  //   );
+
+  //   const unsubscribe = onSnapshot(q, (snapshot) => {
+  //     const entries: LeaderboardEntry[] = snapshot.docs.map((doc, index) => {
+  //       const data = doc.data();
+
+  //       if (type === "totalScore") {
+  //         const scoreData = data as TotalScoreEntry;
+  //         return {
+  //           userId: scoreData.userId,
+  //           username: scoreData.username,
+  //           rank: index + 1,
+  //           value: scoreData.totalScore,
+  //           gamesPlayed: scoreData.gamesPlayed,
+  //           breakdown: scoreData.breakdown,
+  //         };
+  //       } else {
+  //         const streakData = data as StreakEntry;
+  //         return {
+  //           userId: streakData.userId,
+  //           username: streakData.username,
+  //           rank: index + 1,
+  //           value: streakData.currentStreak,
+  //           valueLabel: `${streakData.currentStreak} days`,
+  //         };
+  //       }
+  //     });
+
+  //     callback(entries);
+  //   });
+
+  //   return unsubscribe;
+  // }
+
+  // Placeholder to avoid breaking changes - returns undefined
+  subscribeToLeaderboard = () => {
+    console.warn("subscribeToLeaderboard is deprecated. Use getLeaderboard() with polling instead.");
+    return undefined as any;
   }
 
   // Get user's rank in leaderboard
@@ -718,6 +736,13 @@ export async function fetchSecondaryMarketLeaderboard(
     avatarUrl?: string;
   }>
 > {
+  // Add caching to prevent excessive reads (5-minute cache)
+  const cacheKey = createCacheKey(`secondary-market-${limit}`);
+  const cached = firebaseCache.get<any[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     // Step 1: Query all secondarySaleCache entries
     const cacheSnapshot = await getDocs(collection(db, "secondarySaleCache"));
@@ -893,6 +918,9 @@ export async function fetchSecondaryMarketLeaderboard(
     console.log(
       `[Secondary Market Leaderboard] Successfully built leaderboard with ${leaderboard.length} entries`
     );
+
+    // Cache for 5 minutes (300 seconds) - this is expensive to compute
+    firebaseCache.set(cacheKey, leaderboard, 300000);
 
     return leaderboard;
   } catch (error) {

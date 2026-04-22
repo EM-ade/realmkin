@@ -141,13 +141,13 @@ export function useAutoClaim() {
       clearInterval(intervalRef.current);
     }
 
-    // Set up periodic checking (every 5 minutes)
+    // Set up periodic checking (every 15 minutes - reduced from 5min to save Firebase reads)
     intervalRef.current = setInterval(() => {
       const currentSettings = loadSettings();
       if (shouldAttemptClaim(currentSettings)) {
         attemptAutoClaim();
       }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 15 * 60 * 1000); // Check every 15 minutes
 
   }, [user, account, loadSettings, shouldAttemptClaim, attemptAutoClaim]);
 

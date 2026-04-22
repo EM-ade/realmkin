@@ -182,7 +182,7 @@ export function useNftStaking() {
   useEffect(() => {
     if (isConnected && uid && !isAuthenticating) {
       fetchAllData();
-      const interval = setInterval(fetchAllData, 15000); // Poll every 15s
+      const interval = setInterval(fetchAllData, 60000); // Poll every 60s (reduced from 15s to save Firebase reads)
       return () => clearInterval(interval);
     }
   }, [isConnected, uid, isAuthenticating, fetchAllData]);
