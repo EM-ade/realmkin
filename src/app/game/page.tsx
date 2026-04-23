@@ -162,8 +162,8 @@ function GamePage() {
 
     loadLeaderboard();
 
-    // Poll every 30 seconds instead of real-time listener
-    const interval = setInterval(loadLeaderboard, 30000);
+    // Poll every 60 seconds instead of 30s (cache will handle 30s TTL)
+    const interval = setInterval(loadLeaderboard, 60000);
 
     return () => {
       clearInterval(interval);

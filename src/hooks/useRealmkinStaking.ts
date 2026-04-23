@@ -92,7 +92,7 @@ export function useRealmkinStaking() {
   useEffect(() => {
     if (isConnected && uid && !isAuthenticating) {
       fetchData();
-      const interval = setInterval(fetchData, 10000); // Poll every 10s
+      const interval = setInterval(fetchData, 60000); // Poll every 60s (reduced from 10s to save Firebase reads)
       return () => clearInterval(interval);
     }
   }, [fetchData, isConnected, uid, isAuthenticating]);

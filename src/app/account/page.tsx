@@ -181,32 +181,35 @@ export default function AccountPage() {
     fetchEligibility();
   }, [user?.uid, account]);
 
-  // Fetch leaderboard (Secondary Market Buyers)
-  const fetchLeaderboard = useCallback(async () => {
-    if (!user?.uid) return;
+// Fetch leaderboard (Secondary Market Buyers)
+ // Note: Data is cached for 6 hours to reduce Firebase reads
+ const fetchLeaderboard = useCallback(async () => {
+ if (!user?.uid) return;
 
-    setLeaderboardLoading(true);
-    try {
-      // Fetch top 10 secondary market buyers
-      const entries = await fetchTopSecondaryMarketBuyers(10);
-      setLeaderboardEntries(
-        entries.map((entry) => ({
-          rank: entry.rank,
-          username: entry.username,
-          score: entry.nftCount,
-          nftCount: entry.nftCount, // Keep nftCount separate
-          avatarUrl: entry.avatarUrl,
-        })),
-      );
+ setLeaderboardLoading(true);
+ try {
+ console.log("[Account] Fetching secondary market leaderboard (6h cache)...");
+ // Fetch top 10 secondary market buyers
+ const entries = await fetchTopSecondaryMarketBuyers(10);
+ setLeaderboardEntries(
+ entries.map((entry) => ({
+ rank: entry.rank,
+ username: entry.username,
+ score: entry.nftCount,
+ nftCount: entry.nftCount, // Keep nftCount separate
+ avatarUrl: entry.avatarUrl,
+ }))
+ );
 
-      // User rank not shown for secondary market leaderboard
-      setUserRank(undefined);
-    } catch (error) {
-      console.error("Error fetching leaderboard:", error);
-    } finally {
-      setLeaderboardLoading(false);
-    }
-  }, [user?.uid]);
+ // User rank not shown for secondary market leaderboard
+ setUserRank(undefined);
+ console.log(`[Account] Leaderboard loaded: ${entries.length} entries`);
+ } catch (error) {
+ console.error("Error fetching leaderboard:", error);
+ } finally {
+ setLeaderboardLoading(false);
+ }
+ }, [user?.uid]);
 
   useEffect(() => {
     fetchLeaderboard();
