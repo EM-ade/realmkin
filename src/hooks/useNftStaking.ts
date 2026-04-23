@@ -181,9 +181,18 @@ export function useNftStaking() {
   // Initial fetch
   useEffect(() => {
     if (isConnected && uid && !isAuthenticating) {
+      console.log('[NFT Staking] Initial data fetch');
       fetchAllData();
-      const interval = setInterval(fetchAllData, 60000); // Poll every 60s (reduced from 15s to save Firebase reads)
-      return () => clearInterval(interval);
+      // Poll every 60 seconds for pool stats refresh (cache TTL: 5 minutes)
+      // Pool stats are cached, so this won't cause excessive reads
+      const interval = setInterval(() => {
+        console.log('[NFT Staking] Polling for updates...');
+        fetchAllData();
+      }, 60000);
+      return () => {
+        console.log('[NFT Staking] Cleanup polling interval');
+        clearInterval(interval);
+      };
     }
   }, [isConnected, uid, isAuthenticating, fetchAllData]);
 

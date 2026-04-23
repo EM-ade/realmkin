@@ -661,42 +661,44 @@ export async function fetchTop10Miners(type: "rewards" | "staked" = "rewards"): 
 
 /**
  * Fetch top secondary market buyers (users with most NFTs from secondary market)
+ * Data is cached for 6 hours to reduce Firebase reads
  */
 export async function fetchTopSecondaryMarketBuyers(limit: number = 3): Promise<
-  Array<{
-    rank: number;
-    username: string;
-    nftCount: number;
-    avatarUrl?: string;
-  }>
-> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
-    "https://gatekeeper-bmvu.onrender.com";
+ Array<{
+ rank: number;
+ username: string;
+ nftCount: number;
+ avatarUrl?: string;
+ }>
+ > {
+ const baseUrl =
+ process.env.NEXT_PUBLIC_GATEKEEPER_BASE ||
+ "https://gatekeeper-bmvu.onrender.com";
 
-  try {
-    const response = await fetch(
-      `${baseUrl}/api/leaderboard/secondary-market?limit=${limit}`
-    );
+ try {
+ const response = await fetch(
+ `${baseUrl}/api/leaderboard/secondary-market?limit=${limit}`
+ );
 
-    if (!response.ok) {
-      console.error("Failed to fetch secondary market leaderboard:", response.statusText);
-      return [];
-    }
+ if (!response.ok) {
+ console.error("[Leaderboard] Failed to fetch secondary market leaderboard:", response.statusText);
+ return [];
+ }
 
-    const data = await response.json();
+ const data = await response.json();
 
-    if (!data.leaderboard || !Array.isArray(data.leaderboard)) {
-      console.error("Invalid leaderboard data:", data);
-      return [];
-    }
+ if (!data.leaderboard || !Array.isArray(data.leaderboard)) {
+ console.error("[Leaderboard] Invalid leaderboard data:", data);
+ return [];
+ }
 
-    return data.leaderboard;
-  } catch (error) {
-    console.error("Error fetching secondary market leaderboard:", error);
-    return [];
-  }
-}
+ console.log(`[Leaderboard] Successfully fetched ${data.leaderboard.length} entries (cached, 6h TTL)`);
+ return data.leaderboard;
+ } catch (error) {
+ console.error("[Leaderboard] Error fetching secondary market leaderboard:", error);
+ return [];
+ }
+ }
 
 /**
  * Interface for secondary sale cache data
