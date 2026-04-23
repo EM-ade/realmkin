@@ -18,7 +18,6 @@ export function StakingControls({
   conversionRatio = 2500000,
 }: StakingControlsProps) {
   const [amount, setAmount] = useState("");
-  const [showUnstakeConfirm, setShowUnstakeConfirm] = useState(false);
 
   const numAmount = Number(amount);
   const stakeError = numAmount > walletBalance || !amount || numAmount <= 0;
@@ -34,11 +33,6 @@ export function StakingControls({
 
   const handleUnstakeClick = () => {
     if (unstakeError) return;
-    setShowUnstakeConfirm(true);
-  };
-
-  const handleUnstakeConfirm = () => {
-    setShowUnstakeConfirm(false);
     onUnstake(numAmount);
     setAmount("");
   };
@@ -57,12 +51,12 @@ export function StakingControls({
               {stakedAmount.toLocaleString()} {tokenSymbol}
             </span>
           </div>
-          <div className="flex justify-between text-xs text-[#f7dca1]/60 mb-2 uppercase tracking-wider">
-            <span>Wallet Balance</span>
-            <span>
-              {walletBalance.toLocaleString()} {tokenSymbol}
-            </span>
-          </div>
+<div className="flex justify-between text-xs text-[#f7dca1]/60 mb-2 uppercase tracking-wider">
+          <span>Wallet Balance</span>
+          <span>
+            {walletBalance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 8 })} {tokenSymbol}
+          </span>
+        </div>
         </div>
 
         <div className="space-y-4">
@@ -90,13 +84,15 @@ export function StakingControls({
             >
               Stake
             </button>
-            <button
-              onClick={handleUnstakeClick}
-              disabled={unstakeError}
-              className="py-3 bg-transparent border border-[#f4c752]/50 text-[#f4c752] font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-[#f4c752]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Unstake
-            </button>
+<button
+        onClick={handleUnstakeClick}
+        disabled={unstakeError}
+        className="py-3 bg-transparent border border-[#f4c752]/50 text-[#f4c752] font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-[#f4c752]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        Unstake
+      </button>
+
+      {/* Confirmation modal removed - unstake now executes directly on click */}
           </div>
         </div>
       </div>

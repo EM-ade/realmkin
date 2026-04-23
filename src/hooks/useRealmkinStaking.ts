@@ -36,17 +36,28 @@ export function useRealmkinStaking() {
 
   // Fetch on-chain MKIN token balance
   const fetchWalletBalance = useCallback(async () => {
+    console.log("💰 Fetching wallet balance...");
     if (!publicKey || !connection) {
+      console.log("🔒 No public key or connection, setting balance to 0");
       setWalletBalance(0);
       return;
     }
     try {
       const ata = await getAssociatedTokenAddress(MKIN_MINT, publicKey);
+      console.log("📍 Token ATA:", ata.toBase58());
       const account = await getAccount(connection, ata);
+      const rawBalance = Number(account.amount);
+      const displayBalance = rawBalance / 1e9;
+      console.log("✅ Token account found");
+      console.log("   Raw balance:", rawBalance);
+      console.log("   Display balance:", displayBalance);
+      console.log("   Token mint:", MKIN_MINT.toBase58());
       // Convert from raw (9 decimals) to display amount
-      setWalletBalance(Number(account.amount) / 1e9);
-    } catch (e) {
+      setWalletBalance(displayBalance);
+    } catch (e: any) {
       // Token account doesn't exist (no balance)
+      console.log("❌ Failed to fetch balance:", e.message);
+      console.log("   This usually means the token account doesn't exist yet");
       setWalletBalance(0);
     }
   }, [publicKey, connection]);
