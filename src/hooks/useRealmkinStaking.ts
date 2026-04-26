@@ -13,6 +13,7 @@ import {
   getAssociatedTokenAddress,
   createTransferInstruction,
   getAccount,
+  createAssociatedTokenAccountInstruction,
 } from "@solana/spl-token";
 import { toast } from "react-hot-toast";
 import environmentConfig from "@/config/environment";
@@ -244,61 +245,86 @@ export function useRealmkinStaking() {
       console.log("  User ATA:", userATA.toBase58());
       console.log("  Vault ATA:", vaultATA.toBase58());
 
-      // Check if user token account exists
-      try {
-        const userTokenAccount = await getAccount(connection, userATA);
-        const balance = Number(userTokenAccount.amount) / 1e9;
-        console.log("  User token balance:", balance, "MKIN");
+       // Check if user token account exists (if not, we need to create it first)
+       let userATAInstruction;
+       try {
+         const userTokenAccount = await getAccount(connection, userATA);
+         const balance = Number(userTokenAccount.amount) / 1e9;
+         console.log("  User token balance:", balance, "MKIN");
 
-        if (balance < amount) {
-          throw new Error(
-            `Insufficient balance. You have ${balance.toFixed(
-              2
-            )} MKIN but trying to stake ${amount} MKIN`
-          );
-        }
-      } catch (e: any) {
-        if (e.message.includes("could not find account")) {
-          throw new Error(
-            "You don't have any MKIN tokens in your wallet. Token account doesn't exist."
-          );
-        }
-        throw e;
-      }
+         if (balance < amount) {
+           throw new Error(
+             `Insufficient balance. You have ${balance.toFixed(
+               2
+             )} MKIN but trying to stake ${amount} MKIN`
+           );
+         }
+       } catch (e: any) {
+         if (e.message.includes("could not find account")) {
+           console.log("  📝 User token account doesn't exist, creating...");
+           userATAInstruction = createAssociatedTokenAccountInstruction(
+             publicKey,
+             userATA,
+             publicKey,
+             MKIN_MINT
+           );
+         } else {
+           throw e;
+         }
+       }
 
-      // Check if vault token account exists (if not, we need to create it first)
-      try {
-        await getAccount(connection, vaultATA);
-        console.log("  ✅ Vault token account exists");
-      } catch (e: any) {
-        if (e.message.includes("could not find account")) {
-          throw new Error(
-            "Vault token account doesn't exist yet. Please contact support to initialize the vault."
-          );
-        }
-        throw e;
-      }
+       // Check if vault token account exists (if not, we need to create it first)
+       let vaultATAInstruction;
+       try {
+         await getAccount(connection, vaultATA);
+         console.log("  ✅ Vault token account exists");
+       } catch (e: any) {
+         if (e.message.includes("could not find account")) {
+           console.log("  📝 Vault token account doesn't exist, creating...");
+           vaultATAInstruction = createAssociatedTokenAccountInstruction(
+             publicKey,
+             vaultATA,
+             vaultAddress,
+             MKIN_MINT
+           );
+         } else {
+           throw e;
+         }
+       }
 
-      // 3. Create COMBINED transaction (SOL fee + MKIN tokens in ONE transaction)
-      console.log("  Creating combined transaction...");
-      const transaction = new Transaction()
-        .add(
-          // First: Pay entry fee in SOL
-          SystemProgram.transfer({
-            fromPubkey: publicKey,
-            toPubkey: vaultAddress,
-            lamports: Math.floor(feeData.feeInSol * LAMPORTS_PER_SOL),
-          })
-        )
-        .add(
-          // Second: Transfer MKIN tokens
-          createTransferInstruction(
-            userATA,
-            vaultATA,
-            publicKey,
-            BigInt(Math.floor(amount * 1e9)) // 9 decimals
-          )
-        );
+       // 3. Create COMBINED transaction (SOL fee + MKIN tokens in ONE transaction)
+       console.log("  Creating combined transaction...");
+       const transaction = new Transaction()
+         .add(
+           // First: Pay entry fee in SOL
+           SystemProgram.transfer({
+             fromPubkey: publicKey,
+             toPubkey: vaultAddress,
+             lamports: Math.floor(feeData.feeInSol * LAMPORTS_PER_SOL),
+           })
+         );
+
+       // Add user token account creation instruction if needed
+       if (userATAInstruction) {
+         transaction.add(userATAInstruction);
+         console.log("  Added user token account creation instruction");
+       }
+
+       // Add vault token account creation instruction if needed
+       if (vaultATAInstruction) {
+         transaction.add(vaultATAInstruction);
+         console.log("  Added vault token account creation instruction");
+       }
+
+       // Second: Transfer MKIN tokens
+       transaction.add(
+         createTransferInstruction(
+           userATA,
+           vaultATA,
+           publicKey,
+           BigInt(Math.floor(amount * 1e9)) // 9 decimals
+         )
+       );
 
       // 3. Get latest blockhash
       let latestBlockhash;

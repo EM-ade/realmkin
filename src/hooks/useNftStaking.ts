@@ -364,7 +364,8 @@ export function useNftStaking() {
     stakedNfts: userStats?.stakedNfts || [],
     claimableNfts: userStats?.claimableNfts || [],
     totalClaimable: userStats?.totalClaimable || 0,
-    totalEstimatedReward: userStats?.totalEstimatedReward || 0,
+    // Calculate estimated reward: tokenPerNft * user's staked NFTs
+    totalEstimatedReward: (poolStats?.currentRewardPerNft || 0) * (userStats?.stakedNfts?.length || 0),
     currentRewardRate: userStats?.currentRewardRate || 0,
     tokenPerNft: poolStats?.currentRewardPerNft || 0,
   };
