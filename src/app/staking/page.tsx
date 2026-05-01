@@ -259,6 +259,12 @@ function StakingPage() {
     const isStakingDisabled = nftStaking.poolStats?.stakingEnabled === false;
     const isStakingClosed = periodStatus === "closed";
 
+    // Calculate user's staking info - persist until all claimed
+    const userHasClaimable = nftStaking.claimableNfts.length > 0;
+    const userHasClaimed = nftStaking.claimedNfts.length > 0;
+    const userStakedCount = nftStaking.stakedNfts.length + nftStaking.claimableNfts.length + nftStaking.claimedNfts.length;
+    const userEstimatedReward = userStakedCount * rewardPerNft;
+
     console.log("📊 NFT Staking Stats:", {
       periodStatus,
       periodStart: nftStaking.poolStats?.periodStart,
@@ -266,7 +272,11 @@ function StakingPage() {
       stakingEnabled: nftStaking.poolStats?.stakingEnabled,
       isStakingOpen,
       isStakingDisabled,
-      isStakingClosed
+      isStakingClosed,
+      userHasClaimable,
+      userHasClaimed,
+      userStakedCount,
+      userEstimatedReward
     });
 
     return (
@@ -319,6 +329,7 @@ function StakingPage() {
                 const now = new Date();
                 const daysRemaining = Math.ceil((unlockDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                 const isUnlockable = daysRemaining <= 0;
+                const isPeriodEnded = isStakingClosed || now >= new Date(nftStaking.poolStats?.periodEnd + "T23:59:59Z");
 
                 return (
                   <div key={nft.id} className="bg-black/60 border border-[#f4c752]/20 rounded-lg p-4">
@@ -344,7 +355,7 @@ function StakingPage() {
                           {nft.collectionId}
                         </div>
                         <div className="text-[#f7dca1]/60 text-xs mt-1">
-                          {isUnlockable ? (
+                          {isUnlockable || isPeriodEnded ? (
                             <span className="text-green-400">Ready to claim!</span>
                           ) : (
                             <span>{daysRemaining} days remaining</span>
@@ -360,7 +371,7 @@ function StakingPage() {
                       disabled={nftStaking.isUnstaking}
                       className="w-full mt-3 py-2 bg-[#f4c752]/10 border border-[#f4c752]/30 text-[#f4c752] text-xs uppercase tracking-wider rounded hover:bg-[#f4c752]/20 disabled:opacity-50"
                     >
-                      Unstake {daysRemaining > 0 && "(forfeits reward)"}
+                      {isUnlockable || isPeriodEnded ? "Claim" : `Unstake (forfeits reward)`}
                     </button>
                   </div>
                 );
@@ -370,7 +381,7 @@ function StakingPage() {
         )}
 
         {/* Claimable Rewards */}
-        {nftStaking.totalClaimable > 0 && (
+        {(nftStaking.totalClaimable > 0 || nftStaking.claimableNfts.length > 0 || (nftStaking.stakedNfts.length > 0 && isStakingClosed)) && (
           <div className="bg-black/40 border border-[#f4c752]/20 rounded-xl p-6">
             <div className="flex justify-between items-center">
               <div>
@@ -378,16 +389,80 @@ function StakingPage() {
                   Claimable Rewards
                 </h3>
                 <div className="text-2xl font-bold text-[#f4c752]">
-                  {nftStaking.totalClaimable.toFixed(2)} $MKIN
+                  {nftStaking.totalClaimable > 0 
+                    ? nftStaking.totalClaimable.toFixed(2) 
+                    : (nftStaking.claimableNfts.length > 0 
+                      ? (nftStaking.claimableNfts.length * rewardPerNft).toFixed(2)
+                      : (nftStaking.stakedNfts.length * rewardPerNft).toFixed(2))} $MKIN
                 </div>
+                {nftStaking.claimableNfts.length > 0 && (
+                  <div className="text-[#f7dca1]/40 text-xs mt-1">
+                    {nftStaking.claimableNfts.length} NFT(s) ready to claim
+                  </div>
+                )}
+                {nftStaking.totalClaimable === 0 && nftStaking.claimableNfts.length === 0 && nftStaking.stakedNfts.length > 0 && isStakingClosed && (
+                  <div className="text-[#f7dca1]/40 text-xs mt-1">
+                    {nftStaking.stakedNfts.length} NFT(s) ready to claim
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => nftStaking.claimRewards()}
-                disabled={nftStaking.isClaiming}
+                disabled={nftStaking.isClaiming || (nftStaking.totalClaimable === 0 && nftStaking.claimableNfts.length === 0 && nftStaking.stakedNfts.length === 0)}
                 className="py-3 px-8 bg-[#f4c752] text-black font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-[#f4c752]/90 disabled:opacity-50"
               >
-                Claim All
+                {nftStaking.totalClaimable > 0 || nftStaking.claimableNfts.length > 0 ? "Claim All" : "Claim All Rewards"}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Claimed Rewards History */}
+        {nftStaking.claimedNfts.length > 0 && (
+          <div className="bg-black/40 border border-green-500/20 rounded-xl p-6">
+            <h3 className="text-green-400 text-xs uppercase tracking-[0.2em] mb-4 font-medium">
+              ✓ Claimed Rewards ({nftStaking.claimedNfts.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {nftStaking.claimedNfts.map((nft: any) => {
+                const claimedDate = nft.releasedAt ? new Date(nft.releasedAt).toLocaleDateString() : "Recently";
+                return (
+                  <div key={nft.id} className="bg-black/60 border border-green-500/20 rounded-lg p-4">
+                    <div className="flex gap-3">
+                      <div className="w-16 h-16 bg-green-500/10 rounded-lg flex-shrink-0 overflow-hidden">
+                        {nft.content?.metadata?.image ? (
+                          <img 
+                            src={nft.content.metadata.image} 
+                            alt={nft.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-green-500/30">
+                            NFT
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-green-400 text-sm font-medium truncate">
+                          {nft.name || nft.nftMint?.slice(0, 8) + "..."}
+                        </div>
+                        <div className="text-[#f7dca1]/40 text-[10px] uppercase">
+                          {nft.collectionId}
+                        </div>
+                        <div className="text-green-400 text-xs mt-1">
+                          ✓ Claimed
+                        </div>
+                        <div className="text-[#f7dca1]/40 text-[10px] mt-1">
+                          Earned: {nft.finalReward?.toFixed(2) || 0} $MKIN
+                        </div>
+                        <div className="text-[#f7dca1]/40 text-[10px]">
+                          {claimedDate}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
